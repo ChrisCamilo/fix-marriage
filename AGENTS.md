@@ -1,0 +1,108 @@
+# Convenções deste repositório
+
+Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
+`ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
+resultados medidos e uma seção de armadilhas de método que custaram horas.
+
+## 1. Privacidade — inegociável
+
+Este repositório é **local e privado**. Material pessoal de família.
+
+- **Nunca** adicionar remoto, fazer push, ou criar repositório no GitHub.
+- **Nunca** publicar nada disto: nem artifact, nem gist, nem pastebin, nem
+  serviço de diagrama ou de conversão online.
+- Se um remoto for pedido um dia, tem que nascer privado
+  (`gh repo create --private`). Criar público e trocar depois não resolve:
+  o conteúdo fica em cache e indexado.
+
+## 2. As duas fontes de verdade
+
+| arquivo | regra |
+|---|---|
+| `Caio & Lizandra - Making- Caio-Balu.mp4` | **nunca modificar.** Fica fora do git; integridade em `CHECKSUMS.txt` |
+| `patches.txt` | **append-only.** Cada linha é `offset bit` |
+
+Tudo o mais é derivado e reconstruível: `index.txt`, `reparado.mp4` e o binário
+saem desses dois. Se precisar mexer em algo, mexa nos patches, nunca no MP4.
+
+Antes de qualquer operação de git que possa descartar trabalho, confira o
+`git status` e o número de linhas do `patches.txt`.
+
+## 3. Só entra patch que passa no critério rigoroso
+
+O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
+com zero linhas de log**. Nada mais conta.
+
+A seção 5 do `ESTADO.md` lista seis maneiras de medir errado que já produziram
+conclusões falsas neste projeto. As duas que mais enganam:
+
+- **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
+  ocultação cinza e infla o número. Foi assim que "2808 de 3445" virou verdade
+  por um tempo; o número real era 306.
+- **Métrica agregada esconde falha em subgrupo.** Medir sempre separado por
+  tipo (I, P, B). Um "conserto" no `weighted_pred_flag` já matou 100% dos
+  frames P sem que a média acusasse.
+
+Não mexer no `weighted_pred_flag`: ele fica em 1.
+
+Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
+`0 falsos`. Rodar `verify` **sem** `BASE_N` acusa ~1328 falsos por construção,
+o que é esperado e não é bug — veja a seção 4 do `ESTADO.md`.
+
+## 4. Manter o `ESTADO.md` vivo
+
+Ele é a memória do projeto entre sessões. Depois de qualquer corrida que mude
+resultado, **atualizar a seção 4** com números medidos, não estimados:
+
+- frames perfeitos / 3445, e a que tempo isso corresponde
+- trechos contínuos e quanto dá para assistir de fato
+- quantos IDRs estão limpos (isto governa o que é reparável)
+- resultado do `verify`
+
+Distinguir sempre **"consertado por reparo"** de **"já estava intacto"**. Somar
+os dois num número só foi uma confusão real que aconteceu aqui.
+
+Quando um parâmetro for resolvido, escrever no `ESTADO.md` que está resolvido,
+para ninguém reinvestigar. Quando uma hipótese for descartada, registrar que foi
+testada e o resultado — a seção 6 existe para isso.
+
+## 5. Ordem de ataque
+
+Todo reparo ancora no IDR anterior (`ancora_de`). Um GOP cujo IDR está quebrado
+é **irreparável** enquanto o IDR não for consertado: os ~27 frames dele estão
+bloqueados por dependência, não por dano próprio.
+
+Portanto: **consertar IDR quebrado primeiro.** Rende ~27 frames destravados por
+conserto, contra 1 de um frame comum. O modo `idr` do `reparador.c` faz esse
+diagnóstico sem gravar nada.
+
+Duas janelas importam, e a segunda foi ignorada por muito tempo:
+
+1. em volta do ponto de corte que o decoder informa;
+2. **os primeiros ~256 bytes do NAL** — quando o corte cai antes do byte ~64,
+   a janela do corte colapsa e esta é a única busca que existe de verdade.
+
+## 6. Ambiente
+
+Windows com **MSYS2 UCRT64** — não é Linux, não há `apt-get`. Toda sessão:
+
+```bash
+export PATH=/c/msys64/ucrt64/bin:$PATH
+MP4="Caio & Lizandra - Making- Caio-Balu.mp4"
+```
+
+UCRT64 e não MINGW64: o reparador lê `%td` das mensagens do decoder, que a
+msvcrt antiga não interpreta — a heurística falharia em silêncio. Detalhes na
+seção 3 do `ESTADO.md`.
+
+Python é o do Windows (`C:\Python314`), chamado como `python`. Dentro de string
+passada com `python -c`, usar caminho `C:/...`; o Git Bash só converte `/c/...`
+quando é argumento.
+
+## 7. Higiene
+
+- Finais de linha **LF** nos dados. O `.gitattributes` segura isso contra o
+  `core.autocrlf`; o `reparador.c` grava com `fopen(...,"ab")` e o
+  `ferramentas.py` com `newline="\n"`. Não reverter.
+- Commits em português, explicando o **porquê**.
+- Corridas longas: rodar em background e redirecionar a saída, que é volumosa.
