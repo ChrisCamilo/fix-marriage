@@ -1,0 +1,8 @@
+# Forca LF em disco mesmo no Windows. Sem isto, o core.autocrlf do Git for
+# Windows reescreveria patches.txt em CRLF, misturando finais de linha na
+# fonte de verdade do projeto.
+* text=auto eol=lf
+
+# Dados append-only: git nunca deve mexer no conteudo destes.
+patches.txt -text
+index.txt   -text

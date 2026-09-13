@@ -1,0 +1,7 @@
+# Vídeos: o original é grande e imutável; os reparados são derivados.
+# A integridade do original é verificada por CHECKSUMS.txt.
+*.mp4
+
+# Binários compilados
+*.exe
+reparador

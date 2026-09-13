@@ -1,0 +1,5 @@
+# Integridade do original. O MP4 fica fora do git (ver .gitignore) por causa do
+# tamanho, mas e a fonte de verdade e NUNCA deve ser modificado. Este hash existe
+# para detectar alteracao acidental ou novo bit-rot no proprio original.
+# Verificar:  sha256sum -c CHECKSUMS.txt
+41cf7fa0c8cfbeb1c8b428f57a04a494bfe536eefeae31f6c58b82a3970298fd *Caio & Lizandra - Making- Caio-Balu.mp4
