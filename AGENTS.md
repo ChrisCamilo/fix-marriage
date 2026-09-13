@@ -99,10 +99,32 @@ Python é o do Windows (`C:\Python314`), chamado como `python`. Dentro de string
 passada com `python -c`, usar caminho `C:/...`; o Git Bash só converte `/c/...`
 quando é argumento.
 
-## 7. Higiene
+## 7. Commits — um por ideia
+
+**Cada commit carrega uma ideia só.** Se a mensagem precisa de "e" para dizer o
+que foi feito, provavelmente são dois commits.
+
+Não misturar num mesmo commit: correção de bug, funcionalidade nova, atualização
+de documento, ajuste de formatação. Mesmo que tenham nascido do mesmo trabalho,
+são ideias distintas e se revisam separado. Em particular, **atualizar o
+`ESTADO.md` com números medidos é commit próprio**, separado do código que
+produziu os números — o código é uma ideia, o resultado é outra.
+
+**Commitar assim que a ideia fecha**, não acumular para o fim da sessão. Se o
+próximo passo é disparar uma corrida de 30 minutos, o código vai commitado
+antes: aí o que se perde num acidente é o resultado, que se refaz, e não o
+código.
+
+Mensagem em português explicando o **porquê**, não o quê — o diff já diz o quê.
+E a descoberta que motivou a mudança entra na mensagem: foi assim que ficou
+registrado que o IDR 1802 tem duas soluções de 1 bit válidas, informação que se
+perderia se o commit dissesse apenas "adiciona modo unico".
+
+## 8. Higiene
 
 - Finais de linha **LF** nos dados. O `.gitattributes` segura isso contra o
   `core.autocrlf`; o `reparador.c` grava com `fopen(...,"ab")` e o
   `ferramentas.py` com `newline="\n"`. Não reverter.
-- Commits em português, explicando o **porquê**.
 - Corridas longas: rodar em background e redirecionar a saída, que é volumosa.
+  Não filtrar a saída com `grep` no redirecionamento — os dados dos outros casos
+  se perdem e a corrida tem que ser refeita.
