@@ -12,6 +12,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
 
@@ -24,10 +26,13 @@ static int n_ix = 0;
 static uint8_t *arq = NULL;      /* copia do MP4 em memoria, com patches */
 static long arq_len = 0;
 
-/* ---- captura do log do decoder ---- */
-static int log_erros = 0;
-static long log_bytestream = -1;
-static int log_ocultados = -1;
+/* ---- captura do log do decoder ----
+ * Por thread: o callback do av_log e global, mas cada worker decodifica no
+ * proprio contexto e o libavcodec (com thread_count=1) chama o callback na
+ * mesma thread que decodifica. */
+static _Thread_local int log_erros = 0;
+static _Thread_local long log_bytestream = -1;
+static _Thread_local int log_ocultados = -1;
 
 static void meu_log(void *avcl, int nivel, const char *fmt, va_list vl) {
     if (nivel > AV_LOG_ERROR) return;
@@ -41,8 +46,9 @@ static void meu_log(void *avcl, int nivel, const char *fmt, va_list vl) {
 }
 static void log_zerar(void) { log_erros = 0; log_bytestream = -1; log_ocultados = -1; }
 
-/* ---- decodificador ---- */
-static AVCodecContext *ctx = NULL;
+/* ---- decodificador ----
+ * `ctx` e por thread; `extradata` e compartilhado e so-leitura apos monta_avcc. */
+static _Thread_local AVCodecContext *ctx = NULL;
 static uint8_t extradata[256];
 static int extradata_len = 0;
 
@@ -220,6 +226,111 @@ static int conta_solucoes(int ancora, int alvo, int ini, int fim,
     return n;
 }
 
+/* ---- enumeracao exaustiva paralela ----
+ * Cada worker tem decoder proprio (_Thread_local) e sua copia mutavel do NAL,
+ * passada via o parametro `alt` que ja existia: nada compartilhado e escrito,
+ * `arq` fica so-leitura. Os candidatos saem de um contador atomico, e nao de
+ * blocos fixos, porque o custo varia muito com a posicao do bit -- um flip no
+ * inicio faz o decoder abortar cedo, no fim faz percorrer o frame inteiro.
+ *
+ * Determinismo: no fim as solucoes sao ordenadas pelo indice do candidato, que
+ * e a mesma ordem da varredura sequencial. O resultado e identico para qualquer
+ * numero de threads, por construcao e nao por sorte de escalonamento. */
+
+typedef struct { int idx, off, bit; } Sol;
+
+typedef struct {
+    int ancora, alvo, ini;
+    Sol *sol; int n, cap;
+    int total;
+} Worker;
+
+static _Atomic int prox_cand;
+static int n_cand;
+
+static void *worker_conta(void *p) {
+    Worker *w = p;
+    int len = ix[w->alvo].size;
+    uint8_t *copia = malloc(len);
+    memcpy(copia, arq + ix[w->alvo].off, len);
+    for (;;) {
+        int k = atomic_fetch_add(&prox_cand, 1);
+        if (k >= n_cand) break;
+        int off = w->ini + k / 8, bit = k % 8;
+        copia[off] ^= (1 << bit);
+        int r = decodifica(w->ancora, w->alvo, copia, len, NULL);
+        copia[off] ^= (1 << bit);
+        if (r == 0) {
+            w->total++;
+            if (w->n < w->cap) { w->sol[w->n].idx = k; w->sol[w->n].off = off;
+                                 w->sol[w->n].bit = bit; w->n++; }
+        }
+    }
+    free(copia);
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
+
+static int cmp_sol(const void *a, const void *b) {
+    int x = ((const Sol *)a)->idx, y = ((const Sol *)b)->idx;
+    return (x > y) - (x < y);
+}
+
+static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
+                              int *offs, int *bits, int max, int *guardados,
+                              int nthr) {
+    if (fim <= ini) return 0;
+    n_cand = (fim - ini) * 8;
+    atomic_store(&prox_cand, 0);
+
+    Worker *w = calloc(nthr, sizeof *w);
+    pthread_t *th = calloc(nthr, sizeof *th);
+    for (int i = 0; i < nthr; i++) {
+        w[i].ancora = ancora; w[i].alvo = alvo; w[i].ini = ini;
+        w[i].cap = 4096; w[i].sol = malloc(w[i].cap * sizeof(Sol));
+        pthread_create(&th[i], NULL, worker_conta, &w[i]);
+    }
+    int total = 0, nsol = 0;
+    for (int i = 0; i < nthr; i++) {
+        pthread_join(th[i], NULL);
+        total += w[i].total; nsol += w[i].n;
+    }
+    Sol *todas = malloc((nsol ? nsol : 1) * sizeof(Sol));
+    int k = 0;
+    for (int i = 0; i < nthr; i++)
+        for (int j = 0; j < w[i].n; j++) todas[k++] = w[i].sol[j];
+    qsort(todas, nsol, sizeof(Sol), cmp_sol);
+    for (int i = 0; i < nsol; i++)
+        if (*guardados < max) {
+            offs[*guardados] = todas[i].off; bits[*guardados] = todas[i].bit;
+            (*guardados)++;
+        }
+    free(todas);
+    for (int i = 0; i < nthr; i++) free(w[i].sol);
+    free(w); free(th);
+    return total;
+}
+
+/* Despacha entre sequencial e paralelo. THREADS=1 cai no codigo sequencial
+ * original, o que torna a comparacao A/B honesta: mesma maquina, mesmos dados. */
+static int conta(int ancora, int alvo, int ini, int fim,
+                 int *offs, int *bits, int max, int *g, int nthr) {
+    return nthr <= 1
+        ? conta_solucoes(ancora, alvo, ini, fim, offs, bits, max, g)
+        : conta_solucoes_par(ancora, alvo, ini, fim, offs, bits, max, g, nthr);
+}
+
+/* Default 6, teto em nucleos-2: corridas duram dezenas de minutos e a maquina
+ * precisa continuar usavel. THREADS=1 usa o caminho sequencial original. */
+static int quantas_threads(void) {
+    const char *s = getenv("NUMBER_OF_PROCESSORS");
+    int nc = s ? atoi(s) : 4; if (nc < 1) nc = 4;
+    int n = getenv("THREADS") ? atoi(getenv("THREADS")) : 6;
+    if (n > nc - 2) n = nc - 2;
+    if (n < 1) n = 1;
+    return n;
+}
+
 /* ---- patches ---- */
 typedef struct { long off; int bit; } Patch;
 static Patch patches[200000];
@@ -382,6 +493,9 @@ int main(int argc, char **argv) {
         int ji = argc > 6 ? atoi(argv[6]) : 256;    /* janela no inicio do NAL  */
         int offs[64], bits[64];
         int n_unico = 0, n_multi = 0, n_zero = 0;
+        int nthr = quantas_threads();
+        fprintf(stderr, "[+] modo unico com %d thread(s)%s\n", nthr,
+                nthr <= 1 ? " (caminho sequencial)" : "");
 
         for (int t = 0; t < n_ix; t++) {
             if (!ix[t].idr) continue;
@@ -394,14 +508,14 @@ int main(int argc, char **argv) {
             int f0  = len < ji ? len : ji;
 
             int g = 0;
-            int n = conta_solucoes(t, t, ini, fim, offs, bits, 64, &g);
+            int n = conta(t, t, ini, fim, offs, bits, 64, &g, nthr);
             /* Faixa do inicio do NAL ainda nao coberta por [ini,fim). Quando o
              * corte e pequeno, ini==0 e o que falta fica DEPOIS de fim. */
             if (ini == 0) {
-                if (f0 > fim) n += conta_solucoes(t, t, fim, f0, offs, bits, 64, &g);
+                if (f0 > fim) n += conta(t, t, fim, f0, offs, bits, 64, &g, nthr);
             } else {
                 int lim = ini < f0 ? ini : f0;
-                if (lim > 0)  n += conta_solucoes(t, t, 0, lim, offs, bits, 64, &g);
+                if (lim > 0)  n += conta(t, t, 0, lim, offs, bits, 64, &g, nthr);
             }
             double seg = (double)(clock() - t0) / CLOCKS_PER_SEC;
 
