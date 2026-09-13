@@ -106,10 +106,58 @@ continuam presentes no ffmpeg 8.1.1.
 
 ## 4. Resultados já obtidos
 
-- **4,17 s** contínuos a partir de 110,74 s — região intacta, zero reparos
-- **1,03 s** a partir de 77,84 s — exigiu 4 reparos de bit válidos
-- **7 keyframes** perfeitos em 1920×1080 (0,0 / 77,8 / 110,7 / 111,7 / 112,4 / 113,3 / 114,3 s)
-- Arquivo remontado decodifica 2808 dos 3445 frames (muitos com ocultação)
+Medido em 2026-09-13 com `report` (ffmpeg 8.1.1), critério rigoroso do
+`reparador.c`: flush do decoder e quadros == pacotes, zero linhas de log.
+Números anteriores a esta data eram estimativas e foram substituídos.
+
+**306 dos 3445 frames** decodificam perfeitos (8,9%). Soltos dariam 10,21 s,
+mas estão espalhados em **53 trechos**:
+
+| trecho | frames | duração | início |
+|---|---|---|---|
+| 3319–3444 | 126 | 4,20 s | 110,74 s |
+| 2333–2359 | 27 | 0,90 s | 77,84 s |
+| 2159–2173 | 15 | 0,50 s | 72,04 s |
+| 0–9 | 10 | 0,33 s | 0,00 s |
+| 1135–1142 | 8 | 0,27 s | 37,87 s |
+| + 48 trechos | 2–5 | < 0,17 s cada | espalhados |
+
+**Consertado pelo trabalho de reparo: ~0,90 s** — só o trecho dos 77,84 s, que
+exigiu os 5 reparos reais. Os 4,20 s do final nunca estiveram quebrados, são
+região intacta. Somando o que dá para assistir (trechos ≥ 0,5 s): **5,61 s**
+de 114,95 s.
+
+**Keyframes: 57 dos 128 IDRs decodificam perfeitos**, espalhados por todo o
+filme (0,0 / 1,0 / 4,3 / 6,2 / 7,2 / 10,8 / 12,7 / 13,7 / 14,6 / 15,2 / 17,2 /
+24,5 / 25,5 / 27,2 / 31,8 / 36,9 / 37,9 / 40,1 / 41,0 / 42,3 / 43,3 / 44,1 /
+47,0 / 49,9 / 52,8 / 56,2 / 59,1 / 61,2 / 62,1 / 65,0 / 66,0 / 67,0 / 67,9 /
+69,1 / 72,0 / 74,0 / 77,8 / 78,8 / 80,7 / 86,2 / 89,1 / 90,1 / 91,0 / 93,5 /
+95,4 / 96,2 / 98,2 / 100,0 / 101,7 / 104,3 / 106,5 / 107,4 / 110,7 / 111,7 /
+112,4 / 113,3 / 114,3 s). A anotação antiga de "7 keyframes" é de antes da
+correção do SPS/PPS.
+
+**Isto tem consequência estratégica.** Todo reparo ancora no IDR anterior
+(`ancora_de`), então um GOP cujo IDR está quebrado é irreparável enquanto o IDR
+não for consertado — os ~27 frames dele estão bloqueados. Há 57 GOPs com âncora
+limpa, prontos para reparo, e **71 GOPs bloqueados pelo próprio IDR**. Consertar
+IDR quebrado rende muito mais que consertar frame comum: destrava o GOP inteiro.
+
+Os 5 reparos reais foram revalidados sob o ffmpeg 8.1.1: `verify` com
+`BASE_N=1338` dá **5 válidos, 0 falsos**.
+
+Rodar `verify` sem `BASE_N` julga também os 1338 base e reporta 1328 "falsos".
+Isso é esperado e não indica problema: o teste pergunta "sem este bit o frame
+quebra e com ele fecha perfeito?", e um frame com outra corrupção no corpo nunca
+fecha, por mais correto que esteja o cabeçalho. Dado útil desse run: **10 dos
+1338 base validam sozinhos** — frames cuja corrupção era só de cabeçalho.
+Reforça a anomalia do início do NAL da seção 6.
+
+**A anotação antiga de "2808 dos 3445 frames" era a contagem do ffmpeg** — a
+métrica que a armadilha 1 da seção 5 desmascara. O número rigoroso é 306.
+
+Que 47 dos 53 trechos tenham apenas 2 a 5 frames diz que o dano é **denso e bem
+distribuído**, não concentrado: o decoder trava, recupera por poucos frames e
+trava de novo, ao longo do filme inteiro.
 
 ## 5. Armadilhas de método — ler antes de medir qualquer coisa
 
