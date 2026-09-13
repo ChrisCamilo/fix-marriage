@@ -200,7 +200,7 @@ static int busca2(int ancora, int alvo, int ini, int fim,
  * Serve para responder se o conserto de 1 bit e unico: se houver mais de uma
  * solucao, o criterio de decodificacao perfeita nao distingue a correta. */
 static int conta_solucoes(int ancora, int alvo, int ini, int fim,
-                          int *offs, int *bits, int max) {
+                          int *offs, int *bits, int max, int *guardados) {
     uint8_t *base = arq + ix[alvo].off;
     int n = 0;
     for (int off = ini; off < fim; off++) {
@@ -209,7 +209,12 @@ static int conta_solucoes(int ancora, int alvo, int ini, int fim,
             base[off] = o ^ (1 << b);
             int r = decodifica(ancora, alvo, NULL, 0, NULL);
             base[off] = o;
-            if (r == 0 && n < max) { offs[n] = off; bits[n] = b; n++; }
+            if (r == 0) {
+                if (*guardados < max) {
+                    offs[*guardados] = off; bits[*guardados] = b; (*guardados)++;
+                }
+                n++;              /* conta todas, mesmo alem do que cabe guardar */
+            }
         }
     }
     return n;
@@ -388,10 +393,16 @@ int main(int argc, char **argv) {
             int fim = corte + 3;  if (fim > len) fim = len;
             int f0  = len < ji ? len : ji;
 
-            int n = conta_solucoes(t, t, ini, fim, offs, bits, 64);
-            if (f0 > ini)                                  /* faixa inicial ainda nao coberta */
-                n += conta_solucoes(t, t, 0, ini < f0 ? ini : f0,
-                                    offs + n, bits + n, 64 - n);
+            int g = 0;
+            int n = conta_solucoes(t, t, ini, fim, offs, bits, 64, &g);
+            /* Faixa do inicio do NAL ainda nao coberta por [ini,fim). Quando o
+             * corte e pequeno, ini==0 e o que falta fica DEPOIS de fim. */
+            if (ini == 0) {
+                if (f0 > fim) n += conta_solucoes(t, t, fim, f0, offs, bits, 64, &g);
+            } else {
+                int lim = ini < f0 ? ini : f0;
+                if (lim > 0)  n += conta_solucoes(t, t, 0, lim, offs, bits, 64, &g);
+            }
             double seg = (double)(clock() - t0) / CLOCKS_PER_SEC;
 
             if (n == 0) n_zero++; else if (n == 1) n_unico++; else n_multi++;
