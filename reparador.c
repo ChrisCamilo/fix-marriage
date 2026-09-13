@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <time.h>
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
 
@@ -156,6 +157,45 @@ static int repara(int alvo, int janela, int *bit_out) {
     return -1;
 }
 
+/* Busca de 1 bit restrita a [ini,fim). Nao grava nada. */
+static int busca1(int ancora, int alvo, int ini, int fim, int *off_out, int *bit_out) {
+    uint8_t *base = arq + ix[alvo].off;
+    for (int off = fim - 1; off >= ini; off--) {
+        uint8_t o = base[off];
+        for (int b = 0; b < 8; b++) {
+            base[off] = o ^ (1 << b);
+            int r = decodifica(ancora, alvo, NULL, 0, NULL);
+            base[off] = o;
+            if (r == 0) { *off_out = off; *bit_out = b; return 1; }
+        }
+    }
+    return 0;
+}
+
+/* Busca de 2 bits em [ini,fim). Custo C(n,2) decodificacoes: manter estreita. */
+static int busca2(int ancora, int alvo, int ini, int fim,
+                  int *o1, int *b1, int *o2, int *b2) {
+    uint8_t *base = arq + ix[alvo].off;
+    int nb = (fim - ini) * 8;
+    for (int p = 0; p < nb; p++) {
+        int f1 = ini + p / 8, t1 = p % 8;
+        base[f1] ^= (1 << t1);
+        for (int q = p + 1; q < nb; q++) {
+            int f2 = ini + q / 8, t2 = q % 8;
+            base[f2] ^= (1 << t2);
+            int r = decodifica(ancora, alvo, NULL, 0, NULL);
+            base[f2] ^= (1 << t2);
+            if (r == 0) {
+                base[f1] ^= (1 << t1);
+                *o1 = f1; *b1 = t1; *o2 = f2; *b2 = t2;
+                return 1;
+            }
+        }
+        base[f1] ^= (1 << t1);
+    }
+    return 0;
+}
+
 /* ---- patches ---- */
 typedef struct { long off; int bit; } Patch;
 static Patch patches[200000];
@@ -185,7 +225,9 @@ int main(int argc, char **argv) {
           "  modos:\n"
           "    repair <ini> <fim> [janela]   conserta os frames do intervalo\n"
           "    verify                        revalida cada patch, um a um\n"
-          "    report                        estado de cada frame\n", argv[0]);
+          "    report                        estado de cada frame\n"
+          "    idr [j1] [j2] [max]           diagnostica IDRs quebrados (nao grava):\n"
+          "                                  1 bit no corte, 1 bit no inicio, 2 bits\n", argv[0]);
         return 1;
     }
     const char *f_mp4 = argv[1], *f_ix = argv[2], *f_pt = argv[3];
@@ -257,6 +299,58 @@ int main(int argc, char **argv) {
             }
         }
         printf("\n[+] patches validos: %d | falsos: %d\n", bons, falsos);
+    }
+    /* Diagnostico dos IDRs quebrados. Um IDR e sua propria ancora, entao cada
+     * teste custa 1 decodificacao. Nao grava patches: so mede. */
+    else if (!strcmp(modo, "idr")) {
+        int j1  = argc > 5 ? atoi(argv[5]) : 4096;   /* janela da busca de 1 bit */
+        int j2  = argc > 6 ? atoi(argv[6]) : 24;     /* janela da busca de 2 bits */
+        int max = argc > 7 ? atoi(argv[7]) : 0;      /* 0 = todos */
+        int n_um = 0, n_ini = 0, n_dois = 0, n_sem = 0, n_ok = 0, feitos = 0;
+
+        for (int t = 0; t < n_ix; t++) {
+            if (!ix[t].idr) continue;
+            if (decodifica(t, t, NULL, 0, NULL) == 0) { n_ok++; continue; }
+            if (max && feitos >= max) break;
+            feitos++;
+
+            int len = ix[t].size, corte = acha_corte(t, t);
+            clock_t t0 = clock();
+            int off, bit, o1, b1, o2, b2;
+            const char *via = NULL; char det[128];
+
+            int ini = corte - j1; if (ini < 0) ini = 0;
+            int fim = corte + 3;  if (fim > len) fim = len;
+            if (busca1(t, t, ini, fim, &off, &bit)) {
+                via = "1bit@corte"; snprintf(det, sizeof det, "off %d bit %d", off, bit);
+            } else {
+                /* Melhoria 1: o inicio do NAL. Quando o corte cai antes do byte
+                 * ~64 a janela acima colapsa, entao esta busca e a unica real. */
+                int f0 = len < 256 ? len : 256;
+                int coberto = (ini == 0 && fim >= f0);
+                if (!coberto && busca1(t, t, 0, f0, &off, &bit)) {
+                    via = "1bit@inicio"; snprintf(det, sizeof det, "off %d bit %d", off, bit);
+                } else {
+                    int i2 = corte - j2; if (i2 < 0) i2 = 0;
+                    int f2 = corte + 3;  if (f2 > len) f2 = len;
+                    if (busca2(t, t, i2, f2, &o1, &b1, &o2, &b2)) {
+                        via = "2bit@corte";
+                        snprintf(det, sizeof det, "off %d bit %d + off %d bit %d", o1, b1, o2, b2);
+                    }
+                }
+            }
+            double seg = (double)(clock() - t0) / CLOCKS_PER_SEC;
+            if (!via)                          { n_sem++;  via = "SEM SOLUCAO"; det[0] = 0; }
+            else if (!strcmp(via, "1bit@corte"))  n_um++;
+            else if (!strcmp(via, "1bit@inicio")) n_ini++;
+            else                                  n_dois++;
+            printf("IDR %5d (%7dB, corte %6d): %-11s %-34s [%.1fs]\n",
+                   t, len, corte, via, det, seg);
+            fflush(stdout);
+        }
+        printf("\n[+] IDRs ja bons: %d | testados: %d\n"
+               "    1 bit no corte: %d | 1 bit no inicio: %d | 2 bits: %d | sem solucao: %d\n",
+               n_ok, feitos, n_um, n_ini, n_dois, n_sem);
     }
     else {
         int bons = 0;
