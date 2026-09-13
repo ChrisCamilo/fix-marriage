@@ -196,6 +196,25 @@ static int busca2(int ancora, int alvo, int ini, int fim,
     return 0;
 }
 
+/* Varre [ini,fim) SEM parar na primeira solucao e acumula todas.
+ * Serve para responder se o conserto de 1 bit e unico: se houver mais de uma
+ * solucao, o criterio de decodificacao perfeita nao distingue a correta. */
+static int conta_solucoes(int ancora, int alvo, int ini, int fim,
+                          int *offs, int *bits, int max) {
+    uint8_t *base = arq + ix[alvo].off;
+    int n = 0;
+    for (int off = ini; off < fim; off++) {
+        uint8_t o = base[off];
+        for (int b = 0; b < 8; b++) {
+            base[off] = o ^ (1 << b);
+            int r = decodifica(ancora, alvo, NULL, 0, NULL);
+            base[off] = o;
+            if (r == 0 && n < max) { offs[n] = off; bits[n] = b; n++; }
+        }
+    }
+    return n;
+}
+
 /* ---- patches ---- */
 typedef struct { long off; int bit; } Patch;
 static Patch patches[200000];
@@ -351,6 +370,38 @@ int main(int argc, char **argv) {
         printf("\n[+] IDRs ja bons: %d | testados: %d\n"
                "    1 bit no corte: %d | 1 bit no inicio: %d | 2 bits: %d | sem solucao: %d\n",
                n_ok, feitos, n_um, n_ini, n_dois, n_sem);
+    }
+    /* Conta TODAS as solucoes de 1 bit por IDR quebrado. Nao grava. */
+    else if (!strcmp(modo, "unico")) {
+        int jc = argc > 5 ? atoi(argv[5]) : 1024;   /* janela em volta do corte */
+        int ji = argc > 6 ? atoi(argv[6]) : 256;    /* janela no inicio do NAL  */
+        int offs[64], bits[64];
+        int n_unico = 0, n_multi = 0, n_zero = 0;
+
+        for (int t = 0; t < n_ix; t++) {
+            if (!ix[t].idr) continue;
+            if (decodifica(t, t, NULL, 0, NULL) == 0) continue;
+
+            int len = ix[t].size, corte = acha_corte(t, t);
+            clock_t t0 = clock();
+            int ini = corte - jc; if (ini < 0) ini = 0;
+            int fim = corte + 3;  if (fim > len) fim = len;
+            int f0  = len < ji ? len : ji;
+
+            int n = conta_solucoes(t, t, ini, fim, offs, bits, 64);
+            if (f0 > ini)                                  /* faixa inicial ainda nao coberta */
+                n += conta_solucoes(t, t, 0, ini < f0 ? ini : f0,
+                                    offs + n, bits + n, 64 - n);
+            double seg = (double)(clock() - t0) / CLOCKS_PER_SEC;
+
+            if (n == 0) n_zero++; else if (n == 1) n_unico++; else n_multi++;
+            printf("IDR %5d (corte %6d): %d solucao(oes)", t, corte, n);
+            for (int k = 0; k < n && k < 8; k++) printf("  %d/%d", offs[k], bits[k]);
+            printf("   [%.1fs]\n", seg);
+            fflush(stdout);
+        }
+        printf("\n[+] unica: %d | multipla: %d | nenhuma: %d\n",
+               n_unico, n_multi, n_zero);
     }
     else {
         int bons = 0;
