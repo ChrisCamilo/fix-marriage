@@ -35,33 +35,74 @@ Ordem de exibição confirmada por duas fontes independentes (ctts × POC).
 
 ## 2. Arquivos que importam
 
+Tudo mora na raiz do projeto — **não existe subdiretório `rep/`**. O nome do
+vídeo tem espaços e `&`, então precisa vir sempre entre aspas na linha de comando.
+
 | arquivo | papel |
 |---|---|
-| `orig.mp4` | original intocado — **fonte de verdade, nunca modificar** |
-| `rep/patches.txt` | lista `offset bit`, append-only — a outra fonte de verdade |
-| `rep/index.txt` | índice `i offset size idr` das 3445 amostras |
+| `Caio & Lizandra - Making- Caio-Balu.mp4` | original intocado — **fonte de verdade, nunca modificar** |
+| `patches.txt` | lista `offset bit`, append-only — a outra fonte de verdade |
+| `index.txt` | índice `i offset size idr` das 3445 amostras |
 | `reparador.c` | reparador em C com libavcodec |
 | `ferramentas.py` | gera índice, patches base, e remonta o MP4 |
+| `CHECKSUMS.txt` | SHA-256 do original, para detectar novo bit-rot nele |
 
-Os 1338 primeiros patches são determinísticos (prefixos de NAL e cabeçalhos).
-Os seguintes são reparos reais. Use `BASE_N=1338` no modo `verify`.
+O projeto é um repositório git **local e privado, sem remoto**. Isto é material
+pessoal de família: não publicar em lugar nenhum. O `.mp4` e o binário compilado
+ficam fora do versionamento (ver `.gitignore`); a integridade do original é
+conferida com `sha256sum -c CHECKSUMS.txt`.
+
+Os 1338 primeiros patches são determinísticos (prefixos de NAL e cabeçalhos), e
+isto foi reconferido: regerar com `base` reproduz exatamente os mesmos 1338, byte
+a byte. Os seguintes são reparos reais — hoje são apenas **5**, todos no trecho
+dos 77,5–77,8 s. Use `BASE_N=1338` no modo `verify`.
 
 ## 3. Comandos
 
+Ambiente: **Windows com MSYS2 UCRT64** (não é Linux, não há `apt-get`). Toda
+sessão começa exportando o PATH, senão o `gcc`, o `pkg-config` e as DLLs do
+ffmpeg não são encontrados:
+
 ```bash
-apt-get install -y libavcodec-dev libavformat-dev libavutil-dev
-gcc -O2 -o reparador reparador.c $(pkg-config --cflags --libs libavcodec libavutil)
+export PATH=/c/msys64/ucrt64/bin:$PATH
+MP4="Caio & Lizandra - Making- Caio-Balu.mp4"
+```
 
-python3 ferramentas.py base  orig.mp4 rep/patches.txt
-python3 ferramentas.py index orig.mp4 rep/index.txt rep/patches.txt
+Toolchain já instalado e validado: **gcc 16.1.0**, **ffmpeg 8.1.1 /
+libavcodec 62**. Se precisar reinstalar, no shell UCRT64:
 
-./reparador orig.mp4 rep/index.txt rep/patches.txt repair 0 500 4096
-BASE_N=1338 ./reparador orig.mp4 rep/index.txt rep/patches.txt verify
-python3 ferramentas.py build orig.mp4 rep/patches.txt rep/reparado.mp4
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-ffmpeg mingw-w64-ucrt-x86_64-pkgconf
+```
+
+O Python é o do Windows (3.14, em `C:\Python314`), invocado como `python` — não
+existe `python3` no UCRT64 a menos que instalado à parte.
+
+```bash
+gcc -O2 -o reparador.exe reparador.c $(pkg-config --cflags --libs libavcodec libavutil)
+
+python ferramentas.py base  "$MP4" patches.txt   # só na 1a vez; hoje aborta (ver abaixo)
+python ferramentas.py index "$MP4" index.txt patches.txt
+
+./reparador.exe "$MP4" index.txt patches.txt repair 0 500 4096
+BASE_N=1338 ./reparador.exe "$MP4" index.txt patches.txt verify
+python ferramentas.py build "$MP4" patches.txt reparado.mp4
 ```
 
 `patches.txt` é carregado inteiro na inicialização: o processo é retomável,
 idempotente (pula frames já bons) e incremental por faixa.
+
+**O modo `base` recusa sobrescrever um `patches.txt` existente.** Ele abria a
+saída com `"w"` e truncava, então rodar a linha acima apagaria os reparos reais.
+Para regerar do zero, mova o arquivo atual para outro nome antes.
+
+**Por que UCRT64 e não MINGW64:** o `reparador.c` localiza o byte corrompido
+lendo as mensagens de erro do decoder, e o ffmpeg emite o resto do bytestream
+com `%td`. A UCRT interpreta `%td`; a msvcrt antiga do MINGW64 não, e a
+heurística falharia **em silêncio**, caindo na busca binária — muito mais lenta,
+sem nenhum aviso. Conferido no `avcodec-62.dll`: as duas strings que o reparador
+consome (`error while decoding MB %d %d, bytestream %td` e `concealing %d DC`)
+continuam presentes no ffmpeg 8.1.1.
 
 ## 4. Resultados já obtidos
 
