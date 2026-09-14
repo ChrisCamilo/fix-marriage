@@ -535,6 +535,65 @@ adianta (o decoder nem chega lá), e a faixa antes do corte está varrida. Sem a
 tarja, o resultado teria sido "24 soluções, escolha uma" — e qualquer escolha
 destravaria 28 frames com a tarja inferior em ruína.
 
+### A faixa de corte, medida nos 121 IDRs quebrados (2026-09-14)
+
+O modo `cortes` levanta, para cada IDR que não decodifica, onde o decoder para
+de consumir. Resultado:
+
+| | |
+|---|---|
+| corte mínimo | **5 bytes** |
+| corte mediano | **11.538** — 7,6% do NAL |
+| corte máximo | 60.787 |
+| **39 dos 121** | param antes do byte **1.000** |
+
+**O dano é cedo.** Isso casa com a anomalia já registrada na seção 6: 20% dos
+prefixos de NAL e 17% dos slice headers corrompidos contra interior quase limpo.
+
+#### A janela da seção 6 erra o alvo em 121 de 121
+
+A seção 6 varreu `[corte-1024, corte+1024]`. A armadilha 9 mediu, com erro
+injetado em posição conhecida, que o bit fica **~2600 bytes antes** do corte.
+A janela não alcança essa distância em **nenhum** dos 121 IDRs.
+
+Confirmado na prática no IDR 2362: a janela da seção 6 achou **1** solução; a
+faixa `[5, corte+1024]` achou **24**. Logo, a tabela da seção 6 mede outra coisa
+que não o que diz medir:
+
+| a seção 6 diz | provavelmente é |
+|---|---|
+| 26 IDRs "sem solução de 1 bit" | o bit estava fora da janela |
+| 2 IDRs "com solução única" | única *naquela janela* |
+| 36 IDRs "com 100+ soluções" | esses sim, ambíguos de verdade |
+
+**A faixa certa é `[5, corte+folga]`**, e ela é barata porque o corte é cedo: os
+121 somam 13,45 milhões de candidatos, 1,5 a 6,5 h. O modo `cortes` a calcula.
+
+#### Os 39 IDRs de corte precoce: varridos, e nenhum é reparável com 1 bit
+
+337 mil candidatos, 2% do total. Resultado:
+
+| soluções de 1 bit | IDRs |
+|---|---|
+| 0 | **38** |
+| 1 | 1 (o IDR 0) |
+
+A única solução, no IDR 0 em `rel 154`, **a tarja reprovou**: quadro 16–18 com
+tarja em 18,248 e desvio 0,432, onde todo frame bom tem 16,00 e desvio ≤ 0,16.
+Mesmíssimo padrão do candidato do 2362 — topo certo, base errada.
+
+**Conclusão: IDR cujo decoder para nos primeiros 1.000 bytes não se conserta com
+1 bit.** São 38 de 39 sem nenhuma solução, o que é o oposto do problema de
+ambiguidade — ali não há o que escolher, há o que não existe. Provavelmente dano
+no prefixo ou no slice header exigindo vários bits.
+
+#### Placar da tarja até agora: 26 nãos, nenhum sim
+
+24 candidatos do IDR 2362, 1 do IDR 0, 1 do teste inicial. Ela demonstrou que
+sabe rejeitar e que discrimina as duas metades do quadro (topo sai 16,000 em
+quase todos, a base sai destruída). **Ainda falta um caso em que ela aprove** —
+sem isso é um filtro excelente, não um método de reparo.
+
 ### Ainda em aberto
 
 - **Anomalia do início do NAL:** 20% dos prefixos e 17% dos slice headers

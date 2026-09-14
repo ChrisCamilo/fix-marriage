@@ -1356,6 +1356,29 @@ int main(int argc, char **argv) {
         }
         free(campos);
     }
+    else if (!strcmp(modo, "cortes")) {
+        /* Lista o ponto de corte de todo IDR que nao decodifica. E o que define
+         * a faixa a varrer: a armadilha 9 mede o bit ~2600 bytes ANTES do corte,
+         * entao a janela util e [5, corte+folga] -- e nao a de +-1024 em volta do
+         * corte que a secao 6 usou, que erra o alvo quando o corte e cedo. */
+        int folga = argc > 5 ? atoi(argv[5]) : 1024;
+        cap_buf = malloc((size_t)1920 * 1088);
+        long total = 0; int n = 0;
+        printf("idr tamanho corte fim_faixa candidatos\n");
+        for (int t = 0; t < n_ix; t++) {
+            if (!ix[t].idr) continue;
+            if (decodifica(t, t, NULL, 0, NULL) == 0) continue;   /* ja decodifica */
+            int c = acha_consumo(t);
+            int fim = c + folga; if (fim > ix[t].size) fim = ix[t].size;
+            long cand = (long)(fim - 5) * 8;
+            printf("%d %d %d %d %ld\n", t, ix[t].size, c, fim, cand);
+            fflush(stdout);
+            total += cand; n++;
+        }
+        fprintf(stderr, "[+] %d IDRs quebrados, %ld candidatos na soma das faixas\n",
+                n, total);
+        free(cap_buf); cap_buf = NULL;
+    }
     else if (!strcmp(modo, "corte")) {
         int alvo = atoi(argv[5]);
         cap_buf = malloc((size_t)1920 * 1088);
