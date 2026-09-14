@@ -98,10 +98,11 @@ O casamento do quadro por `pts` e a exigência de imagem mudaram os números. N�
 | `propagado` | **0** | agora reprovam no critério, viram `quebrado` |
 | `quebrado` | 3257 | |
 
-**Depois dos reparos de 3435, 3439 e 3442: 151 frames com imagem confiável**
-(5,04 s), e o `verify` dá `5 válidos, 4 falsos`.
+**Depois dos seis reparos de 2026-09-14** — frames 2360, 2361, 3435, 3439 e 3442
+— **153 frames com imagem confiável** (5,11 s). O `verify` dá `7 válidos, 4
+falsos, 31 determinísticos pulados`.
 
-O número bruto do modo `estado` é 191, mas **40 deles não valem**: estão em GOPs
+O número bruto do modo `estado` é 193, mas **40 deles não valem**: estão em GOPs
 cujo IDR não decodifica, e saem em listras verticais mesmo passando no critério.
 Ver armadilha 12 do `ARMADILHAS.md`. Contagem honesta é sempre com o filtro do IDR.
 
@@ -112,12 +113,32 @@ ordenando por `poc`:
 | frames | duração | em decodificação |
 |---|---|---|
 | 108 | **3,60 s** | 3319–3426 |
-| 26 | **0,87 s** | 2333–2359 |
+| **29** | **0,97 s** | **2333–2361 — GOP COMPLETO** |
 | 10 | **0,33 s** | 3431–3442 |
 
-**4,80 s assistíveis** (era 4,54 s). O trecho de 10 frames é obra dos três
-reparos: antes morria em 4 quadros, porque o 3435 quebrado interrompia a
-exibição logo depois do 3436.
+**4,90 s assistíveis** (eram 4,54 s no começo do dia).
+
+### Cinco GOPs completos: 2333, 3319, 3348, 3368, 3397
+
+O **2333 fechou em 29 de 29** com os reparos dos frames 2360 e 2361, e é o
+primeiro GOP íntegro fora do bloco final — 0,97 s de cena real, o noivo diante
+do espelho ajustando a gravata.
+
+Os 29 cabeçalhos do GOP são agora **aritmeticamente impecáveis**: zero violações
+da regra da norma, com `frame_num` incrementando só nas referências e `poc_lsb`
+subindo de 2 em 2. Os dois frames reparados caem exatamente nos valores
+previstos:
+
+```
+2359  ref_idc 0   frame_num 8   poc_lsb 50
+2360  ref_idc 0   frame_num 8   poc_lsb 52   <- reparado
+2361  ref_idc 0   frame_num 8   poc_lsb 54   <- reparado
+2358  ref_idc 2   frame_num 7   poc_lsb 56
+```
+
+Isso é **confirmação independente**: o bit do 2360 foi achado por varredura
+exaustiva e escolhido pelos juízes de imagem, sem a aritmética participar da
+decisão — e o resultado pousou no valor que ela prevê.
 
 O final do filme em ordem de exibição, com `*` marcando quebrado:
 
