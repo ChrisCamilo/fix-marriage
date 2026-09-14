@@ -262,6 +262,10 @@ static int acha_consumo(int alvo) {
     uint8_t *base = arq + ix[alvo].off;
     uint8_t *copia = malloc(len);
     memcpy(copia, base, len);
+    /* O buffer tem que existir ANTES de desligar exigir_imagem: e ele que
+     * habilita a captura, e sem captura o hash nunca muda e a busca binaria
+     * colapsa no limite inferior. */
+    if (!cap_buf) cap_buf = malloc((size_t)1920 * 1088);
     int salvo = exigir_imagem; exigir_imagem = 0;   /* aqui so importa a imagem */
     decodifica(alvo, alvo, NULL, 0, NULL);
     uint64_t h_ref = cap_hash;
