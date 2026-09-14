@@ -564,6 +564,35 @@ static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
     return total;
 }
 
+/* ---- modo testa: prova candidatos de cabecalho no decoder ----
+ * Recebe uma lista de flips propostos (um por linha, com o frame alvo) e diz
+ * quais fazem o frame passar no criterio rigoroso. E o unico juiz que vale: o
+ * cabecalho consistente prova que o bit estava errado, nao que era o UNICO
+ * errado. Paralelo porque sao centenas de candidatos independentes. */
+typedef struct { int alvo; long off; int bit; int ok; } Cand;
+static Cand *cands = NULL;
+static int n_cands = 0;
+
+static void *worker_testa(void *p) {
+    (void)p;
+    cap_buf = malloc((size_t)1920 * 1088);
+    for (;;) {
+        int k = atomic_fetch_add(&prox_cand, 1);
+        if (k >= n_cands) break;
+        int t = cands[k].alvo, len = ix[t].size;
+        long rel = cands[k].off - ix[t].off;
+        if (rel < 0 || rel >= len) { cands[k].ok = -1; continue; }
+        uint8_t *copia = malloc(len);
+        memcpy(copia, arq + ix[t].off, len);
+        copia[rel] ^= (1 << cands[k].bit);
+        cands[k].ok = decodifica(ancora_de(t), t, copia, len, NULL) == 0;
+        free(copia);
+    }
+    free(cap_buf); cap_buf = NULL;
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
+
 /* O "contexto aquecido" -- reaproveitar um mesmo contexto entre candidatos,
  * porque decodificar frame nao-referencia nao suja o buffer de referencias --
  * foi implementado aqui, medido e DESCARTADO em 2026-09-14. Dava 31x de ganho e
@@ -1108,6 +1137,36 @@ int main(int argc, char **argv) {
         free(cap_buf); cap_buf = NULL;
     }
     /* Despeja o plano Y de um frame como PGM, para inspecao visual. */
+    else if (!strcmp(modo, "testa")) {
+        FILE *f = fopen(argv[5], "r");
+        if (!f) { fprintf(stderr, "nao abriu %s%s", argv[5], "\n"); return 1; }
+        cands = calloc(100000, sizeof *cands);
+        int t, gop, pos; char campo[32]; int visto, esp; long off; int bit; char est[32];
+        while (fscanf(f, "%d %d %d %31s %d %d %ld %d %31s",
+                      &t, &gop, &pos, campo, &visto, &esp, &off, &bit, est) == 9) {
+            cands[n_cands].alvo = t; cands[n_cands].off = off;
+            cands[n_cands].bit = bit; cands[n_cands].ok = 0; n_cands++;
+        }
+        fclose(f);
+        int nthr = quantas_threads();
+        printf("testando %d candidatos com %d threads%s", n_cands, nthr, "\n");
+        atomic_store(&prox_cand, 0);
+        pthread_t *th = calloc(nthr, sizeof *th);
+        for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_testa, NULL);
+        for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
+        free(th);
+        int bons = 0;
+        for (int k = 0; k < n_cands; k++) {
+            if (cands[k].ok == 1) {
+                printf("PASSA frame %d off %ld bit %d%s",
+                       cands[k].alvo, cands[k].off, cands[k].bit, "\n");
+                bons++;
+            }
+        }
+        printf("%s[+] %d de %d candidatos fazem o frame decodificar limpo%s",
+               "\n", bons, n_cands, "\n");
+        free(cands);
+    }
     else if (!strcmp(modo, "dump")) {
         int alvo = atoi(argv[5]);
         const char *saida = argv[6];
