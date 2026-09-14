@@ -732,6 +732,11 @@ int main(int argc, char **argv) {
           "                                  1 bit no corte, 1 bit no inicio, 2 bits\n", argv[0]);
         return 1;
     }
+    /* Sem buffer: corridas duram dezenas de minutos e a saida vai para arquivo,
+     * onde stdout bufferiza em blocos. Sem isto o progresso so aparece no fim e
+     * nao da para acompanhar nem estimar quanto falta. */
+    setvbuf(stdout, NULL, _IONBF, 0);
+
     const char *f_mp4 = argv[1], *f_ix = argv[2], *f_pt = argv[3];
     const char *modo = argc > 4 ? argv[4] : "report";
 
