@@ -324,6 +324,37 @@ header, não coincidência. Isso reforça a anomalia abaixo.
   inversão errada em dados de resíduo produz macroblocos destoantes mesmo
   decodificando limpo. Comparar o keyframe candidato com vizinhos temporais
   discriminaria o que a sintaxe não discrimina.
+- **Redundância de cabeçalho como critério CERTO** (2026-09-14, promissor). Todo
+  critério tentado até aqui é proxy — "isto parece imagem?" — e a busca aprende a
+  burlar. Os campos do slice header não são proxy: eles são **previsíveis pelos
+  vizinhos**, então erro neles se prova por aritmética, não por aparência.
+
+  Medido nos frames 2354–2369 (parser de exp-golomb em Python, SPS diz
+  `log2_max_frame_num=8`, `poc_type=0`, `log2_max_poc_lsb=8`):
+
+  | frame | tipo | `frame_num` | `poc_lsb` | |
+  |---|---|---|---|---|
+  | 2358 | P ref | 7 | 56 | |
+  | 2359 | B | 8 | 50 | ok |
+  | 2360 | B | 8 | 52 | **cabeçalho perfeito**, não decodifica |
+  | 2361 | B | **136** | 54 | `frame_num` errado por **1 bit** |
+  | 2362 | IDR | 0 | 0 | |
+  | 2364 | ? | 232 | 137 | `slice_type` 63, cabeçalho destruído |
+
+  `8 = 0b00001000`, `136 = 0b10001000`: bit alto do campo. Localizado em
+  **offset 77528961 bit 0** e conferido por releitura (136 → 8, `poc_lsb` intacto
+  em 54). **Não entrou no `patches.txt`**: corrigi-lo não faz o 2361 decodificar,
+  então não passa no critério da seção 3. É reparo certo e insuficiente — o 2361
+  tem dano também nos dados da slice.
+
+  Os dois resultados que importam para a estratégia:
+  - o **2360 tem cabeçalho impecável**, então o dano dele está nos dados da
+    slice, não no header — buscar bit no início do NAL não vai achar nada ali;
+  - dá para **varrer os 3445 frames** conferindo `frame_num` e `poc_lsb` contra
+    a progressão dos vizinhos e listar todo cabeçalho inconsistente. É barato
+    (parser em Python, sem decodificar) e devolve reparos com prova aritmética.
+    Ainda não feito.
+
 - **Densidade real:** todas as estimativas que circulei (27.000 reparos, depois
   2.100) foram medidas com PPS errado ou métrica furada. Refazer do zero.
 
