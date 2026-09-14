@@ -587,12 +587,40 @@ Mesmíssimo padrão do candidato do 2362 — topo certo, base errada.
 ambiguidade — ali não há o que escolher, há o que não existe. Provavelmente dano
 no prefixo ou no slice header exigindo vários bits.
 
-#### Placar da tarja até agora: 26 nãos, nenhum sim
+#### Calibração da tarja contra quadros genuínos — e ela aprova
 
-24 candidatos do IDR 2362, 1 do IDR 0, 1 do teste inicial. Ela demonstrou que
-sabe rejeitar e que discrimina as duas metades do quadro (topo sai 16,000 em
-quase todos, a base sai destruída). **Ainda falta um caso em que ela aprove** —
-sem isso é um filtro excelente, não um método de reparo.
+Testado no GOP 3426, o último com quadros intactos, e depois em toda a amostra
+disponível. **O limiar que eu vinha usando estava errado**: `média 16,00 ± 0,10,
+desvio < 0,25` reprovava **3 de 10 quadros genuínos** daquele GOP.
+
+Calibração correta, em **144 quadros genuínos** (trechos 2333–2361 e 3319–3444,
+já com o filtro da armadilha 12 aplicado — sem ele um quadro de GOP quebrado
+entrou na amostra com tarja média 183 e arruinou a estatística):
+
+| | |
+|---|---|
+| tarja média | 15,984 a **16,188** (mediana 16,000) |
+| tarja desvio | 0,008 a **0,408** (mediana 0,119) |
+| topo média | 15,991 a 16,015 |
+
+**Limiar que aceita 100% dos genuínos: `|média−16| ≤ 0,19` e `desvio ≤ 0,41`.**
+
+Afrouxar não enfraquece nada, porque as rejeições nunca foram apertadas:
+
+| caso | tarja média | erro / tolerância |
+|---|---|---|
+| candidato do IDR 0 | 18,248 | **12x** |
+| candidato rel 75 do 2362 | 19,248 | 17x |
+| 23 candidatos do 2362 | 90 a 158 | 390x a **750x** |
+
+**Correção: o reparo do frame 3435 NÃO tem defeito de tarja.** Eu havia
+registrado isso no commit e aqui. Ele dá 16,186 / 0,409 e os vizinhos genuínos
+3436 e 3438 dão 16,188 / 0,395 e 16,180 / 0,408 — indistinguível. O erro foi
+calibrar o limiar contra o miolo do filme, onde a tarja é limpa, e aplicá-lo na
+cauda do fade, onde o encoder gasta menos bits e ela fica ruidosa.
+
+Os outros dois reparos ficam no limite: 3439 e 3442 dão desvio 0,468 contra
+0,408 do pior genuíno — 15% acima, marginal mas não absurdo.
 
 ### Ainda em aberto
 
