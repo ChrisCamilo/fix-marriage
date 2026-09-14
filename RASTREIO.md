@@ -66,6 +66,38 @@ escolhida por um número sem significado. Resultado retirado.
 O que sobra de válido: o **IDR 0** (2.302 B, `[5,1443)`, 11.504 candidatos) tem
 **1 solução** em `rel 154`, reprovada pela tarja — quadro 16–18 com tarja 18,248.
 
+## Patches determinísticos — provados por invariante, não por busca
+
+`deterministicos.txt` lista patches que entram por **prova**, não por
+decodificação: o cabeçalho de um IDR só pode começar com `65 88 80`, porque é a
+única codificação de `first_mb=0, slice_type=7, pps_id=0, frame_num=0` — quatro
+campos que um IDR não pode ter diferentes. Medido nos 7 IDRs que decodificam:
+os três bytes são idênticos em todos.
+
+Dos 121 IDRs quebrados, **104 já têm o prefixo canônico** e 17 divergem:
+
+| bits fora do canônico | IDRs |
+|---|---|
+| 1 | 11 |
+| 2 | 3 |
+| 4 | 2 |
+| 6 | 1 |
+
+**31 bits anexados** ao `patches.txt` (linhas 1348–1378). **Nenhum dos 17 passa a
+decodificar** — o dano vai além do prefixo. O ganho é outro: toda varredura
+futura nesses 17 parte de um cabeçalho correto, em vez de procurar bit num NAL
+que já tem bits provadamente errados.
+
+O `verify` pula esses patches, senão eles apareceriam como falsos e afogariam o
+sinal. Saída esperada hoje:
+
+```
+[+] patches validos: 5 | falsos: 4 | deterministicos pulados: 31
+```
+
+Os 4 falsos são os antigos dos frames 2362–2366, **insuficientes e não errados**
+— ver `INVESTIGACOES.md`.
+
 ## Varredura de cabeçalho
 
 Não é força bruta: o `cabecalhos.py` deduz o valor certo por aritmética.

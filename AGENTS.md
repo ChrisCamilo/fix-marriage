@@ -47,7 +47,9 @@ conclusões falsas neste projeto. As duas que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-`0 falsos`. Rodar `verify` **sem** `BASE_N` acusa ~1328 falsos por construção,
+hoje `5 válidos, 4 falsos, 31 determinísticos pulados` — os 4 falsos são
+insuficientes, não errados, e estão explicados no `INVESTIGACOES.md`. **Qualquer
+falso além desses 4 é problema.** Rodar `verify` **sem** `BASE_N` acusa ~1328 falsos por construção,
 o que é esperado e não é bug — veja a `RESULTADOS.md`.
 
 ## 4. Manter a documentação viva

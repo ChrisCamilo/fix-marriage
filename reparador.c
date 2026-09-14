@@ -985,11 +985,35 @@ int main(int argc, char **argv) {
                jaok, ok, duro);
     }
     else if (!strcmp(modo, "verify")) {
-        /* testa cada patch isoladamente: sem ele o frame quebra? com ele fecha? */
-        int bons = 0, falsos = 0;
+        /* testa cada patch isoladamente: sem ele o frame quebra? com ele fecha?
+         *
+         * Pula os DETERMINISTICOS, listados em deterministicos.txt. Sao patches
+         * provados por invariante do encoder, nao por busca: o cabecalho de um
+         * IDR so pode comecar com 65 88 80, porque e a unica codificacao de
+         * first_mb=0, slice_type=7, pps_id=0 e frame_num=0. Eles nao fazem o
+         * frame decodificar sozinhos, entao apareceriam como falsos e afogariam
+         * o sinal -- que e justamente "0 falsos" querer dizer "nenhum patch
+         * ruim". Foram 31 de uma vez, contra 4 falsos de verdade. */
+        int bons = 0, falsos = 0, pulados = 0;
         int base_n = getenv("BASE_N") ? atoi(getenv("BASE_N")) : 0;
+        static long det_off[4096]; static int det_bit[4096]; int n_det = 0;
+        {
+            FILE *fd = fopen(getenv("DET") ? getenv("DET") : "deterministicos.txt", "r");
+            if (fd) {
+                long o; int b;
+                while (n_det < 4096 && fscanf(fd, "%ld %d", &o, &b) == 2) {
+                    det_off[n_det] = o; det_bit[n_det] = b; n_det++;
+                }
+                fclose(fd);
+                fprintf(stderr, "[+] %d patches deterministicos serao pulados\n", n_det);
+            }
+        }
         for (int k = base_n; k < n_patch; k++) {
             long o = patches[k].off;
+            int det = 0;
+            for (int j = 0; j < n_det; j++)
+                if (det_off[j] == o && det_bit[j] == patches[k].bit) { det = 1; break; }
+            if (det) { pulados++; continue; }
             int alvo = -1;
             for (int t = 0; t < n_ix; t++)
                 if (o >= ix[t].off && o < ix[t].off + ix[t].size) { alvo = t; break; }
@@ -1006,7 +1030,7 @@ int main(int argc, char **argv) {
                        o, patches[k].bit, alvo, com, sem);
             }
         }
-        printf("\n[+] patches validos: %d | falsos: %d\n", bons, falsos);
+        printf("\n[+] patches validos: %d | falsos: %d | deterministicos pulados: %d\n", bons, falsos, pulados);
     }
     /* Diagnostico dos IDRs quebrados. Um IDR e sua propria ancora, entao cada
      * teste custa 1 decodificacao. Nao grava patches: so mede. */
