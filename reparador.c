@@ -76,12 +76,12 @@ static void abre_decoder(void) {
     memcpy(ctx->extradata, extradata, extradata_len);
     ctx->extradata_size = extradata_len;
     ctx->thread_count = 1;                 /* determinismo acima de velocidade */
-    /* Detectar slice que termina cedo. Com err_recognition=0 o ffmpeg aceitava
-     * em silencio uma slice que decodificava so as primeiras fileiras de
-     * macrobloco e propagava o resto -- e o criterio dava esse frame como
-     * perfeito. EF_RECOG=0 volta ao comportamento antigo, para comparacao. */
-    ctx->err_recognition = getenv("EF_RECOG") ? atoi(getenv("EF_RECOG"))
-                                              : (AV_EF_EXPLODE | AV_EF_BITSTREAM);
+    /* Fica em 0 de proposito. Testei AV_EF_EXPLODE|AV_EF_BITSTREAM achando que
+     * pegaria a slice que termina cedo: nao pega, e ainda piora -- o ffmpeg
+     * aborta e devolve quadro de ocultacao no lugar da imagem parcialmente
+     * decodificada, que e justamente o que queremos ver. Quem detecta slice
+     * truncada e o criterio visual, nao o err_recognition. */
+    ctx->err_recognition = getenv("EF_RECOG") ? atoi(getenv("EF_RECOG")) : 0;
     avcodec_open2(ctx, c, NULL);
 }
 
@@ -147,6 +147,37 @@ static double propagacao(const uint8_t *Y, int w, int h) {
         total++;
     }
     return total ? (double)repet / total : 0;
+}
+
+/* Quantas linhas de imagem real o frame tem antes de virar propagacao.
+ * Pula a tarja preta do letterbox (linhas uniformes do topo) e devolve a
+ * primeira linha a partir da qual 20 seguidas sao copia da anterior. E o proxy
+ * util de "quao corrompido": mede o que sobrou de imagem, nao quanto byte o
+ * decoder leu. Devolve -1 para quadro de ocultacao (poucos tons distintos),
+ * que nao e imagem nenhuma -- armadilha 1 da secao 5. */
+static int linhas_reais(const uint8_t *Y, int w, int h) {
+    int hist[256] = {0}, distintos = 0;
+    for (size_t i = 0; i < (size_t)w*h; i += 97) hist[Y[i]] = 1;
+    for (int i = 0; i < 256; i++) distintos += hist[i];
+    if (distintos < 16) return -1;                    /* quadro de ocultacao */
+
+    int y0 = 0;                                       /* fim do letterbox */
+    for (int y = 1; y < h; y++) {
+        long s = 0;
+        for (int x = 0; x < w; x += 4) s += abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)(y-1)*w+x]);
+        if (s / (w/4) >= 1) { y0 = y; break; }
+    }
+    for (int y = y0 + 1; y < h - 20; y++) {
+        int rep = 1;
+        for (int k = y; k < y + 20 && rep; k++) {
+            long s = 0;
+            for (int x = 0; x < w; x += 4)
+                s += abs((int)Y[(size_t)k*w+x] - (int)Y[(size_t)(k-1)*w+x]);
+            if (s / (w/4) >= 1) rep = 0;
+        }
+        if (rep) return y - y0;
+    }
+    return h - y0;
 }
 
 /* Diferenca entre duas imagens Y: quanto o flip de fato estragou. */
@@ -753,6 +784,21 @@ int main(int argc, char **argv) {
         printf("\n[+] IDRs: %d | flips: %d | com blocagem acima do limpo: %d (%.0f%%)\n",
                feitos, testes, acima, testes ? 100.0 * acima / testes : 0.0);
         free(R); free(cap_buf); cap_buf = NULL;
+    }
+    /* Rankeia os IDRs por quanto de imagem real sobrou. Saida: <idr> <linhas>
+     * (-1 = quadro de ocultacao, nao decodificou nada). */
+    else if (!strcmp(modo, "ranking")) {
+        int salvo = exigir_imagem; exigir_imagem = 0;   /* queremos ver todos */
+        cap_buf = malloc((size_t)1920 * 1088);
+        for (int t = 0; t < n_ix; t++) {
+            if (!ix[t].idr) continue;
+            decodifica(t, t, NULL, 0, NULL);
+            int lr = cap_w > 0 ? linhas_reais(cap_buf, cap_w, cap_h) : -1;
+            printf("%d %d %d\n", t, lr, ix[t].size);
+            fflush(stdout);
+        }
+        exigir_imagem = salvo;
+        free(cap_buf); cap_buf = NULL;
     }
     /* Despeja o plano Y de um frame como PGM, para inspecao visual. */
     else if (!strcmp(modo, "dump")) {
