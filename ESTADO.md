@@ -493,10 +493,18 @@ destravaria 28 frames de lixo e passaria no `verify`.
 
 Dois subprodutos que valem tanto quanto:
 
-- **A tarja localiza.** Topo em 16,000 (certo) e base em 19,248 (errado) diz que
-  o erro está no fim do NAL, porque os macroblocos saem em ordem raster. Para o
-  2362 isso significa procurar **depois do byte 12562** — as janelas da seção 6
-  não alcançam o dano, e é por isso que ele parecia ter solução única.
+- **A tarja localiza — mas leia direito.** No candidato do 2362 o topo saiu em
+  16,000 (certo) e a base em 19,248 (errado). A leitura apressada foi "o erro
+  está no fim do NAL". **Errado:** a *imagem* também saiu errada (média 17,5
+  contra 91–168 dos IDRs bons), então só as ~8 primeiras fileiras de macrobloco
+  — a tarja superior — decodificaram bem. A divergência é **precoce**.
+
+  Somando com a armadilha 9, que mede o bit ~2600 bytes *antes* do corte: para o
+  2362, cujo corte está em 11538, a região a varrer é **[5, 12562)**, que as
+  janelas de ±1024 não cobrem. É por isso que ele parecia ter solução única.
+
+  Custo dessa faixa: 100.456 candidatos, **1 a 3 minutos**. O NAL inteiro são
+  1.767.088 candidatos, 12 a 58 minutos.
 - **Custo irrisório.** A janela do corte levou 32 s e a do início 4 s, com 6
   threads disputando CPU; o teste da tarja em si é uma decodificação por
   candidato. O gargalo nunca foi medir, foi não ter o que medir.
