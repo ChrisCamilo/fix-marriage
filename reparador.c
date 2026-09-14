@@ -80,6 +80,41 @@ static void abre_decoder(void) {
     avcodec_open2(ctx, c, NULL);
 }
 
+/* ---- captura da imagem decodificada ----
+ * Quando `cap_buf` esta setado, o plano Y do ultimo quadro recebido e copiado
+ * para la. Serve ao criterio visual: a sintaxe nao distingue o bit certo, mas
+ * a imagem sim. */
+static _Thread_local uint8_t *cap_buf = NULL;
+static _Thread_local int cap_w = 0, cap_h = 0;
+
+static void captura_frame(AVFrame *fr) {
+    if (!cap_buf || fr->width <= 0) return;
+    cap_w = fr->width; cap_h = fr->height;
+    for (int y = 0; y < cap_h; y++)
+        memcpy(cap_buf + (size_t)y * cap_w, fr->data[0] + (size_t)y * fr->linesize[0], cap_w);
+}
+
+/* Blocagem: descontinuidade na grade 16x16 do macrobloco contra a do interior.
+ * Num decode correto o deblocking deixa a razao perto de 1; residuo corrompido
+ * cria degraus nas bordas e a razao sobe. Nao precisa de imagem de referencia. */
+static double blocagem(const uint8_t *Y, int w, int h) {
+    double borda = 0, interior = 0; long nb = 0, ni = 0;
+    for (int y = 0; y < h; y++)
+        for (int x = 16; x < w; x++) {
+            int d = abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)y*w+x-1]);
+            if (x % 16 == 0)      { borda += d; nb++; }
+            else if (x % 16 == 8) { interior += d; ni++; }
+        }
+    for (int y = 16; y < h; y++)
+        for (int x = 0; x < w; x++) {
+            int d = abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)(y-1)*w+x]);
+            if (y % 16 == 0)      { borda += d; nb++; }
+            else if (y % 16 == 8) { interior += d; ni++; }
+        }
+    if (!nb || !ni || interior <= 0) return 0;
+    return (borda / nb) / (interior / ni);
+}
+
 /* Decodifica a cadeia [ancora..alvo]. Opcionalmente troca o payload do alvo.
  * Devolve 0 se TUDO saiu perfeito: nenhum log de erro e o numero de quadros
  * emitidos (apos flush) igual ao numero de pacotes enviados.
@@ -99,7 +134,7 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
         memcpy(pkt->data, src, len);
         if (avcodec_send_packet(ctx, pkt) == 0) enviados++;
         av_packet_unref(pkt);
-        while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; av_frame_unref(fr); }
+        while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; captura_frame(fr); av_frame_unref(fr); }
     }
     avcodec_send_packet(ctx, NULL);
     while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; av_frame_unref(fr); }
@@ -237,36 +272,52 @@ static int conta_solucoes(int ancora, int alvo, int ini, int fim,
  * e a mesma ordem da varredura sequencial. O resultado e identico para qualquer
  * numero de threads, por construcao e nao por sorte de escalonamento. */
 
-typedef struct { int idx, off, bit; } Sol;
+typedef struct { int idx, off, bit; double m; } Sol;
 
 typedef struct {
     int ancora, alvo, ini;
+    int quebra, primeiro, metrica;
     Sol *sol; int n, cap;
     int total;
 } Worker;
 
 static _Atomic int prox_cand;
+static _Atomic int menor_aceito;
 static int n_cand;
 
-static void *worker_conta(void *p) {
+static void *worker_varre(void *p) {
     Worker *w = p;
     int len = ix[w->alvo].size;
     uint8_t *copia = malloc(len);
     memcpy(copia, arq + ix[w->alvo].off, len);
+    if (w->metrica) cap_buf = malloc((size_t)1920 * 1088);
     for (;;) {
         int k = atomic_fetch_add(&prox_cand, 1);
         if (k >= n_cand) break;
+        /* Regra do menor indice: com parada antecipada, so interessa candidato
+         * anterior ao melhor ja achado. Garante o mesmo resultado da varredura
+         * sequencial, independente do escalonamento. */
+        if (w->primeiro && k >= atomic_load(&menor_aceito)) break;
         int off = w->ini + k / 8, bit = k % 8;
         copia[off] ^= (1 << bit);
         int r = decodifica(w->ancora, w->alvo, copia, len, NULL);
+        int aceita = w->quebra ? (r != 0) : (r == 0);
+        double m = (aceita && w->metrica && r == 0) ? blocagem(cap_buf, cap_w, cap_h) : 0;
         copia[off] ^= (1 << bit);
-        if (r == 0) {
+        if (aceita) {
             w->total++;
-            if (w->n < w->cap) { w->sol[w->n].idx = k; w->sol[w->n].off = off;
-                                 w->sol[w->n].bit = bit; w->n++; }
+            if (w->n < w->cap) {
+                w->sol[w->n].idx = k; w->sol[w->n].off = off;
+                w->sol[w->n].bit = bit; w->sol[w->n].m = m; w->n++;
+            }
+            if (w->primeiro) {
+                int cur = atomic_load(&menor_aceito);
+                while (k < cur && !atomic_compare_exchange_weak(&menor_aceito, &cur, k)) { }
+            }
         }
     }
     free(copia);
+    if (cap_buf) { free(cap_buf); cap_buf = NULL; }
     if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
     return NULL;
 }
@@ -276,38 +327,58 @@ static int cmp_sol(const void *a, const void *b) {
     return (x > y) - (x < y);
 }
 
-static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
-                              int *offs, int *bits, int max, int *guardados,
-                              int nthr) {
+/* Varre [ini,fim) em paralelo. `quebra`: aceita quem QUEBRA o decode em vez de
+ * quem fecha. `primeiro`: para no menor indice aceito. `metrica`: calcula a
+ * blocagem da imagem de cada aceito. Devolve o total aceito e preenche `saida`
+ * ordenada por indice, que e a ordem da varredura sequencial. */
+static int varre_par(int ancora, int alvo, int ini, int fim,
+                     int quebra, int primeiro, int metrica,
+                     Sol *saida, int max_saida, int nthr) {
     if (fim <= ini) return 0;
     n_cand = (fim - ini) * 8;
     atomic_store(&prox_cand, 0);
+    atomic_store(&menor_aceito, n_cand);
 
+    int cap = primeiro ? 64 : (max_saida < 4096 ? 4096 : max_saida);
     Worker *w = calloc(nthr, sizeof *w);
     pthread_t *th = calloc(nthr, sizeof *th);
     for (int i = 0; i < nthr; i++) {
         w[i].ancora = ancora; w[i].alvo = alvo; w[i].ini = ini;
-        w[i].cap = 4096; w[i].sol = malloc(w[i].cap * sizeof(Sol));
-        pthread_create(&th[i], NULL, worker_conta, &w[i]);
+        w[i].quebra = quebra; w[i].primeiro = primeiro; w[i].metrica = metrica;
+        w[i].cap = cap; w[i].sol = malloc((size_t)cap * sizeof(Sol));
+        pthread_create(&th[i], NULL, worker_varre, &w[i]);
     }
     int total = 0, nsol = 0;
     for (int i = 0; i < nthr; i++) {
         pthread_join(th[i], NULL);
         total += w[i].total; nsol += w[i].n;
     }
-    Sol *todas = malloc((nsol ? nsol : 1) * sizeof(Sol));
+    Sol *todas = malloc((size_t)(nsol ? nsol : 1) * sizeof(Sol));
     int k = 0;
     for (int i = 0; i < nthr; i++)
         for (int j = 0; j < w[i].n; j++) todas[k++] = w[i].sol[j];
     qsort(todas, nsol, sizeof(Sol), cmp_sol);
-    for (int i = 0; i < nsol; i++)
-        if (*guardados < max) {
-            offs[*guardados] = todas[i].off; bits[*guardados] = todas[i].bit;
-            (*guardados)++;
-        }
+    for (int i = 0; i < nsol && i < max_saida; i++) saida[i] = todas[i];
+    if (primeiro && nsol > 1) total = 1;      /* so o menor indice conta */
     free(todas);
     for (int i = 0; i < nthr; i++) free(w[i].sol);
     free(w); free(th);
+    return total;
+}
+
+static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
+                              int *offs, int *bits, int max, int *guardados,
+                              int nthr) {
+    if (fim <= ini) return 0;
+    int cap = (fim - ini) * 8;
+    Sol *s = malloc((size_t)cap * sizeof(Sol));
+    int total = varre_par(ancora, alvo, ini, fim, 0, 0, 0, s, cap, nthr);
+    int n = total < cap ? total : cap;
+    for (int i = 0; i < n; i++)
+        if (*guardados < max) {
+            offs[*guardados] = s[i].off; bits[*guardados] = s[i].bit; (*guardados)++;
+        }
+    free(s);
     return total;
 }
 
@@ -527,6 +598,72 @@ int main(int argc, char **argv) {
         }
         printf("\n[+] unica: %d | multipla: %d | nenhuma: %d\n",
                n_unico, n_multi, n_zero);
+    }
+    /* Valida o criterio visual contra verdade conhecida. Pega IDRs que ja
+     * decodificam limpos, injeta um bit de erro, enumera TODAS as correcoes de
+     * 1 bit que restauram a decodificacao e pergunta: a metrica visual coloca a
+     * correcao verdadeira em primeiro lugar? Sem isto nao ha razao para confiar
+     * na metrica -- ver secao 5 do ESTADO.md. */
+    else if (!strcmp(modo, "oraculo")) {
+        int n_am = argc > 5 ? atoi(argv[5]) : 3;
+        int jan  = argc > 6 ? atoi(argv[6]) : 1024;
+        size_t PX = 1920 * 1088;
+        int MAXSOL = 200000;
+        uint8_t *R = malloc(PX);
+        cap_buf = malloc(PX);
+        Sol *sol = malloc((size_t)MAXSOL * sizeof *sol);
+        int feitos = 0, acertos = 0, top10 = 0;
+        int nthr = quantas_threads();
+        fprintf(stderr, "[+] modo oraculo com %d thread(s)\n", nthr);
+
+        for (int t = 0; t < n_ix && feitos < n_am; t++) {
+            if (!ix[t].idr) continue;
+            if (decodifica(t, t, NULL, 0, NULL) != 0) continue;   /* precisa estar limpo */
+            int w = cap_w, h = cap_h, len = ix[t].size;
+            memcpy(R, cap_buf, (size_t)w * h);
+            double m_limpo = blocagem(R, w, h);
+            uint8_t *base = arq + ix[t].off;
+
+            /* injeta: primeiro flip a partir do meio do NAL que quebre o decode */
+            Sol inj;
+            if (varre_par(t, t, len / 2, len, 1, 1, 0, &inj, 1, nthr) == 0)
+                continue;                                          /* nao consegui quebrar */
+            int oi = inj.off, bi = inj.bit;
+            base[oi] ^= (1 << bi);
+
+            int corte = acha_corte(t, t);
+            int ini = corte - jan; if (ini < 0) ini = 0;
+            int fim = corte + 3;  if (fim > len) fim = len;
+            if (oi < ini || oi >= fim) {                           /* fora da janela */
+                base[oi] ^= (1 << bi);
+                printf("IDR %5d: erro injetado em %d, fora da janela [%d,%d) -- pulado\n",
+                       t, oi, ini, fim);
+                fflush(stdout); continue;
+            }
+
+            time_t t0 = time(NULL);
+            int total = varre_par(t, t, ini, fim, 0, 0, 1, sol, MAXSOL, nthr);
+            int n = total < MAXSOL ? total : MAXSOL;
+            base[oi] ^= (1 << bi);                                 /* desfaz a injecao */
+
+            /* posicao da correcao verdadeira no ranking por blocagem crescente */
+            double m_true = -1;
+            for (int i = 0; i < n; i++)
+                if (sol[i].off == oi && sol[i].bit == bi) m_true = sol[i].m;
+            int rank = 1;
+            for (int i = 0; i < n; i++) if (sol[i].m < m_true) rank++;
+
+            feitos++;
+            if (rank == 1) acertos++;
+            if (rank <= 10) top10++;
+            printf("IDR %5d: %5d candidatos | verdadeiro em %d/%d | blocagem: limpo %.3f, "
+                   "verdadeiro %.3f [%.0fs]\n",
+                   t, n, rank, n, m_limpo, m_true, difftime(time(NULL), t0));
+            fflush(stdout);
+        }
+        printf("\n[+] amostras: %d | verdadeiro em 1o lugar: %d | no top 10: %d\n",
+               feitos, acertos, top10);
+        free(R); free(cap_buf); cap_buf = NULL; free(sol);
     }
     else {
         int bons = 0;
