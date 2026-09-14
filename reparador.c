@@ -26,10 +26,6 @@ static int n_ix = 0;
 static uint8_t *arq = NULL;      /* copia do MP4 em memoria, com patches */
 static long arq_len = 0;
 
-/* Ligado por WARM=1. Declarado aqui porque `abre_decoder` precisa dele.
- * Ver o bloco "contexto aquecido" mais abaixo. */
-static int usar_aquecido = 0;
-
 /* ---- captura do log do decoder ----
  * Por thread: o callback do av_log e global, mas cada worker decodifica no
  * proprio contexto e o libavcodec (com thread_count=1) chama o callback na
@@ -80,9 +76,6 @@ static void abre_decoder(void) {
     memcpy(ctx->extradata, extradata, extradata_len);
     ctx->extradata_size = extradata_len;
     ctx->thread_count = 1;                 /* determinismo acima de velocidade */
-    /* No modo aquecido o quadro precisa sair na hora: sem isto o decoder o
-     * segura para reordenar e so entrega no flush, que encerraria o contexto. */
-    if (usar_aquecido) ctx->flags |= AV_CODEC_FLAG_LOW_DELAY;
     /* Fica em 0 de proposito. Testei AV_EF_EXPLODE|AV_EF_BITSTREAM achando que
      * pegaria a slice que termina cedo: nao pega, e ainda piora -- o ffmpeg
      * aborta e devolve quadro de ocultacao no lugar da imagem parcialmente
@@ -567,63 +560,13 @@ static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
     return total;
 }
 
-/* ---- contexto aquecido (melhoria 3, em versao possivel) ----
- *
- * A melhoria 3 do ESTADO.md pede "cachear o estado do decoder na ancora". Isso
- * NAO e implementavel: o libavcodec nao expoe API para salvar, clonar ou
- * restaurar estado interno de decodificacao. Nao existe snapshot.
- *
- * O que da para fazer aproveita uma propriedade do proprio fluxo: decodificar
- * um frame NAO-REFERENCIA (nal_ref_idc == 0) nao altera o buffer de imagens de
- * referencia -- ele e exibido e descartado. Entao um contexto que ja decodificou
- * a cadeia ancora..alvo-1 continua valido depois de testar um candidato, e serve
- * para o proximo sem refazer nada. Sao 70% dos frames do arquivo (2395 de 3445),
- * e troca "decodificar 28 frames por candidato" por "decodificar 1".
- *
- * O obstaculo e a reordenacao: normalmente o decoder segura o quadro para
- * reordenar e so o entrega no flush, e o flush encerra o contexto. Por isso o
- * modo aquecido liga AV_CODEC_FLAG_LOW_DELAY, que faz o quadro sair na hora.
- *
- * NAO VALIDADO AINDA -- por isso fica atras de WARM=1, desligado por padrao.
- * Antes de confiar, rodar o mesmo alvo com e sem e exigir resultado identico,
- * como manda a secao 7 do AGENTS.md. Se low_delay mudar o comportamento de
- * ocultacao, a saida vai divergir e o modo deve ser descartado. */
-static int nao_referencia(int t) {
-    return ((arq[ix[t].off + 4] >> 5) & 3) == 0;
-}
-
-/* Decodifica ancora..alvo-1 e deixa o contexto pronto para receber o alvo. */
-static void aquece(int ancora, int alvo) {
-    abre_decoder();
-    AVPacket *pkt = av_packet_alloc();
-    AVFrame *fr = av_frame_alloc();
-    for (int i = ancora; i < alvo; i++) {
-        av_new_packet(pkt, ix[i].size);
-        memcpy(pkt->data, arq + ix[i].off, ix[i].size);
-        pkt->pts = i;
-        avcodec_send_packet(ctx, pkt);
-        av_packet_unref(pkt);
-        while (avcodec_receive_frame(ctx, fr) == 0) av_frame_unref(fr);
-    }
-    av_frame_free(&fr); av_packet_free(&pkt);
-}
-
-/* Testa um candidato num contexto ja aquecido: manda so o pacote do alvo. */
-static int decodifica_aquecido(int alvo, const uint8_t *alt, int alt_len) {
-    log_zerar();
-    cap_hash = 0; cap_w = 0; cap_h = 0; cap_alvo = alvo;
-    AVPacket *pkt = av_packet_alloc();
-    AVFrame *fr = av_frame_alloc();
-    av_new_packet(pkt, alt_len);
-    memcpy(pkt->data, alt, alt_len);
-    pkt->pts = alvo;
-    int quadros = 0;
-    if (avcodec_send_packet(ctx, pkt) == 0)
-        while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; captura_frame(fr); av_frame_unref(fr); }
-    av_packet_unref(pkt);
-    av_frame_free(&fr); av_packet_free(&pkt);
-    return (log_erros == 0 && quadros == 1) ? 0 : 1;
-}
+/* O "contexto aquecido" -- reaproveitar um mesmo contexto entre candidatos,
+ * porque decodificar frame nao-referencia nao suja o buffer de referencias --
+ * foi implementado aqui, medido e DESCARTADO em 2026-09-14. Dava 31x de ganho e
+ * resultado nao reproduzivel: candidato quebrado deixa estado para tras, entao a
+ * nota de um candidato passa a depender de quais candidatos vieram antes na
+ * mesma thread. Postmortem no item 6 da secao 7 do ESTADO.md. Nao reimplementar.
+ */
 
 /* ---- criterio de referencia temporal ----
  * Todas as metricas anteriores eram proxies inventados ("isto parece imagem?"),
@@ -653,17 +596,12 @@ static void *worker_ref(void *p) {
     uint8_t *copia = malloc(len);
     memcpy(copia, arq + ix[w->alvo].off, len);
     if (!cap_buf) cap_buf = malloc((size_t)1920 * 1088);
-    /* So vale aquecer se o alvo for nao-referencia: senao ele entra no buffer
-     * de referencia e suja o contexto para o candidato seguinte. */
-    int aquecido = usar_aquecido && nao_referencia(w->alvo) && w->alvo > w->ancora;
-    if (aquecido) aquece(w->ancora, w->alvo);
     for (;;) {
         int k = atomic_fetch_add(&prox_cand, 1);
         if (k >= n_cand) break;
         int off = w->ini + k / 8, bit = k % 8;
         copia[off] ^= (1 << bit);
-        if (aquecido) decodifica_aquecido(w->alvo, copia, len);
-        else          decodifica(w->ancora, w->alvo, copia, len, NULL);
+        decodifica(w->ancora, w->alvo, copia, len, NULL);
         double m = cap_w > 0 ? mad_ref(cap_buf, cap_w, cap_h) : 1e9;
         copia[off] ^= (1 << bit);
         if (m < w->mad || (m == w->mad && k < w->idx)) {
@@ -840,10 +778,6 @@ int main(int argc, char **argv) {
                getenv("PPS") ? getenv("PPS") : "68eb7352");
     av_log_set_callback(meu_log);
     if (getenv("VISUAL")) exigir_imagem = atoi(getenv("VISUAL"));
-    if (getenv("WARM"))   usar_aquecido  = atoi(getenv("WARM"));
-    if (usar_aquecido)
-        fprintf(stderr, "[!] contexto aquecido LIGADO (WARM=1) -- nao validado; "
-                        "compare com WARM=0 antes de confiar\n");
     fprintf(stderr, "[+] criterio: sintatico%s\n",
             exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");
     carrega_patches(f_pt);
