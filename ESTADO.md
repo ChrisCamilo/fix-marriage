@@ -339,18 +339,8 @@ header, não coincidência. Isso reforça a anomalia abaixo.
 
 ### Pendentes
 
-3. **Cache do estado do decoder na âncora** — ~~como descrito, é impossível~~.
-   O libavcodec **não expõe API** para salvar, clonar ou restaurar estado
-   interno de decodificação. Não existe snapshot. Não tente.
-   - O que funciona está implementado atrás de `WARM=1` (desligado por padrão,
-     **ainda não validado**): decodificar um frame **não-referência**
-     (`nal_ref_idc == 0`) não altera o buffer de referências, então um contexto
-     que já decodificou `âncora..alvo-1` continua válido entre candidatos.
-     Cobre **70% dos frames** (2395 de 3445) e troca 28 decodificações por 1.
-   - Exige `AV_CODEC_FLAG_LOW_DELAY`, senão o quadro só sai no flush e o flush
-     encerra o contexto. É esse o risco: low_delay pode mudar a ocultação.
-   - **Validar antes de usar**: mesmo alvo com `WARM=0` e `WARM=1`, exigindo
-     saída idêntica (seção 7 do `AGENTS.md`). Se divergir, descartar o modo.
+3. **Cache do estado do decoder na âncora** — impossível como descrito, e a
+   versão possível foi medida e descartada. Ver item 6 abaixo. Não tente.
 4. **Paralelizar a busca com parada antecipada** (`busca1`) — ainda sequencial.
    Exige a regra do menor índice descrita em `PARALELIZACAO.md`, porque com
    múltiplas soluções "a primeira que chegar" escolheria bit errado.
@@ -359,3 +349,48 @@ header, não coincidência. Isso reforça a anomalia abaixo.
 
 5. ~~**Busca de 2 bits**~~ — implementada e testada: 0 soluções em todas as
    corridas. E a seção 6 mostra que a premissa estava errada de qualquer forma.
+
+6. ~~**Contexto aquecido entre candidatos**~~ — implementado atrás de `WARM=1`,
+   medido em 2026-09-14, **descartado**. Era a versão possível da melhoria 3.
+
+   A premissa: decodificar um frame **não-referência** (`nal_ref_idc == 0`) não
+   altera o buffer de referências, então um contexto que já decodificou
+   `âncora..alvo-1` continuaria válido de um candidato para o seguinte — 28
+   decodificações viram 1, em 70% dos frames (2395 de 3445).
+
+   O ganho era real: `vizinho 2360 2359 256 3` caiu de **93 s para 3 s** (31x).
+   Mas reprovou nas duas validações da seção 7 do `AGENTS.md`:
+
+   | | passo 1, candidato `off 8 bit 2` | reprodutível |
+   |---|---|---|
+   | `WARM=0`, 1 thread | 0,47 | sim |
+   | `WARM=0`, 12 threads | 0,47 | sim |
+   | `WARM=1`, 1 thread | 0,46 | sim, mas ≠ referência |
+   | `WARM=1`, 12 threads | 0,46 / 0,46 / 0,47 | **não** |
+
+   O dado que fecha o diagnóstico é a última linha: **o mesmo candidato recebe
+   nota diferente a cada corrida.** Não é "escolheu outro candidato igualmente
+   válido" — a métrica é que tem ruído, e aí o mínimo vira sorteio. O `melhor_ref`
+   varre tudo e desempata pelo menor índice, então ordem de varredura não
+   explicaria divergência nenhuma.
+
+   Causa: a premissa vale para um frame não-referência **íntegro**. Quase todo
+   candidato de uma varredura é lixo, e um decode que falha deixa estado para
+   trás (ocultação, buraco de `frame_num`, POC). O resultado do candidato *k*
+   passa a depender de quais candidatos aquela thread viu antes — dependência de
+   história, que a regra do menor índice não conserta. Com 1 thread o efeito é
+   determinístico, mas continua contaminado: por isso ele reproduz a si mesmo e
+   não reproduz o `WARM=0`.
+
+   `AV_CODEC_FLAG_LOW_DELAY` foi suspeito e **está inocente**: separando o flag
+   do modo (`LOWDELAY=1 WARM=0`), a saída ficou idêntica à de `LOWDELAY=0` nos
+   alvos 2358 e 2360. O flag não muda nada.
+
+   Não há limpeza barata: `avcodec_flush_buffers` zera o estado mas leva junto os
+   frames de referência, forçando a redecodificação da cadeia que a otimização
+   existia para evitar. **A ideia morre no desenho, não na implementação.**
+
+   Sinal de alerta a guardar: com 12 threads o resultado contaminado sai
+   *melhor* (0,42) que o limpo (0,46–0,47). Ruído que melhora a nota significa
+   que o contexto sujo empurra o decoder para a ocultação — que copia o frame
+   anterior, que é justamente a referência contra a qual se mede.
