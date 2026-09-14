@@ -161,13 +161,26 @@ static int linhas_reais(const uint8_t *Y, int w, int h) {
     for (int i = 0; i < 256; i++) distintos += hist[i];
     if (distintos < 16) return -1;                    /* quadro de ocultacao */
 
-    /* Diferenca linha-a-linha calculada UMA vez: o laco aninhado ingenuo custava
-     * ~10 ms por frame e dominava a busca. */
+    /* Uma linha e RUIM de dois jeitos, e os dois precisam contar:
+     *   - repetida: copia da anterior -> propagacao (slice terminou cedo);
+     *   - blocada:  degraus fortes na grade 16x16 -> lixo de macrobloco.
+     * Contar so a repeticao foi um erro caro: a busca incremental "melhorava" o
+     * frame trocando propagacao limpa por ruido embaralhado, que nao repete e
+     * por isso pontuava alto. Armadilha 2 da secao 5, na pratica.
+     * A diferenca linha-a-linha e calculada UMA vez; o laco aninhado ingenuo
+     * custava ~10 ms por frame e dominava a busca. */
     static _Thread_local unsigned char rep[2048];
     for (int y = 1; y < h; y++) {
-        long s = 0;
-        for (int x = 0; x < w; x += 4) s += abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)(y-1)*w+x]);
-        rep[y] = (s / (w/4) < 1);
+        long s = 0, borda = 0, dentro = 0; int nb = 0, ni = 0, nv = 0;
+        for (int x = 4; x < w; x += 4) {
+            s += abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)(y-1)*w+x]); nv++;
+            int dh = abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)y*w+x-1]);
+            if (x % 16 == 0) { borda += dh; nb++; } else { dentro += dh; ni++; }
+        }
+        int repetida = (s / nv < 1);
+        /* degrau medio na borda do macrobloco > 2x o do interior = lixo */
+        int blocada = (dentro > 0 && borda * ni > 2 * dentro * nb);
+        rep[y] = repetida || blocada;
     }
     int y0 = 0;                                       /* fim do letterbox */
     for (int y = 1; y < h; y++) if (!rep[y]) { y0 = y; break; }
