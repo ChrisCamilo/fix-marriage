@@ -128,3 +128,21 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     acima de ~0,05.** Os 84 IDRs que passam nesse teste têm corte de 792 a
     60.787, mediana 17.698 — nada parecido com os 5 a 12 do grupo colapsado.
 
+15. **Limiar calibrado numa região, aplicado em outra, condena quadro genuíno.**
+    A tarja tem duas regiões com tolerâncias muito diferentes, porque a fronteira
+    imagem/tarja cai **dentro** da fileira de macroblocos 59 (linhas 944–959).
+    Medido em 144 quadros genuínos:
+
+    | região | desvio | pior pixel | pixels fora de ±10 |
+    |---|---|---|---|
+    | transição 950–956 | até **1,36** | até **14** | até **0,238%** |
+    | fundo 957–1079 | até 0,40 | até 7 | **zero** |
+
+    O limiar do fundo é **3x mais apertado**. Aplicá-lo à faixa inteira reprova
+    quadro perfeitamente normal — erro cometido duas vezes: no frame 3435, onde
+    inventei um "defeito de tarja" que não existia, e no 2361, onde a rejeição
+    estava certa mas pelo número errado.
+
+    **Calibrar sempre na mesma região onde se vai julgar**, e contra quadros
+    genuínos, nunca contra intuição. O `campo` agora reporta as duas separadas.
+

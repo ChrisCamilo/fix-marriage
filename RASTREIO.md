@@ -49,8 +49,17 @@ decodificar; só o outro faz decodificar mas deixa o `frame_num` provadamente
 errado; os dois juntos dão cabeçalho correto e **imagem pior**.
 
 Ampliando a tarja inferior em resolução cheia, os dois candidatos mostram um
-**borrão claro horizontal** logo abaixo da borda da imagem, que os vizinhos
-genuínos não têm. Rejeitados pelos juízes e pelo olho.
+**borrão claro horizontal** logo abaixo da borda da imagem. Recalibrado o
+critério por região (armadilha 15), a rejeição se sustenta com folga:
+
+| | genuínos, pior caso | 2361 de 1 bit |
+|---|---|---|
+| desvio na transição 950–956 | 1,36 | **45,36** (33x) |
+| pior pixel | 14 | **219** (15x) |
+| pixels fora de ±10 | 0,238% | **21,7%** (91x) |
+
+O **fundo da tarja do candidato é perfeito** — desvio 0,00, melhor que os
+genuínos. O defeito está inteiramente nas sete linhas da transição.
 
 O GOP 2333 fica em **28 de 29**.
 

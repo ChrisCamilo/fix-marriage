@@ -631,7 +631,8 @@ static void *worker_par2(void *p) {
  *   - o fundo da tarja e uniforme 16; a ocultacao poe ruido la.
  * Imprime as medidas e deixa a decisao para quem le. */
 typedef struct { long off; int bit; int pmin, pmax, l949, l952, l960, bmin, bmax;
-                 double bmed, bdes, tmed, dref; } Campo;
+                 double bmed, bdes, tmed, dref;
+                 double tmed2, tdes2; int tmaxdev; double tfora; } Campo;
 static Campo *campos = NULL;
 static int n_campos = 0;
 static int campo_alvo = 0;
@@ -665,10 +666,34 @@ static void *worker_campo(void *p) {
          * EXATAMENTE 16,00 em todo o filme -- e grao que o encoder preservou.
          * Entao o gabarito e a media e o desvio, nao o intervalo. Filtrar por
          * "tarja uniforme 16" rejeita frame realista e premia frame liso
-         * demais; foi erro cometido antes de medir o filme inteiro. */
+         * demais; foi erro cometido antes de medir o filme inteiro.
+         *
+         * E ela tem DUAS REGIOES com tolerancias muito diferentes, porque a
+         * fronteira imagem/tarja cai DENTRO da fileira de macroblocos 59 (linhas
+         * 944-959). Medido em 144 quadros genuinos:
+         *
+         *   transicao 950-956: desvio ate 1,36, pixel desviando ate 14 de 16,
+         *                      ate 0,238% dos pixels fora de +-10
+         *   fundo    957-1079: desvio ate 0,40, pixel ate 7, ZERO fora de +-10
+         *
+         * Julgar a faixa inteira com o limiar do fundo condena quadro genuino --
+         * erro ja cometido. Por isso as duas regioes saem separadas. */
+        /* transicao: 950-956 */
+        double tsoma2 = 0, tq2 = 0; long tn2 = 0; int tmaxdev = 0; long tfora = 0;
+        for (int y = 950; y < 957 && y < H; y++)
+            for (int x = 0; x < W; x += 4) {
+                int v = cap_buf[(size_t)y * W + x];
+                int dv = v > 16 ? v - 16 : 16 - v;
+                if (dv > tmaxdev) tmaxdev = dv;
+                if (dv > 10) tfora++;
+                tsoma2 += v; tq2 += (double)v * v; tn2++;
+            }
+        double tmed2 = tn2 ? tsoma2 / tn2 : 0;
+        double tdes2 = tn2 ? sqrt(tq2 / tn2 - tmed2 * tmed2) : 0;
+        /* fundo: 957 ate o fim */
         int bmin = 255, bmax = 0;
         double bsoma = 0, bq = 0; long bn = 0;
-        for (int y = 951; y < H; y++)
+        for (int y = 957; y < H; y++)
             for (int x = 0; x < W; x += 4) {
                 int v = cap_buf[(size_t)y * W + x];
                 if (v < bmin) bmin = v;
@@ -704,6 +729,9 @@ static void *worker_campo(void *p) {
         campos[k].bmin = bmin; campos[k].bmax = bmax;
         campos[k].bmed = bmed; campos[k].bdes = bdes; campos[k].tmed = tmed;
         campos[k].dref = dref;
+        campos[k].tmed2 = tmed2; campos[k].tdes2 = tdes2;
+        campos[k].tmaxdev = tmaxdev;
+        campos[k].tfora = tn2 ? 100.0 * tfora / tn2 : 0;
     }
     free(copia); free(cap_buf); cap_buf = NULL;
     if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
@@ -1369,14 +1397,15 @@ int main(int argc, char **argv) {
         for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_campo, NULL);
         for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
         free(th);
-        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max tarja_media tarja_desvio topo_media dif_referencia\n");
+        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max tarja_media tarja_desvio topo_media dif_referencia trans_media trans_desvio trans_maxdev trans_fora%\n");
         for (int k = 0; k < n_campos; k++) {
             if (campos[k].pmin < 0) continue;
-            printf("%ld %d %d %d %d %d %d %d %d %.3f %.3f %.3f %.4f\n",
+            printf("%ld %d %d %d %d %d %d %d %d %.3f %.3f %.3f %.4f %.2f %.2f %d %.3f\n",
                    campos[k].off, campos[k].bit, campos[k].pmin, campos[k].pmax,
                    campos[k].l949, campos[k].l952, campos[k].l960,
                    campos[k].bmin, campos[k].bmax,
-                   campos[k].bmed, campos[k].bdes, campos[k].tmed, campos[k].dref);
+                   campos[k].bmed, campos[k].bdes, campos[k].tmed, campos[k].dref,
+                   campos[k].tmed2, campos[k].tdes2, campos[k].tmaxdev, campos[k].tfora);
         }
         free(campos);
     }
