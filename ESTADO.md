@@ -106,26 +106,43 @@ continuam presentes no ffmpeg 8.1.1.
 
 ## 4. Resultados já obtidos
 
-Medido em 2026-09-13 com `report` (ffmpeg 8.1.1), critério rigoroso do
-`reparador.c`: flush do decoder e quadros == pacotes, zero linhas de log.
-Números anteriores a esta data eram estimativas e foram substituídos.
+Medido em 2026-09-13 com `report` (ffmpeg 8.1.1). O critério agora tem **duas
+partes**, e a segunda é indispensável: além do sintático (flush, quadros ==
+pacotes, zero logs), exige-se que a imagem não seja propagação vertical — ver
+armadilha 7 da seção 5. Sem ela o número fica ~2x inflado por lixo.
 
-**306 dos 3445 frames** decodificam perfeitos (8,9%). Soltos dariam 10,21 s,
-mas estão espalhados em **53 trechos**:
+| classificação | frames | o que é |
+|---|---|---|
+| **real** | **149** | decodifica limpo **e** tem imagem de verdade |
+| propagado | 137 | "limpo", mas slice terminou cedo: listra vertical |
+| uniforme | 16 | imagem chapada (preto/fade); pode ser legítima |
+| quebrado | 3143 | falha no critério sintático |
 
-| trecho | frames | duração | início |
-|---|---|---|---|
-| 3319–3444 | 126 | 4,20 s | 110,74 s |
-| 2333–2359 | 27 | 0,90 s | 77,84 s |
-| 2159–2173 | 15 | 0,50 s | 72,04 s |
-| 0–9 | 10 | 0,33 s | 0,00 s |
-| 1135–1142 | 8 | 0,27 s | 37,87 s |
-| + 48 trechos | 2–5 | < 0,17 s cada | espalhados |
+Os 149 reais estão em **apenas 4 trechos contínuos** — não em 53, como a medida
+antiga sugeria:
 
-**Consertado pelo trabalho de reparo: ~0,90 s** — só o trecho dos 77,84 s, que
-exigiu os 5 reparos reais. Os 4,20 s do final nunca estiveram quebrados, são
-região intacta. Somando o que dá para assistir (trechos ≥ 0,5 s): **5,61 s**
-de 114,95 s.
+| trecho | frames | duração | início | origem |
+|---|---|---|---|---|
+| 3319–3434 | 116 | 3,87 s | 110,74 s | região intacta |
+| 2333–2359 | 27 | 0,90 s | 77,84 s | **reparado** (os 5 patches) |
+| 1138–1141 | 4 | 0,13 s | 37,97 s | — |
+| 3437–3438 | 2 | 0,07 s | 114,68 s | — |
+
+**Vídeo real hoje: 4,77 s de 114,95 s** (trechos ≥ 15 frames). Desses, **0,90 s
+foram consertados pelo trabalho de reparo** e 3,87 s nunca estiveram quebrados.
+
+Confirmado por inspeção visual: o frame 2333 mostra o noivo ajustando a gravata
+diante do espelho, imagem íntegra. **Os 5 reparos produziram vídeo verdadeiro** —
+o que estava errado antes era a régua, não os reparos.
+
+A medida anterior dizia "306 perfeitos, 5,61 s assistíveis". Dos 306, **137 eram
+listra vertical** e 16 chapados. E a região intacta encolheu de 4,20 s para
+3,87 s: os frames 3435–3444 também são propagados.
+
+**Atenção:** a contagem de keyframes abaixo usa só o critério sintático, de
+antes da armadilha 7 ser conhecida. Os IDRs 29, 128, 215 e 323 foram inspecionados
+visualmente e são **listra vertical**, apesar de constarem como "perfeitos". O
+número real de IDRs com imagem é muito menor que 57 e precisa ser remedido.
 
 **Keyframes: 57 dos 128 IDRs decodificam perfeitos**, espalhados por todo o
 filme (0,0 / 1,0 / 4,3 / 6,2 / 7,2 / 10,8 / 12,7 / 13,7 / 14,6 / 15,2 / 17,2 /
