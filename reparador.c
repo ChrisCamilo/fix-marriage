@@ -97,11 +97,18 @@ static _Thread_local int cap_w = 0, cap_h = 0;
  * antigas, nao para decidir reparo. */
 static int exigir_imagem = 1;
 
+static _Thread_local uint64_t cap_hash = 0;
+
 static void captura_frame(AVFrame *fr) {
     if (!cap_buf || fr->width <= 0) return;
     cap_w = fr->width; cap_h = fr->height;
-    for (int y = 0; y < cap_h; y++)
-        memcpy(cap_buf + (size_t)y * cap_w, fr->data[0] + (size_t)y * fr->linesize[0], cap_w);
+    uint64_t hh = 1469598103934665603ULL;
+    for (int y = 0; y < cap_h; y++) {
+        const uint8_t *src = fr->data[0] + (size_t)y * fr->linesize[0];
+        memcpy(cap_buf + (size_t)y * cap_w, src, cap_w);
+        for (int x = 0; x < cap_w; x += 8) { hh ^= src[x]; hh *= 1099511628211ULL; }
+    }
+    cap_hash = hh;
 }
 
 /* Blocagem: descontinuidade na grade 16x16 do macrobloco contra a do interior.
@@ -241,6 +248,35 @@ static int repara(int alvo, int janela, int *bit_out) {
         }
     }
     return -1;
+}
+
+/* Ate onde o decoder de fato consome a amostra.
+ *
+ * Para frame que termina cedo SEM erro, `acha_corte` nao serve: ele localiza
+ * onde o decoder reclamou, e esse nao reclama. O ponto util e outro -- a partir
+ * de onde corromper nao muda mais a imagem, o dado nao esta sendo lido. O
+ * primeiro bit corrompido esta perto dessa fronteira, porque foi ele que fez o
+ * decoder parar ali. Busca binaria: O(log n) decodificacoes. */
+static int acha_consumo(int alvo) {
+    int len = ix[alvo].size;
+    uint8_t *base = arq + ix[alvo].off;
+    uint8_t *copia = malloc(len);
+    memcpy(copia, base, len);
+    int salvo = exigir_imagem; exigir_imagem = 0;   /* aqui so importa a imagem */
+    decodifica(alvo, alvo, NULL, 0, NULL);
+    uint64_t h_ref = cap_hash;
+
+    int lo = 5, hi = len;               /* menor p tal que corromper [p,len) nao muda nada */
+    while (lo < hi) {
+        int md = (lo + hi) / 2;
+        memcpy(copia, base, len);
+        for (int k = md; k < len; k++) copia[k] ^= 0xFF;
+        decodifica(alvo, alvo, copia, len, NULL);
+        if (cap_hash == h_ref) hi = md; else lo = md + 1;
+    }
+    exigir_imagem = salvo;
+    free(copia);
+    return lo;
 }
 
 /* Busca de 1 bit restrita a [ini,fim). Nao grava nada. */
@@ -620,7 +656,10 @@ int main(int argc, char **argv) {
             if (!ix[t].idr) continue;
             if (decodifica(t, t, NULL, 0, NULL) == 0) continue;
 
-            int len = ix[t].size, corte = acha_corte(t, t);
+            int len = ix[t].size;
+            /* Centro da busca: a fronteira de consumo, nao o corte. Ver
+             * acha_consumo(). O corte so vale quando o decoder reclamou. */
+            int corte = exigir_imagem ? acha_consumo(t) : acha_corte(t, t);
             clock_t t0 = clock();
             int ini = corte - jc; if (ini < 0) ini = 0;
             int fim = corte + 3;  if (fim > len) fim = len;
