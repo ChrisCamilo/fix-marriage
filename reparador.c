@@ -564,6 +564,65 @@ static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
     return total;
 }
 
+/* ---- modo campo: mede o quadro resultante de cada candidato ----
+ * Nasceu do trecho final do filme, que e um fade: dali para a frente o frame
+ * certo e um campo UNIFORME de valor previsivel, e o valor sai da media dos
+ * dois vizinhos na ordem de EXIBICAO (poc), nao na de decodificacao. Isso da um
+ * gabarito aritmetico, nao um proxy visual.
+ *
+ * Alem do valor, dois detalhes separam o frame verdadeiro da ocultacao:
+ *   - a borda da tarja e SECA (o preto comeca de uma linha para a outra);
+ *     a ocultacao deixa uma rampa esfumada, que e o borrao vertical.
+ *   - o fundo da tarja e uniforme 16; a ocultacao poe ruido la.
+ * Imprime as medidas e deixa a decisao para quem le. */
+typedef struct { long off; int bit; int pmin, pmax, l949, l952, l960, bmin, bmax; } Campo;
+static Campo *campos = NULL;
+static int n_campos = 0;
+static int campo_alvo = 0;
+
+static void *worker_campo(void *p) {
+    (void)p;
+    cap_buf = malloc((size_t)1920 * 1088);
+    int len = ix[campo_alvo].size, anc = ancora_de(campo_alvo);
+    uint8_t *copia = malloc(len);
+    for (;;) {
+        int k = atomic_fetch_add(&prox_cand, 1);
+        if (k >= n_campos) break;
+        memcpy(copia, arq + ix[campo_alvo].off, len);
+        copia[campos[k].off - ix[campo_alvo].off] ^= (1 << campos[k].bit);
+        campos[k].pmin = -1;
+        if (decodifica(anc, campo_alvo, copia, len, NULL) != 0 || cap_w <= 0) continue;
+        int W = cap_w, H = cap_h;
+        int pmin = 255, pmax = 0;
+        for (int y = 136; y < 944 && y < H; y++)
+            for (int x = 0; x < W; x += 4) {
+                int v = cap_buf[(size_t)y * W + x];
+                if (v < pmin) pmin = v;
+                if (v > pmax) pmax = v;
+            }
+        int bmin = 255, bmax = 0;
+        for (int y = 951; y < H; y++)          /* a tarja INTEIRA, ate a ultima linha */
+            for (int x = 0; x < W; x += 4) {
+                int v = cap_buf[(size_t)y * W + x];
+                if (v < bmin) bmin = v;
+                if (v > bmax) bmax = v;
+            }
+        long s9 = 0, s2 = 0, s6 = 0;
+        for (int x = 0; x < W; x++) {
+            s9 += cap_buf[(size_t)949 * W + x];
+            s2 += cap_buf[(size_t)952 * W + x];
+            s6 += cap_buf[(size_t)960 * W + x];
+        }
+        campos[k].pmin = pmin; campos[k].pmax = pmax;
+        campos[k].l949 = (int)(s9 / W); campos[k].l952 = (int)(s2 / W);
+        campos[k].l960 = (int)(s6 / W);
+        campos[k].bmin = bmin; campos[k].bmax = bmax;
+    }
+    free(copia); free(cap_buf); cap_buf = NULL;
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
+
 /* ---- modo testa: prova candidatos de cabecalho no decoder ----
  * Recebe uma lista de flips propostos (um por linha, com o frame alvo) e diz
  * quais fazem o frame passar no criterio rigoroso. E o unico juiz que vale: o
@@ -1137,6 +1196,35 @@ int main(int argc, char **argv) {
         free(cap_buf); cap_buf = NULL;
     }
     /* Despeja o plano Y de um frame como PGM, para inspecao visual. */
+    else if (!strcmp(modo, "campo")) {
+        campo_alvo = atoi(argv[5]);
+        FILE *f = fopen(argv[6], "r");
+        if (!f) { fprintf(stderr, "nao abriu %s%s", argv[6], "\n"); return 1; }
+        campos = calloc(200000, sizeof *campos);
+        long o; int b;
+        while (fscanf(f, "%ld %d", &o, &b) == 2) {
+            campos[n_campos].off = o; campos[n_campos].bit = b; n_campos++;
+        }
+        fclose(f);
+        int nthr = quantas_threads();
+        printf("frame %d: medindo %d candidatos com %d threads%s",
+               campo_alvo, n_campos, nthr, "\n");
+        fflush(stdout);
+        atomic_store(&prox_cand, 0);
+        pthread_t *th = calloc(nthr, sizeof *th);
+        for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_campo, NULL);
+        for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
+        free(th);
+        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max%s", "\n");
+        for (int k = 0; k < n_campos; k++) {
+            if (campos[k].pmin < 0) continue;
+            printf("%ld %d %d %d %d %d %d %d %d%s",
+                   campos[k].off, campos[k].bit, campos[k].pmin, campos[k].pmax,
+                   campos[k].l949, campos[k].l952, campos[k].l960,
+                   campos[k].bmin, campos[k].bmax, "\n");
+        }
+        free(campos);
+    }
     else if (!strcmp(modo, "varre1")) {
         /* Varredura exaustiva de 1 bit sobre o NAL INTEIRO de um frame comum.
          * O modo `unico` so olha IDR; este serve para os frames quebrados que
@@ -1155,9 +1243,17 @@ int main(int argc, char **argv) {
                                        4096, &guardados, nthr);
         printf("[+] frame %d: %d solucoes de 1 bit [%.0fs]%s",
                alvo, total, difftime(time(NULL), t0), "\n");
-        for (int i = 0; i < guardados && i < 40; i++)
-            printf("    off %ld bit %d  (rel %d)%s",
-                   ix[alvo].off + offs[i], bits[i], offs[i], "\n");
+        if (argc > 6) {
+            FILE *g = fopen(argv[6], "w");
+            for (int i = 0; i < guardados; i++)
+                fprintf(g, "%ld %d\n", ix[alvo].off + offs[i], bits[i]);
+            fclose(g);
+            printf("    %d solucoes gravadas em %s\n", guardados, argv[6]);
+        } else {
+            for (int i = 0; i < guardados && i < 40; i++)
+                printf("    off %ld bit %d  (rel %d)\n",
+                       ix[alvo].off + offs[i], bits[i], offs[i]);
+        }
         free(sol);
     }
     else if (!strcmp(modo, "testa")) {
