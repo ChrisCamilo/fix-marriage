@@ -170,6 +170,7 @@ static int linhas_reais(const uint8_t *Y, int w, int h) {
      * A diferenca linha-a-linha e calculada UMA vez; o laco aninhado ingenuo
      * custava ~10 ms por frame e dominava a busca. */
     static _Thread_local unsigned char rep[2048];
+    static _Thread_local float dl[2048];
     for (int y = 1; y < h; y++) {
         long s = 0, borda = 0, dentro = 0; int nb = 0, ni = 0, nv = 0;
         for (int x = 4; x < w; x += 4) {
@@ -177,17 +178,30 @@ static int linhas_reais(const uint8_t *Y, int w, int h) {
             int dh = abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)y*w+x-1]);
             if (x % 16 == 0) { borda += dh; nb++; } else { dentro += dh; ni++; }
         }
-        int repetida = (s / nv < 1);
+        dl[y] = (float)s / nv;
+        int repetida = (dl[y] < 1);
         /* degrau medio na borda do macrobloco > 2x o do interior = lixo */
         int blocada = (dentro > 0 && borda * ni > 2 * dentro * nb);
         rep[y] = repetida || blocada;
     }
     int y0 = 0;                                       /* fim do letterbox */
     for (int y = 1; y < h; y++) if (!rep[y]) { y0 = y; break; }
-    int seq = 0;
+
+    /* Cresce a regiao boa de cima para baixo, medindo cada linha nova contra a
+     * estatistica das que ja foram aceitas. E a ancora que faltava: limiar fixo
+     * inventado por mim a busca aprende a burlar; a media do proprio conteudo
+     * real do frame, nao. Lixo de macrobloco tem diferenca linha-a-linha muito
+     * fora da distribuicao natural da imagem acima dele. */
+    double soma = 0; int n = 0, seq = 0;
     for (int y = y0 + 1; y < h; y++) {
-        seq = rep[y] ? seq + 1 : 0;
-        if (seq >= 20) return (y - 19) - y0;
+        int aceita;
+        if (n < 8) aceita = !rep[y];                  /* semente: ainda sem media */
+        else {
+            double mu = soma / n;
+            aceita = !rep[y] && dl[y] < 3.0 * mu + 2.0;
+        }
+        if (aceita) { soma += dl[y]; n++; seq = 0; }
+        else if (++seq >= 20) return (y - 19) - y0;
     }
     return h - y0;
 }
