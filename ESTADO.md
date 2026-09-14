@@ -132,14 +132,20 @@ antiga sugeria:
 
 | trecho | frames | duração | início | origem |
 |---|---|---|---|---|
-| 3319–3434 | 116 | 3,87 s | 110,74 s | íntegro por conta própria |
+| **3319–3444** | **126** | **4,20 s** | 110,74 s | íntegro, **o final do filme inteiro** |
 | 2333–2359 | 27 | 0,90 s | 77,84 s | íntegro por conta própria |
 | 1138–1141 | 4 | 0,13 s | 37,97 s | — |
-| 3437–3438 | 2 | 0,07 s | 114,68 s | — |
 
-**Vídeo real hoje: 4,77 s de 114,95 s** (trechos ≥ 15 frames). Confirmado por
-inspeção visual: o frame 2333 mostra o noivo ajustando a gravata diante do
-espelho, imagem íntegra; o 3319 mostra o noivo calçando o sapato.
+**Vídeo real hoje: 5,10 s de 114,95 s.** Confirmado por inspeção visual: o frame
+2333 mostra o noivo ajustando a gravata diante do espelho; o 3319 mostra o noivo
+calçando o sapato.
+
+**O trecho final está completo, sem nenhum frame corrompido.** São 5 GOPs
+seguidos (IDRs 3319, 3348, 3368, 3397, 3426) e os 126 frames decodificam. Os
+últimos ~10 frames aparecem como `uniforme`/`propagado` nas classificações
+automáticas, mas **são o fade para preto que encerra o filme**, não dano: o
+brilho médio cai monotonicamente 54,5 → 44,5 → 36,5 → 32,7 → 25,9 → 22,8 → 16,0
+e o número de tons vai de 110 a 1. Não tentar "consertar" esses frames.
 
 **Os 5 reparos do `patches.txt` não produziram nenhum frame com imagem.** Eles
 pertencem aos frames **2362–2366**, e os cinco estão classificados como
