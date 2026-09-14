@@ -240,11 +240,15 @@ header, não coincidência. Isso reforça a anomalia abaixo.
    | threads | tempo (71 IDRs) | ganho | eficiência |
    |---|---|---|---|
    | 1 (sequencial) | 2064 s | 1,0x | 100% |
-   | 6 (default) | 430 s | 4,8x | 80% |
+   | 6 | 430 s | 4,8x | 80% |
    | 10 | 319 s | 6,5x | 65% |
+   | **12 (default)** | **298 s** | **6,9x** | 58% |
 
-   Controlada por `THREADS`, default 6, teto em `núcleos-2`. Retorno decrescente
-   claro: 10 threads dão 26% mais velocidade por 67% mais threads. Desenho e
+   Controlada por `THREADS`, teto em `núcleos-2`. O ganho satura perto de 7x:
+   de 10 para 12 threads são só 6,6% a mais de velocidade por 20% mais threads.
+   O default 12 é escolha deliberada de priorizar o relógio sobre a eficiência.
+   A saturação indica gargalo serial por IDR — `acha_corte`, a decodificação de
+   checagem e a ordenação final — que é o que a melhoria 3 atacaria. Desenho e
    justificativa em `PARALELIZACAO.md`. **Não** mexer no `thread_count` do
    libavcodec — ver seção 1 daquele documento.
 
