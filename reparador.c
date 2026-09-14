@@ -76,7 +76,12 @@ static void abre_decoder(void) {
     memcpy(ctx->extradata, extradata, extradata_len);
     ctx->extradata_size = extradata_len;
     ctx->thread_count = 1;                 /* determinismo acima de velocidade */
-    ctx->err_recognition = 0;
+    /* Detectar slice que termina cedo. Com err_recognition=0 o ffmpeg aceitava
+     * em silencio uma slice que decodificava so as primeiras fileiras de
+     * macrobloco e propagava o resto -- e o criterio dava esse frame como
+     * perfeito. EF_RECOG=0 volta ao comportamento antigo, para comparacao. */
+    ctx->err_recognition = getenv("EF_RECOG") ? atoi(getenv("EF_RECOG"))
+                                              : (AV_EF_EXPLODE | AV_EF_BITSTREAM);
     avcodec_open2(ctx, c, NULL);
 }
 
@@ -115,6 +120,23 @@ static double blocagem(const uint8_t *Y, int w, int h) {
     return (borda / nb) / (interior / ni);
 }
 
+/* Fracao de linhas da metade de baixo que sao praticamente copia da linha
+ * acima. Quando a slice termina cedo, o decoder propaga verticalmente o ultimo
+ * macrobloco decodificado e a imagem vira listras: quase toda linha repete a
+ * anterior. Numa imagem real isso e raro. E o sinal que o criterio sintatico
+ * nao da -- ele aceita a slice truncada em silencio. */
+static double propagacao(const uint8_t *Y, int w, int h) {
+    int y0 = h / 2, repet = 0, total = 0;
+    for (int y = y0; y < h; y++) {
+        long s = 0;
+        for (int x = 0; x < w; x++)
+            s += abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)(y-1)*w+x]);
+        if ((double)s / w < 1.0) repet++;
+        total++;
+    }
+    return total ? (double)repet / total : 0;
+}
+
 /* Diferenca entre duas imagens Y: quanto o flip de fato estragou. */
 static void difere(const uint8_t *A, const uint8_t *B, int w, int h,
                    double *media, int *maxd, double *frac) {
@@ -149,7 +171,7 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
         while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; captura_frame(fr); av_frame_unref(fr); }
     }
     avcodec_send_packet(ctx, NULL);
-    while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; av_frame_unref(fr); }
+    while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; captura_frame(fr); av_frame_unref(fr); }
     av_frame_free(&fr); av_packet_free(&pkt);
     if (quadros_out) *quadros_out = quadros;
     int esperado = alvo - ancora + 1;
@@ -671,14 +693,47 @@ int main(int argc, char **argv) {
                feitos, testes, acima, testes ? 100.0 * acima / testes : 0.0);
         free(R); free(cap_buf); cap_buf = NULL;
     }
+    /* Despeja o plano Y de um frame como PGM, para inspecao visual. */
+    else if (!strcmp(modo, "dump")) {
+        int alvo = atoi(argv[5]);
+        const char *saida = argv[6];
+        cap_buf = malloc((size_t)1920 * 1088);
+        int r = decodifica(ancora_de(alvo), alvo, NULL, 0, NULL);
+        if (cap_w <= 0) { fprintf(stderr, "sem imagem capturada\n"); return 1; }
+        FILE *g = fopen(saida, "wb");
+        fprintf(g, "P5\n%d %d\n255\n", cap_w, cap_h);
+        fwrite(cap_buf, 1, (size_t)cap_w * cap_h, g);
+        fclose(g);
+        printf("frame %d (ancora %d, decode %s) -> %s  %dx%d | "
+               "propagacao %.1f%% | blocagem %.3f\n",
+               alvo, ancora_de(alvo), r ? "COM ERRO" : "limpo", saida, cap_w, cap_h,
+               100 * propagacao(cap_buf, cap_w, cap_h), blocagem(cap_buf, cap_w, cap_h));
+    }
     else {
-        int bons = 0;
+        /* Saida por frame: <t> <estado> <propagacao> <blocagem>
+         *   quebrado  - falhou no criterio sintatico
+         *   propagado - decodificou "limpo" mas a slice terminou cedo e a
+         *               imagem e listra vertical (>=99,5% das linhas repetidas)
+         *   uniforme  - imagem chapada (preto/fade); pode ser legitima
+         *   real      - decodificou limpo e tem conteudo de imagem */
+        int quebrado = 0, propagado = 0, uniforme = 0, real = 0;
+        cap_buf = malloc((size_t)1920 * 1088);
         for (int t = 0; t < n_ix; t++) {
             int q, r = decodifica(ancora_de(t), t, NULL, 0, &q);
-            if (!r) bons++;
-            else printf("frame %5d: quebrado (ancora %d)\n", t, ancora_de(t));
+            const char *est; double pr = 0, bl = 0;
+            if (r) { est = "quebrado"; quebrado++; }
+            else {
+                pr = propagacao(cap_buf, cap_w, cap_h);
+                bl = blocagem(cap_buf, cap_w, cap_h);
+                if (bl == 0)         { est = "uniforme";  uniforme++;  }
+                else if (pr >= 0.995){ est = "propagado"; propagado++; }
+                else                 { est = "real";      real++;      }
+            }
+            printf("%d %s %.3f %.3f\n", t, est, pr, bl);
         }
-        printf("\n[+] frames perfeitos: %d/%d\n", bons, n_ix);
+        printf("\n[+] de %d frames: real %d | propagado %d | uniforme %d | quebrado %d\n",
+               n_ix, real, propagado, uniforme, quebrado);
+        free(cap_buf); cap_buf = NULL;
     }
     return 0;
 }
