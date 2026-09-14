@@ -210,8 +210,12 @@ O casamento do quadro por `pts` e a exigência de imagem mudaram os números. N�
 | `propagado` | **0** | agora reprovam no critério, viram `quebrado` |
 | `quebrado` | 3257 | |
 
-**Depois dos reparos de 3435, 3439 e 3442: 191 frames com imagem**, e o `verify`
-dá `4 válidos, 4 falsos`.
+**Depois dos reparos de 3435, 3439 e 3442: 151 frames com imagem confiável**
+(5,04 s), e o `verify` dá `5 válidos, 4 falsos`.
+
+O número bruto do modo `estado` é 191, mas **40 deles não valem**: estão em GOPs
+cujo IDR não decodifica, e saem em listras verticais mesmo passando no critério.
+Ver armadilha 12 da seção 5. Contagem honesta é sempre com o filtro do IDR.
 
 **Medir trecho contínuo em ordem de decodificação está errado** — quem assiste vê
 em ordem de exibição, e dentro do GOP elas não coincidem. Corrigido aqui;
@@ -415,6 +419,20 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     de 0,63 da armadilha 10 é o que separa um decode de verdade de uma cópia:
     **abaixo dele, desconfie.** É por isso que o resultado do `vizinho` sobre o
     frame 2360 (0,46–0,47) não conta como reparo.
+
+12. **Frame limpo dentro de GOP com IDR quebrado é lixo, e nenhuma métrica
+    acusa.** Ele passa no critério rigoroso porque a *sintaxe dele* está boa —
+    mas prediz a partir de referências que são lixo, e sai em listras verticais.
+    Medido em 2026-09-14: dos 191 frames classificados com imagem, **40 estavam
+    nessa situação**; amostrei 10 e **todos** estavam visualmente destruídos.
+
+    Por que as métricas falham: o frame 2363, destruído, tem blocagem 2,11 e
+    propagação 0,861 — dentro da faixa dos frames bons. A blocagem dos 40
+    suspeitos tem mediana 1,69 contra 1,03 dos confiáveis: **não separa**.
+
+    O teste que funciona é barato e não precisa olhar a imagem: **o IDR do
+    próprio GOP decodifica?** Se não, o frame não conta, por mais limpo que
+    pareça. Toda contagem de "frames recuperados" tem que aplicar esse filtro.
 
 ## 6. Questões abertas
 
