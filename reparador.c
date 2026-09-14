@@ -115,6 +115,18 @@ static double blocagem(const uint8_t *Y, int w, int h) {
     return (borda / nb) / (interior / ni);
 }
 
+/* Diferenca entre duas imagens Y: quanto o flip de fato estragou. */
+static void difere(const uint8_t *A, const uint8_t *B, int w, int h,
+                   double *media, int *maxd, double *frac) {
+    double s = 0; int mx = 0; long mud = 0;
+    size_t n = (size_t)w * h;
+    for (size_t i = 0; i < n; i++) {
+        int d = abs((int)A[i] - (int)B[i]);
+        s += d; if (d > mx) mx = d; if (d) mud++;
+    }
+    *media = s / n; *maxd = mx; *frac = (double)mud / n;
+}
+
 /* Decodifica a cadeia [ancora..alvo]. Opcionalmente troca o payload do alvo.
  * Devolve 0 se TUDO saiu perfeito: nenhum log de erro e o numero de quadros
  * emitidos (apos flush) igual ao numero de pacotes enviados.
@@ -599,87 +611,65 @@ int main(int argc, char **argv) {
         printf("\n[+] unica: %d | multipla: %d | nenhuma: %d\n",
                n_unico, n_multi, n_zero);
     }
-    /* Valida o criterio visual contra verdade conhecida. Pega IDRs que ja
-     * decodificam limpos, injeta um bit de erro, enumera TODAS as correcoes de
-     * 1 bit que restauram a decodificacao e pergunta: a metrica visual coloca a
-     * correcao verdadeira em primeiro lugar? Sem isto nao ha razao para confiar
-     * na metrica -- ver secao 5 do ESTADO.md. */
+    /* Duas perguntas de uma vez, em IDRs que ja decodificam limpos:
+     *
+     * 1. Quanto dano visual um bit corrompido causa de fato? Medido contra a
+     *    imagem limpa (a verdade conhecida), em pixels alterados e diferenca.
+     * 2. A blocagem detecta esse dano? Se nao subir acima do valor limpo, o
+     *    criterio visual nao serve e nao ha por que segui-lo.
+     *
+     * A versao anterior injetava um flip que QUEBRASSE o decode. Nao existe na
+     * pratica: 6.300 flips em quatro keyframes e nenhum quebrou. Este desenho
+     * usa essa tolerancia a favor -- injeta flips que nao quebram, que e o caso
+     * real, e pergunta se a imagem denuncia o que a sintaxe deixa passar. */
     else if (!strcmp(modo, "oraculo")) {
-        int n_am = argc > 5 ? atoi(argv[5]) : 3;
-        int jan  = argc > 6 ? atoi(argv[6]) : 1024;
+        int n_am = argc > 5 ? atoi(argv[5]) : 5;
+        int n_fl = argc > 6 ? atoi(argv[6]) : 24;
         size_t PX = 1920 * 1088;
-        int MAXSOL = 200000;
         uint8_t *R = malloc(PX);
         cap_buf = malloc(PX);
-        Sol *sol = malloc((size_t)MAXSOL * sizeof *sol);
-        int feitos = 0, acertos = 0, top10 = 0;
-        int nthr = quantas_threads();
-        fprintf(stderr, "[+] modo oraculo com %d thread(s)\n", nthr);
+        int feitos = 0, testes = 0, acima = 0;
 
         for (int t = 0; t < n_ix && feitos < n_am; t++) {
             if (!ix[t].idr) continue;
             if (decodifica(t, t, NULL, 0, NULL) != 0) continue;   /* precisa estar limpo */
             int w = cap_w, h = cap_h, len = ix[t].size;
             memcpy(R, cap_buf, (size_t)w * h);
-            double m_limpo = blocagem(R, w, h);
+            double m0 = blocagem(R, w, h);
             uint8_t *base = arq + ix[t].off;
 
-            /* Injeta um erro. Amostra posicoes ESPARSAS em vez de varrer: serve
-             * qualquer flip que quebre, e varrer linearmente do meio ate o fim
-             * custava ~900 mil decodificacoes num IDR grande. Fica sequencial de
-             * proposito: o custo e limitado a 256*8 decodificacoes e na pratica
-             * termina nas primeiras, entao paralelizar so somaria complexidade. */
-            int oi = -1, bi = -1, tentativas = 0;
-            int passo = len / 256; if (passo < 1) passo = 1;
-            for (int off = len / 4; off < len && oi < 0; off += passo)
-                for (int b = 0; b < 8; b++) {
-                    tentativas++;
-                    base[off] ^= (1 << b);
-                    int r = decodifica(t, t, NULL, 0, NULL);
-                    base[off] ^= (1 << b);
-                    if (r != 0) { oi = off; bi = b; break; }
+            int passo = len / (n_fl + 2); if (passo < 1) passo = 1;
+            int n = 0, n_acima = 0, quebrou = 0, pior_max = 0;
+            double som_m = 0, som_dif = 0, som_frac = 0, pior_dif = 0, pior_m = 0;
+
+            for (int off = len / 4; off < len && n < n_fl; off += passo) {
+                int b = off % 8;                       /* bit deterministico */
+                base[off] ^= (1 << b);
+                int r = decodifica(t, t, NULL, 0, NULL);
+                if (r != 0) { quebrou++; }
+                else {
+                    double m = blocagem(cap_buf, cap_w, cap_h), media, frac; int mx;
+                    difere(R, cap_buf, w, h, &media, &mx, &frac);
+                    n++; som_m += m; som_dif += media; som_frac += frac;
+                    if (media > pior_dif) pior_dif = media;
+                    if (m > pior_m) pior_m = m;
+                    if (mx > pior_max) pior_max = mx;
+                    if (m > m0) n_acima++;
                 }
-            if (oi < 0) {
-                printf("IDR %5d: nenhum flip quebrou em %d tentativas -- pulado\n",
-                       t, tentativas);
-                fflush(stdout); continue;
+                base[off] ^= (1 << b);
             }
-            base[oi] ^= (1 << bi);
-
-            int corte = acha_corte(t, t);
-            int ini = corte - jan; if (ini < 0) ini = 0;
-            int fim = corte + 3;  if (fim > len) fim = len;
-            if (oi < ini || oi >= fim) {                           /* fora da janela */
-                base[oi] ^= (1 << bi);
-                printf("IDR %5d: erro injetado em %d, fora da janela [%d,%d) -- pulado\n",
-                       t, oi, ini, fim);
-                fflush(stdout); continue;
-            }
-
-            time_t t0 = time(NULL);
-            int total = varre_par(t, t, ini, fim, 0, 0, 1, sol, MAXSOL, nthr);
-            int n = total < MAXSOL ? total : MAXSOL;
-            base[oi] ^= (1 << bi);                                 /* desfaz a injecao */
-
-            /* posicao da correcao verdadeira no ranking por blocagem crescente */
-            double m_true = -1;
-            for (int i = 0; i < n; i++)
-                if (sol[i].off == oi && sol[i].bit == bi) m_true = sol[i].m;
-            int rank = 1;
-            for (int i = 0; i < n; i++) if (sol[i].m < m_true) rank++;
-
-            feitos++;
-            if (rank == 1) acertos++;
-            if (rank <= 10) top10++;
-            printf("IDR %5d: injetado %d/%d (%d tent.) | %5d candidatos | "
-                   "verdadeiro em %d/%d | blocagem limpo %.3f vs verdadeiro %.3f [%.0fs]\n",
-                   t, oi, bi, tentativas, n, rank, n, m_limpo, m_true,
-                   difftime(time(NULL), t0));
+            if (!n) continue;
+            feitos++; testes += n; acima += n_acima;
+            printf("IDR %5d: %2d flips (%d quebraram) | pixels alterados %5.1f%% | "
+                   "dif media %5.2f pior %5.2f maxpix %3d | blocagem limpo %.4f "
+                   "media %.4f pior %.4f | %d/%d acima\n",
+                   t, n, quebrou, 100 * som_frac / n, som_dif / n, pior_dif, pior_max,
+                   m0, som_m / n, pior_m, n_acima, n);
             fflush(stdout);
         }
-        printf("\n[+] amostras: %d | verdadeiro em 1o lugar: %d | no top 10: %d\n",
-               feitos, acertos, top10);
-        free(R); free(cap_buf); cap_buf = NULL; free(sol);
+        printf("\n[+] IDRs: %d | flips: %d | com blocagem acima do limpo: %d (%.0f%%)\n",
+               feitos, testes, acima, testes ? 100.0 * acima / testes : 0.0);
+        free(R); free(cap_buf); cap_buf = NULL;
     }
     else {
         int bons = 0;
