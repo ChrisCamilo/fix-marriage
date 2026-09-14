@@ -123,17 +123,24 @@ antiga sugeria:
 
 | trecho | frames | duração | início | origem |
 |---|---|---|---|---|
-| 3319–3434 | 116 | 3,87 s | 110,74 s | região intacta |
-| 2333–2359 | 27 | 0,90 s | 77,84 s | **reparado** (os 5 patches) |
+| 3319–3434 | 116 | 3,87 s | 110,74 s | íntegro por conta própria |
+| 2333–2359 | 27 | 0,90 s | 77,84 s | íntegro por conta própria |
 | 1138–1141 | 4 | 0,13 s | 37,97 s | — |
 | 3437–3438 | 2 | 0,07 s | 114,68 s | — |
 
-**Vídeo real hoje: 4,77 s de 114,95 s** (trechos ≥ 15 frames). Desses, **0,90 s
-foram consertados pelo trabalho de reparo** e 3,87 s nunca estiveram quebrados.
+**Vídeo real hoje: 4,77 s de 114,95 s** (trechos ≥ 15 frames). Confirmado por
+inspeção visual: o frame 2333 mostra o noivo ajustando a gravata diante do
+espelho, imagem íntegra; o 3319 mostra o noivo calçando o sapato.
 
-Confirmado por inspeção visual: o frame 2333 mostra o noivo ajustando a gravata
-diante do espelho, imagem íntegra. **Os 5 reparos produziram vídeo verdadeiro** —
-o que estava errado antes era a régua, não os reparos.
+**Os 5 reparos do `patches.txt` não produziram nenhum frame com imagem.** Eles
+pertencem aos frames **2362–2366**, e os cinco estão classificados como
+`propagado` — listra vertical. O trecho real de 0,90 s é o 2333–2359, que não
+tem patch algum: estava íntegro por conta própria. A anotação antiga de "1,03 s
+a partir de 77,84 s exigiu 4 reparos" confundia as duas coisas, porque só media
+pelo critério sintático.
+
+Ou seja: **todo o vídeo real que existe hoje sobreviveu sozinho.** O trabalho de
+reparo até aqui rendeu zero segundo de imagem.
 
 A medida anterior dizia "306 perfeitos, 5,61 s assistíveis". Dos 306, **137 eram
 listra vertical** e 16 chapados. E a região intacta encolheu de 4,20 s para
