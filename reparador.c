@@ -161,21 +161,20 @@ static int linhas_reais(const uint8_t *Y, int w, int h) {
     for (int i = 0; i < 256; i++) distintos += hist[i];
     if (distintos < 16) return -1;                    /* quadro de ocultacao */
 
-    int y0 = 0;                                       /* fim do letterbox */
+    /* Diferenca linha-a-linha calculada UMA vez: o laco aninhado ingenuo custava
+     * ~10 ms por frame e dominava a busca. */
+    static _Thread_local unsigned char rep[2048];
     for (int y = 1; y < h; y++) {
         long s = 0;
         for (int x = 0; x < w; x += 4) s += abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)(y-1)*w+x]);
-        if (s / (w/4) >= 1) { y0 = y; break; }
+        rep[y] = (s / (w/4) < 1);
     }
-    for (int y = y0 + 1; y < h - 20; y++) {
-        int rep = 1;
-        for (int k = y; k < y + 20 && rep; k++) {
-            long s = 0;
-            for (int x = 0; x < w; x += 4)
-                s += abs((int)Y[(size_t)k*w+x] - (int)Y[(size_t)(k-1)*w+x]);
-            if (s / (w/4) >= 1) rep = 0;
-        }
-        if (rep) return y - y0;
+    int y0 = 0;                                       /* fim do letterbox */
+    for (int y = 1; y < h; y++) if (!rep[y]) { y0 = y; break; }
+    int seq = 0;
+    for (int y = y0 + 1; y < h; y++) {
+        seq = rep[y] ? seq + 1 : 0;
+        if (seq >= 20) return (y - 19) - y0;
     }
     return h - y0;
 }
@@ -502,6 +501,65 @@ static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
     return total;
 }
 
+/* ---- recuperacao incremental ----
+ * Exigir frame perfeito nao funciona quando ha varios bits corrompidos por
+ * frame: nenhum flip sozinho conserta tudo, e a busca devolve zero. Aqui o
+ * criterio e PROGRESSO -- aceita o flip que faz a imagem crescer, e repete.
+ * Determinismo: vence o maior numero de linhas; empate, o menor indice. */
+typedef struct {
+    int alvo, ini;
+    int lin, off, bit, idx;
+} WorkerL;
+
+static void *worker_linhas(void *p) {
+    WorkerL *w = p;
+    int len = ix[w->alvo].size;
+    uint8_t *copia = malloc(len);
+    memcpy(copia, arq + ix[w->alvo].off, len);
+    if (!cap_buf) cap_buf = malloc((size_t)1920 * 1088);
+    for (;;) {
+        int k = atomic_fetch_add(&prox_cand, 1);
+        if (k >= n_cand) break;
+        int off = w->ini + k / 8, bit = k % 8;
+        copia[off] ^= (1 << bit);
+        decodifica(w->alvo, w->alvo, copia, len, NULL);
+        int lr = cap_w > 0 ? linhas_reais(cap_buf, cap_w, cap_h) : -1;
+        copia[off] ^= (1 << bit);
+        if (lr > w->lin || (lr == w->lin && k < w->idx)) {
+            w->lin = lr; w->off = off; w->bit = bit; w->idx = k;
+        }
+    }
+    free(copia);
+    if (cap_buf) { free(cap_buf); cap_buf = NULL; }
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
+
+static int melhor_flip(int alvo, int ini, int fim, int nthr,
+                       int *off_out, int *bit_out) {
+    if (fim <= ini) return -1;
+    n_cand = (fim - ini) * 8;
+    atomic_store(&prox_cand, 0);
+    Worker *dummy; (void)dummy;
+    WorkerL *w = calloc(nthr, sizeof *w);
+    pthread_t *th = calloc(nthr, sizeof *th);
+    for (int i = 0; i < nthr; i++) {
+        w[i].alvo = alvo; w[i].ini = ini;
+        w[i].lin = -1; w[i].idx = n_cand + 1;
+        pthread_create(&th[i], NULL, worker_linhas, &w[i]);
+    }
+    int lin = -1, off = -1, bit = -1, idx = n_cand + 1;
+    for (int i = 0; i < nthr; i++) {
+        pthread_join(th[i], NULL);
+        if (w[i].lin > lin || (w[i].lin == lin && w[i].idx < idx)) {
+            lin = w[i].lin; off = w[i].off; bit = w[i].bit; idx = w[i].idx;
+        }
+    }
+    free(w); free(th);
+    *off_out = off; *bit_out = bit;
+    return lin;
+}
+
 /* Despacha entre sequencial e paralelo. THREADS=1 cai no codigo sequencial
  * original, o que torna a comparacao A/B honesta: mesma maquina, mesmos dados. */
 static int conta(int ancora, int alvo, int ini, int fim,
@@ -784,6 +842,43 @@ int main(int argc, char **argv) {
         printf("\n[+] IDRs: %d | flips: %d | com blocagem acima do limpo: %d (%.0f%%)\n",
                feitos, testes, acima, testes ? 100.0 * acima / testes : 0.0);
         free(R); free(cap_buf); cap_buf = NULL;
+    }
+    /* Recuperacao incremental de um frame: aceita o flip que faz a imagem
+     * crescer e repete. NAO grava patches -- imprime o que achou. */
+    else if (!strcmp(modo, "recupera")) {
+        int alvo = atoi(argv[5]);
+        int jan   = argc > 6 ? atoi(argv[6]) : 2048;
+        int passos= argc > 7 ? atoi(argv[7]) : 8;
+        int nthr = quantas_threads();
+        exigir_imagem = 0;                 /* aqui queremos imagem parcial */
+        cap_buf = malloc((size_t)1920 * 1088);
+        decodifica(alvo, alvo, NULL, 0, NULL);
+        int L = cap_w > 0 ? linhas_reais(cap_buf, cap_w, cap_h) : -1;
+        printf("frame %d (%d bytes): comeca com %d linhas reais\n", alvo, ix[alvo].size, L);
+        uint8_t *base = arq + ix[alvo].off;
+
+        for (int p = 0; p < passos; p++) {
+            int c = acha_consumo(alvo);
+            int ini = c - jan; if (ini < 0) ini = 0;
+            int fim = c + jan; if (fim > ix[alvo].size) fim = ix[alvo].size;
+            time_t t0 = time(NULL);
+            int off, bit;
+            int lin = melhor_flip(alvo, ini, fim, nthr, &off, &bit);
+            if (lin <= L) {
+                printf("  passo %d: consumo %d, janela [%d,%d) -- sem ganho "
+                       "(melhor %d vs %d) [%.0fs]\n",
+                       p+1, c, ini, fim, lin, L, difftime(time(NULL), t0));
+                break;
+            }
+            base[off] ^= (1 << bit);
+            printf("  passo %d: consumo %d | flip off %d bit %d | linhas %d -> %d "
+                   "(+%d) [%.0fs]\n",
+                   p+1, c, off, bit, L, lin, lin - L, difftime(time(NULL), t0));
+            L = lin;
+            fflush(stdout);
+        }
+        printf("[+] frame %d terminou com %d linhas reais de ~850 visiveis\n", alvo, L);
+        free(cap_buf); cap_buf = NULL;
     }
     /* Rankeia os IDRs por quanto de imagem real sobrou. Saida: <idr> <linhas>
      * (-1 = quadro de ocultacao, nao decodificou nada). */
