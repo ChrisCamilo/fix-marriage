@@ -1137,6 +1137,29 @@ int main(int argc, char **argv) {
         free(cap_buf); cap_buf = NULL;
     }
     /* Despeja o plano Y de um frame como PGM, para inspecao visual. */
+    else if (!strcmp(modo, "varre1")) {
+        /* Varredura exaustiva de 1 bit sobre o NAL INTEIRO de um frame comum.
+         * O modo `unico` so olha IDR; este serve para os frames quebrados que
+         * estao cercados de frames bons, que sao os melhores alvos de reparo. */
+        int alvo = atoi(argv[5]);
+        int len = ix[alvo].size, anc = ancora_de(alvo);
+        int nthr = quantas_threads();
+        int cap = 4096;
+        Sol *sol = malloc((size_t)cap * sizeof(Sol));
+        int offs[4096], bits[4096], guardados = 0;
+        printf("frame %d: %d bytes, ancora %d, %d candidatos de 1 bit, %d threads%s",
+               alvo, len, anc, (len - 5) * 8, nthr, "\n");
+        fflush(stdout);
+        time_t t0 = time(NULL);
+        int total = conta_solucoes_par(anc, alvo, 5, len, offs, bits,
+                                       4096, &guardados, nthr);
+        printf("[+] frame %d: %d solucoes de 1 bit [%.0fs]%s",
+               alvo, total, difftime(time(NULL), t0), "\n");
+        for (int i = 0; i < guardados && i < 40; i++)
+            printf("    off %ld bit %d  (rel %d)%s",
+                   ix[alvo].off + offs[i], bits[i], offs[i], "\n");
+        free(sol);
+    }
     else if (!strcmp(modo, "testa")) {
         FILE *f = fopen(argv[5], "r");
         if (!f) { fprintf(stderr, "nao abriu %s%s", argv[5], "\n"); return 1; }
