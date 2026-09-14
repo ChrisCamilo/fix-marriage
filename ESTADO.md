@@ -263,6 +263,21 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
    reporta ganho pequeno. Use janela de 8192 ou mais, e desconfie de ganho
    pequeno: pode ser sinal de que a janela não cobriu o alvo.
 
+10. **O quadro capturado não é necessariamente o que você pediu.** Com
+    reordenação de B, a ordem de saída não é a de decodificação: guardar "o
+    último quadro recebido" entrega outro frame. O sintoma foi vizinhos
+    *bons* consecutivos acusando diferença 0,00 — eu comparava uma imagem com
+    ela mesma. Corrigido casando `fr->pts` com o índice do alvo; depois disso
+    vizinhos bons passaram a diferir de **0,63 a 1,51**, que é o valor natural.
+    Toda medição feita sobre cadeia de frames antes disso está inválida.
+
+11. **Parecido demais com o vizinho é sinal de falha, não de acerto.** Quando o
+    frame não decodifica, o ffmpeg emite uma cópia do anterior como ocultação —
+    que tira nota máxima num critério de "seja parecido com o vizinho". O piso
+    de 0,63 da armadilha 10 é o que separa um decode de verdade de uma cópia:
+    **abaixo dele, desconfie.** É por isso que o resultado do `vizinho` sobre o
+    frame 2360 (0,46–0,47) não conta como reparo.
+
 ## 6. Questões abertas
 
 ### RESOLVIDO em 2026-09-13: o critério não localiza o bit — não reinvestigar
