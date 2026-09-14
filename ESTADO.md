@@ -339,10 +339,18 @@ header, não coincidência. Isso reforça a anomalia abaixo.
 
 ### Pendentes
 
-3. **Cache do estado do decoder na âncora** — hoje cada candidato de um frame
-   comum redecodifica o GOP inteiro desde o IDR. Continua sendo o maior ganho
-   disponível para frames não-IDR; para IDR a cadeia tem tamanho 1 e só o
-   threading ajuda. Soma-se à paralelização, não a substitui.
+3. **Cache do estado do decoder na âncora** — ~~como descrito, é impossível~~.
+   O libavcodec **não expõe API** para salvar, clonar ou restaurar estado
+   interno de decodificação. Não existe snapshot. Não tente.
+   - O que funciona está implementado atrás de `WARM=1` (desligado por padrão,
+     **ainda não validado**): decodificar um frame **não-referência**
+     (`nal_ref_idc == 0`) não altera o buffer de referências, então um contexto
+     que já decodificou `âncora..alvo-1` continua válido entre candidatos.
+     Cobre **70% dos frames** (2395 de 3445) e troca 28 decodificações por 1.
+   - Exige `AV_CODEC_FLAG_LOW_DELAY`, senão o quadro só sai no flush e o flush
+     encerra o contexto. É esse o risco: low_delay pode mudar a ocultação.
+   - **Validar antes de usar**: mesmo alvo com `WARM=0` e `WARM=1`, exigindo
+     saída idêntica (seção 7 do `AGENTS.md`). Se divergir, descartar o modo.
 4. **Paralelizar a busca com parada antecipada** (`busca1`) — ainda sequencial.
    Exige a regra do menor índice descrita em `PARALELIZACAO.md`, porque com
    múltiplas soluções "a primeira que chegar" escolheria bit errado.
