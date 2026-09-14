@@ -434,6 +434,21 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     próprio GOP decodifica?** Se não, o frame não conta, por mais limpo que
     pareça. Toda contagem de "frames recuperados" tem que aplicar esse filtro.
 
+13. **Só se repara na ordem da cadeia.** O critério exige a cadeia INTEIRA
+    limpa — `log_erros == 0 && quadros == alvo - ancora + 1`. Se qualquer frame
+    entre a âncora e o alvo estiver quebrado, ele emite quadro de ocultação, a
+    ocultação gera linha de log, e **nenhum candidato do alvo pode passar**,
+    qualquer que seja o bit.
+
+    Custou uma hora de máquina: a varredura do frame 2361 devolveu **0 soluções
+    em 243.552 candidatos**, e o resultado é inválido — ela rodou enquanto o
+    2360, que está na cadeia dele, ainda estava quebrado. O 2360 foi reparado
+    depois, na mesma corrida.
+
+    **Regra: varrer sempre do menor índice para o maior dentro do GOP**, e
+    refazer qualquer varredura que tenha rodado com um predecessor quebrado. Um
+    "0 soluções" só significa alguma coisa se a cadeia até o alvo estiver limpa.
+
 ## 6. Questões abertas
 
 ### RESOLVIDO em 2026-09-13: o critério não localiza o bit — não reinvestigar
@@ -534,6 +549,25 @@ metades do mesmo quadro. A decodificação anda certo e diverge antes do fim.
 adianta (o decoder nem chega lá), e a faixa antes do corte está varrida. Sem a
 tarja, o resultado teria sido "24 soluções, escolha uma" — e qualquer escolha
 destravaria 28 frames com a tarja inferior em ruína.
+
+### Frame 2360 reparado: solução única em 260 mil candidatos
+
+Primeiro reparo em **cena de verdade** (não no fade). O 2360 é um dos dois
+buracos do GOP 2333, o GOP parcial mais completo do filme com 27 de 29 quadros.
+
+Varredura exaustiva do NAL inteiro — 259.968 candidatos, 64 min, 12 threads:
+**uma única solução**, em `rel 8`, dentro do cabeçalho da slice. Os três juízes
+concordam, e nenhum marginalmente:
+
+| juiz | candidato | faixa dos genuínos |
+|---|---|---|
+| tarja | 16,000 / desvio 0,071 | 15,98–16,19 / até 0,41 |
+| gabarito (interpolação) | 0,911 | piso 0,66 a 1,25 nesta cena |
+| blocagem | 0,992 | 0,993 / 1,009 / 1,018 |
+
+Em resolução cheia a imagem está limpa — rosto, gravata, mangas, papel de
+parede, sem um bloco fora do lugar — e o movimento das mãos progride
+coerentemente entre 2359 e 2358. Patch `77496463 2`.
 
 ### A faixa de corte, medida nos 121 IDRs quebrados (2026-09-14)
 
