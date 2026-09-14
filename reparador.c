@@ -168,6 +168,10 @@ static void difere(const uint8_t *A, const uint8_t *B, int w, int h,
 static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
                       int *quadros_out) {
     if (exigir_imagem && !cap_buf) cap_buf = malloc((size_t)1920 * 1088);
+    /* Zerar antes de decodificar. Se nenhum quadro sair, estes tem que denunciar
+     * a ausencia em vez de manter o valor da decodificacao anterior -- foi o que
+     * fez a busca binaria de acha_consumo ler "nao mudou" e convergir para 5. */
+    cap_hash = 0; cap_w = 0; cap_h = 0;
     abre_decoder();
     log_zerar();
     AVPacket *pkt = av_packet_alloc();
