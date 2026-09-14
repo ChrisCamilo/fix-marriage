@@ -194,6 +194,23 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
    emite em ordem de saída, não de decodificação. Use extensão incremental.
 6. **Destruir o cabeçalho do NAL zera a contagem de erros** porque o ffmpeg
    descarta o pacote em silêncio. Exija sempre que o quadro seja produzido.
+7. **"Decodifica sem erro" não quer dizer que a imagem existe.** Esta é a mais
+   cara de todas: contaminou todas as medições anteriores. Uma slice pode
+   terminar cedo, o decoder decodifica as primeiras fileiras de macrobloco,
+   propaga o resto verticalmente e **não emite log nenhum**. O quadro é
+   produzido, `quadros == pacotes` bate, e o frame passa como perfeito sendo
+   listra. Medido: em amostras de 200–290 KB, corromper qualquer byte além de
+   ~8–16 KB não muda nada — o decoder consome ~5% do dado e para.
+   - Ligar `err_recognition` **não** resolve; testado com `AV_EF_EXPLODE |
+     AV_EF_BITSTREAM` e o ffmpeg aceita a slice truncada do mesmo jeito.
+   - O que funciona é a assinatura visual: na propagação cada linha é cópia da
+     anterior. Frames bons dão ~24% de linhas repetidas na metade de baixo, os
+     truncados dão 100%. É o que `propagacao()` mede.
+   - **Calibre nos dois sentidos.** Só com exemplos ruins eu teria condenado o
+     frame 2333, que dá 67,8% por ser uma cena de paredes claras e chapadas —
+     e é vídeo real e bom. Sem um exemplo bom conhecido, o limiar sai errado.
+   - Na dúvida, **olhe a imagem**. Despejar o frame com o modo `dump` e abrir
+     custa segundos e responde o que métrica nenhuma respondeu aqui.
 
 ## 6. Questões abertas
 
