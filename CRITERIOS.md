@@ -35,6 +35,40 @@ Mais três conferências, todas contra os vizinhos genuínos:
   e 1,15 dos vizinhos.
 - **média e desvio** têm que bater. No 2361: 166,32 / 63,88 contra 166,19 / 63,99
   e 166,21 / 63,98 — indistinguível.
+### O último juiz sou eu olhando — e ele decide
+
+As métricas acima são **peneira**, não veredito. Elas reduzem milhares de
+candidatos a um punhado; o punhado eu **abro e olho**, em resolução cheia, e
+escrevo o que vejo.
+
+Isso não é formalidade. As duas coisas se pegam mutuamente:
+
+- **O olho pegou o que o número não viu:** o frame 3428 tinha blocagem 1,429
+  contra 1,399 do pior vizinho — margem que parecia estreita. Ampliado em
+  resolução cheia, mostrava degraus de 16×16 na borda da perna e manchas
+  quadradas no chão. Foi removido depois de aplicado.
+- **O número pegou o que o olho não viu:** o vazamento de sete linhas na tarja
+  do 2361 é invisível em imagem reduzida. Só apareceu esticando 18x e marcando
+  em vermelho os pixels fora de faixa.
+
+**O que eu procuro ao olhar**, em recorte de resolução cheia sem redução:
+
+- nitidez de borda onde o original é fino — fios de cabelo na testa, dedos
+  separados, dobras de tecido, o desenho do papel de parede;
+- degraus na grade de 16 pixels, que é a assinatura de macrobloco quebrado;
+- listra horizontal ou vertical, borrão, vazamento de cor;
+- coerência de movimento com os vizinhos de exibição: o quadro tem que estar
+  *entre* eles também no gesto, não só na estatística.
+
+**Limite honesto:** não dá para olhar milhares. Por isso a ordem é peneira
+numérica primeiro, olho depois — e por isso a peneira não pode ser tão apertada
+que descarte antes de eu ver, que foi o erro cometido com a tarja.
+
+**O veredito visual vai escrito no commit, em palavras.** "Rosto nítido, dedos
+separados, papel de parede com borda afiada, sem bloco" vale mais que um número,
+porque daqui a um ano ninguém vai reproduzir a métrica — mas a frase continua
+dizendo o que foi visto.
+
 - **olhar em resolução cheia**. Métrica agregada esconde dano local: foi assim
   que o frame 3428 quase entrou com quebra de macrobloco visível.
 
