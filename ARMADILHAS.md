@@ -109,3 +109,22 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     **Regra: varrer sempre do menor índice para o maior dentro do GOP**, e
     refazer qualquer varredura que tenha rodado com um predecessor quebrado. Um
     "0 soluções" só significa alguma coisa se a cadeia até o alvo estiver limpa.
+
+14. **O ponto de corte só vale se o frame produzir imagem com estrutura.** O
+    `acha_consumo` faz busca binária truncando o NAL e comparando o hash da
+    imagem. Se o frame não produz imagem nenhuma, ou produz campo chapado, o
+    hash não varia com a truncagem e a busca **colapsa para o limite inferior** —
+    devolvendo 5, 7, 10, 12 como se fossem medições.
+
+    Medido nos 121 IDRs quebrados: **22 não produzem imagem** e **15 produzem
+    campo chapado** (blocagem ≤ 0,05). Nesses 37, o corte é artefato.
+
+    Custou uma varredura inteira: os "39 IDRs de corte precoce" que varri em
+    `[5, corte+1024]` eram, em 37 dos 39 casos, uma faixa escolhida por um número
+    sem significado. O resultado "38 de 39 sem solução de 1 bit" **não mede
+    nada** e foi retirado.
+
+    **Antes de usar o corte, conferir que o frame produz imagem com blocagem
+    acima de ~0,05.** Os 84 IDRs que passam nesse teste têm corte de 792 a
+    60.787, mediana 17.698 — nada parecido com os 5 a 12 do grupo colapsado.
+

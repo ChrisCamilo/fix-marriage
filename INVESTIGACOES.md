@@ -155,23 +155,61 @@ que não o que diz medir:
 **A faixa certa é `[5, corte+folga]`**, e ela é barata porque o corte é cedo: os
 121 somam 13,45 milhões de candidatos, 1,5 a 6,5 h. O modo `cortes` a calcula.
 
-#### Os 39 IDRs de corte precoce: varridos, e nenhum é reparável com 1 bit
+#### RETIRADO: a varredura dos "39 IDRs de corte precoce" não media nada
 
-337 mil candidatos, 2% do total. Resultado:
+Varri 39 IDRs cujo corte era menor que 1.000 e concluí que 38 não tinham solução
+de 1 bit. **O resultado é vazio.** Em 37 dos 39 o corte era artefato do
+`acha_consumo` colapsando — ver armadilha 14 do `ARMADILHAS.md`. A faixa
+`[5, corte+1024]` foi escolhida por um número sem significado.
 
-| soluções de 1 bit | IDRs |
-|---|---|
-| 0 | **38** |
-| 1 | 1 (o IDR 0) |
+O que sobra de válido: o IDR 0 tem uma solução de 1 bit em `rel 154`, e a tarja
+a reprovou (quadro 16–18, tarja 18,248 onde todo frame bom tem 16,00).
 
-A única solução, no IDR 0 em `rel 154`, **a tarja reprovou**: quadro 16–18 com
-tarja em 18,248 e desvio 0,432, onde todo frame bom tem 16,00 e desvio ≤ 0,16.
-Mesmíssimo padrão do candidato do 2362 — topo certo, base errada.
+#### Os IDRs com corte confiável: poucas soluções, e a tarja reprova todas
 
-**Conclusão: IDR cujo decoder para nos primeiros 1.000 bytes não se conserta com
-1 bit.** São 38 de 39 sem nenhuma solução, o que é o oposto do problema de
-ambiguidade — ali não há o que escolher, há o que não existe. Provavelmente dano
-no prefixo ou no slice header exigindo vários bits.
+Refeita a triagem, **84 dos 121 produzem imagem com estrutura** e têm corte
+utilizável: de 792 a 60.787, mediana 17.698. Varrer os 84 até `corte+1024` são
+13,1 milhões de candidatos, 1,5 a 2,4 h.
+
+Testados os seis mais baratos, varrendo `[5, corte+1024]`:
+
+| IDR | corte | soluções de 1 bit | tarja |
+|---|---|---|---|
+| 1524 | 792 | 0 | |
+| 1831 | 840 | 0 | |
+| 2072 | 1.371 | 2 | 103 e 104 — reprovadas |
+| 734 | 3.662 | 4 | 19 a 147 — reprovadas |
+| 2217 | 4.266 | 5 | 19 a 180 — reprovadas |
+| 3126 | 3.468 | 8 | 97 a 127 — reprovadas |
+
+**Varrer a faixa certa muda a natureza do problema:** as soluções passam de
+milhares para unidades, e com poucos candidatos a tarja decide sem ambiguidade.
+Todos os 19 candidatos mostram a mesma assinatura — **topo em 16,00 e tarja
+entre 97 e 180**. A decodificação começa certa e desmorona antes do fim do
+quadro, o que aponta dano distribuído, não um bit único.
+
+#### Os três IDRs com erro de cabeçalho provado: 2525 descartado
+
+Dos 121 IDRs quebrados, **26 têm erro de cabeçalho provado** — um IDR tem que
+ter `frame_num = 0` e `poc_lsb = 0` pela norma. Três erram um campo só, por um
+bit só, o que dá âncora para busca linear de pares:
+
+| IDR | tamanho | erro | bit |
+|---|---|---|---|
+| 2525 | 63.244 B | `frame_num=32` | `84217196 bit 4` (rel 6) |
+| 705 | 232.555 B | `poc_lsb=8` | `26199123 bit 1` (rel 8) |
+| 3278 | 244.901 B | `poc_lsb=16` | `109719190 bit 6` (rel 9) |
+
+**A âncora não muda nada observável** em nenhum dos três: 2525 e 705 seguem
+entregando campo chapado, 3278 segue sem produzir imagem. Isso sugere que o
+decoder descarta o NAL antes de usar o campo — armadilha 6.
+
+**IDR 2525: 0 soluções** varrendo o NAL inteiro com a âncora aplicada (505.912
+candidatos). Nenhum par `(bit do cabeçalho, outro bit)` o conserta.
+
+O erro de cabeçalho é real e provado por aritmética, mas é **sintoma, não
+causa**: um entre vários bits corrompidos naquela região, e não o bit que
+trancou o frame.
 
 #### Calibração da tarja contra quadros genuínos — e ela aprova
 
