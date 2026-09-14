@@ -22,7 +22,7 @@ candidato mas nenhum passou nos juízes; `sem solução` não tem candidato nenh
 |---|---|---|---|---|---|---|---|
 | **2360** | 2333 | 32.501 | NAL inteiro | 259.968 | 64 min | **1** | **reparado** — `77496463 2`, os três juízes aprovam |
 | 2361 | 2333 | 30.449 | NAL inteiro | 243.552 | 62 min | 0 | **INVÁLIDA** — rodou com o 2360 quebrado na cadeia |
-| 2361 | 2333 | 30.449 | NAL inteiro | 243.552 | — | — | refazendo, agora com a cadeia limpa |
+| 2361 | 2333 | 30.449 | NAL inteiro | 243.552 | 75 min | **1** | reprovado — ver abaixo |
 | 3428 | 3426 | 5.211 | NAL inteiro | 41.648 | 70 s | 25.537 | **reprovado** — o melhor tem quebra de macrobloco visível |
 | 3430 | 3426 | 7.223 | NAL inteiro | 57.744 | 148 s | 17.448 | reprovado — blocagem 2,199 contra 1,40 dos vizinhos |
 | 3432 | 3426 | 1.626 | NAL inteiro | 12.968 | 40 s | 6.266 | reprovado — retângulos de macrobloco no mapa de diferença |
@@ -32,6 +32,27 @@ candidato mas nenhum passou nos juízes; `sem solução` não tem candidato nenh
 | **3442** | 3426 | 2.939 | NAL inteiro | 23.472 | 125 s | 959 | **reparado** — `114260576 3`, erra 6 linhas na borda |
 | 3443 | 3426 | 261 | NAL inteiro | 2.048 | 12 s | **0** | sem solução |
 | 3444 | 3426 | 266 | NAL inteiro | 2.088 | 12 s | 2 | reprovado — campo 19–21, não uniforme |
+
+### Frame 2361: o zero era artefato, mas o reparo não saiu
+
+A revarredura com a cadeia limpa devolveu **1 solução** onde a anterior dera 0 —
+confirmação direta da armadilha 13. Mas ela não passa:
+
+| tentativa | cabeçalho | tarja média / desvio | gabarito |
+|---|---|---|---|
+| só `77528961 bit 2` | `frame_num=136` (**errado**, devia ser 8) | 16,246 / **5,350** | 1,308 |
+| `bit 0` + `bit 2` | `frame_num=8`, `poc_lsb=54` — **corretos** | 17,432 / **13,632** | 1,908 |
+| genuínos | | ~16,00 / ≤ 0,41 | piso 0,66 |
+
+Os **dois bits estão no mesmo byte**, `77528961`. Só o do `frame_num` não faz
+decodificar; só o outro faz decodificar mas deixa o `frame_num` provadamente
+errado; os dois juntos dão cabeçalho correto e **imagem pior**.
+
+Ampliando a tarja inferior em resolução cheia, os dois candidatos mostram um
+**borrão claro horizontal** logo abaixo da borda da imagem, que os vizinhos
+genuínos não têm. Rejeitados pelos juízes e pelo olho.
+
+O GOP 2333 fica em **28 de 29**.
 
 ### Busca de segundo bit
 
