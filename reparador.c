@@ -91,6 +91,9 @@ static void abre_decoder(void) {
  * para la. Serve ao criterio visual: a sintaxe nao distingue o bit certo, mas
  * a imagem sim. */
 static _Thread_local uint8_t *cap_buf = NULL;
+/* Croma, so para o modo dumpyuv: o resto do programa decide por luma. */
+static _Thread_local uint8_t *cap_u = NULL, *cap_v = NULL;
+static int guardar_croma = 0;
 static _Thread_local int cap_w = 0, cap_h = 0;
 
 /* Criterio de 2 partes ligado por padrao. VISUAL=0 volta ao criterio so
@@ -124,6 +127,14 @@ static void captura_frame(AVFrame *fr) {
         for (int x = 0; x < cap_w; x += 8) { hh ^= src[x]; hh *= 1099511628211ULL; }
     }
     cap_hash = hh;
+    if (guardar_croma && fr->data[1] && fr->data[2]) {
+        int cw = cap_w / 2, ch = cap_h / 2;
+        if (!cap_u) { cap_u = malloc((size_t)cw * ch); cap_v = malloc((size_t)cw * ch); }
+        for (int y = 0; y < ch; y++) {
+            memcpy(cap_u + (size_t)y * cw, fr->data[1] + (size_t)y * fr->linesize[1], cw);
+            memcpy(cap_v + (size_t)y * cw, fr->data[2] + (size_t)y * fr->linesize[2], cw);
+        }
+    }
 }
 
 /* Blocagem: descontinuidade na grade 16x16 do macrobloco contra a do interior.
@@ -620,10 +631,15 @@ static void *worker_par2(void *p) {
  *   - o fundo da tarja e uniforme 16; a ocultacao poe ruido la.
  * Imprime as medidas e deixa a decisao para quem le. */
 typedef struct { long off; int bit; int pmin, pmax, l949, l952, l960, bmin, bmax;
-                 double bmed, bdes, tmed; } Campo;
+                 double bmed, bdes, tmed, dref; } Campo;
 static Campo *campos = NULL;
 static int n_campos = 0;
 static int campo_alvo = 0;
+/* Referencia opcional: o quadro que o candidato DEVERIA produzir. Numa cena
+ * parada que so escurece, o frame certo e quase a interpolacao dos dois
+ * vizinhos de exibicao -- gabarito que vale onde o campo nao e uniforme. */
+static uint8_t *alvo_img = NULL;
+static int alvo_w = 0, alvo_h = 0;
 
 static void *worker_campo(void *p) {
     (void)p;
@@ -665,6 +681,17 @@ static void *worker_campo(void *p) {
         for (int y = 0; y < 130 && y < H; y++)
             for (int x = 0; x < W; x += 4) { tsoma += cap_buf[(size_t)y * W + x]; tn++; }
         double tmed = tn ? tsoma / tn : 0;
+        double dref = -1;
+        if (alvo_img && W == alvo_w) {
+            double sd = 0; long nd = 0;
+            for (int y = 136; y < 950 && y < H; y++)
+                for (int x = 0; x < W; x += 2) {
+                    sd += abs((int)cap_buf[(size_t)y * W + x]
+                              - (int)alvo_img[(size_t)y * W + x]);
+                    nd++;
+                }
+            dref = nd ? sd / nd : -1;
+        }
         long s9 = 0, s2 = 0, s6 = 0;
         for (int x = 0; x < W; x++) {
             s9 += cap_buf[(size_t)949 * W + x];
@@ -676,6 +703,7 @@ static void *worker_campo(void *p) {
         campos[k].l960 = (int)(s6 / W);
         campos[k].bmin = bmin; campos[k].bmax = bmax;
         campos[k].bmed = bmed; campos[k].bdes = bdes; campos[k].tmed = tmed;
+        campos[k].dref = dref;
     }
     free(copia); free(cap_buf); cap_buf = NULL;
     if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
@@ -1295,6 +1323,19 @@ int main(int argc, char **argv) {
             campos[n_campos].off = o; campos[n_campos].bit = b; n_campos++;
         }
         fclose(f);
+        if (argc > 7) {
+            FILE *r = fopen(argv[7], "rb");
+            if (r) {
+                char m[3]; int mx;
+                fscanf(r, "%2s %d %d %d", m, &alvo_w, &alvo_h, &mx);
+                fgetc(r);
+                alvo_img = malloc((size_t)alvo_w * alvo_h);
+                fread(alvo_img, 1, (size_t)alvo_w * alvo_h, r);
+                fclose(r);
+                fprintf(stderr, "[+] referencia %dx%d carregada de %s\n",
+                        alvo_w, alvo_h, argv[7]);
+            }
+        }
         int nthr = quantas_threads();
         printf("frame %d: medindo %d candidatos com %d threads%s",
                campo_alvo, n_campos, nthr, "\n");
@@ -1304,16 +1345,23 @@ int main(int argc, char **argv) {
         for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_campo, NULL);
         for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
         free(th);
-        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max tarja_media tarja_desvio topo_media\n");
+        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max tarja_media tarja_desvio topo_media dif_referencia\n");
         for (int k = 0; k < n_campos; k++) {
             if (campos[k].pmin < 0) continue;
-            printf("%ld %d %d %d %d %d %d %d %d %.3f %.3f %.3f\n",
+            printf("%ld %d %d %d %d %d %d %d %d %.3f %.3f %.3f %.4f\n",
                    campos[k].off, campos[k].bit, campos[k].pmin, campos[k].pmax,
                    campos[k].l949, campos[k].l952, campos[k].l960,
                    campos[k].bmin, campos[k].bmax,
-                   campos[k].bmed, campos[k].bdes, campos[k].tmed);
+                   campos[k].bmed, campos[k].bdes, campos[k].tmed, campos[k].dref);
         }
         free(campos);
+    }
+    else if (!strcmp(modo, "corte")) {
+        int alvo = atoi(argv[5]);
+        cap_buf = malloc((size_t)1920 * 1088);
+        printf("frame %d (%d bytes): o decoder para de consumir por volta do byte %d\n",
+               alvo, ix[alvo].size, acha_consumo(alvo));
+        free(cap_buf); cap_buf = NULL;
     }
     else if (!strcmp(modo, "varre1")) {
         /* Varredura exaustiva de 1 bit sobre o NAL INTEIRO de um frame comum.
@@ -1321,15 +1369,22 @@ int main(int argc, char **argv) {
          * estao cercados de frames bons, que sao os melhores alvos de reparo. */
         int alvo = atoi(argv[5]);
         int len = ix[alvo].size, anc = ancora_de(alvo);
+        /* Janela opcional. Sem ela varre o NAL inteiro; com ela repete o recorte
+         * da secao 6 do ESTADO.md (em volta do corte e no inicio do NAL), que e
+         * ordens de grandeza mais barato num IDR de 150 KB. */
+        int jini = argc > 7 ? atoi(argv[7]) : 5;
+        int jfim = argc > 8 ? atoi(argv[8]) : len;
+        if (jini < 5) jini = 5;
+        if (jfim > len) jfim = len;
         int nthr = quantas_threads();
         int cap = 4096;
         Sol *sol = malloc((size_t)cap * sizeof(Sol));
         int offs[4096], bits[4096], guardados = 0;
-        printf("frame %d: %d bytes, ancora %d, %d candidatos de 1 bit, %d threads%s",
-               alvo, len, anc, (len - 5) * 8, nthr, "\n");
+        printf("frame %d: %d bytes, ancora %d, faixa [%d,%d), %d candidatos, %d threads%s",
+               alvo, len, anc, jini, jfim, (jfim - jini) * 8, nthr, "\n");
         fflush(stdout);
         time_t t0 = time(NULL);
-        int total = conta_solucoes_par(anc, alvo, 5, len, offs, bits,
+        int total = conta_solucoes_par(anc, alvo, jini, jfim, offs, bits,
                                        4096, &guardados, nthr);
         printf("[+] frame %d: %d solucoes de 1 bit [%.0fs]%s",
                alvo, total, difftime(time(NULL), t0), "\n");
@@ -1375,6 +1430,57 @@ int main(int argc, char **argv) {
         printf("%s[+] %d de %d candidatos fazem o frame decodificar limpo%s",
                "\n", bons, n_cands, "\n");
         free(cands);
+    }
+    else if (!strcmp(modo, "serie")) {
+        /* Extrai uma faixa de frames em I420 cru, numa passada so, mais um mapa
+         * de quais decodificaram. E a materia-prima da REMONTAGEM -- que e
+         * ocultacao, nao reparo: os frames quebrados sao preenchidos depois pela
+         * media dos vizinhos de exibicao, o que da video assistivel sem afirmar
+         * nada sobre os bits. Nunca confundir com o patches.txt. */
+        int ini = atoi(argv[5]), fim = atoi(argv[6]);
+        guardar_croma = 1;
+        cap_buf = malloc((size_t)1920 * 1088);
+        FILE *g = fopen(argv[7], "wb");
+        FILE *m = fopen(argv[8], "w");
+        size_t ny = (size_t)1920 * 1080, nc = (size_t)960 * 540;
+        uint8_t *zero = calloc(1, ny > nc ? ny : nc);
+        int bons = 0;
+        for (int t = ini; t <= fim && t < n_ix; t++) {
+            int r = decodifica(ancora_de(t), t, NULL, 0, NULL);
+            int ok = (r == 0 && cap_w == 1920 && cap_h == 1080);
+            if (ok) {
+                fwrite(cap_buf, 1, ny, g);
+                fwrite(cap_u ? cap_u : zero, 1, nc, g);
+                fwrite(cap_v ? cap_v : zero, 1, nc, g);
+                bons++;
+            } else {
+                fwrite(zero, 1, ny, g);
+                fwrite(zero, 1, nc, g); fwrite(zero, 1, nc, g);
+            }
+            fprintf(m, "%d %s\n", t, ok ? "ok" : "quebrado");
+        }
+        fclose(g); fclose(m); free(zero);
+        printf("faixa %d-%d: %d de %d decodificaram -> %s\n",
+               ini, fim, bons, fim - ini + 1, argv[7]);
+        free(cap_buf); cap_buf = NULL;
+    }
+    else if (!strcmp(modo, "dumpyuv")) {
+        /* Grava o quadro inteiro em I420 cru, para remontagem externa. O resto
+         * do programa decide por luma; aqui o croma importa porque a saida vai
+         * virar video para assistir. */
+        int alvo = atoi(argv[5]);
+        guardar_croma = 1;
+        cap_buf = malloc((size_t)1920 * 1088);
+        int r = decodifica(ancora_de(alvo), alvo, NULL, 0, NULL);
+        if (cap_w <= 0) { fprintf(stderr, "frame %d nao produz imagem\n", alvo); return 1; }
+        FILE *g = fopen(argv[6], "wb");
+        fwrite(cap_buf, 1, (size_t)cap_w * cap_h, g);
+        int cw = cap_w / 2, ch = cap_h / 2;
+        if (cap_u) { fwrite(cap_u, 1, (size_t)cw * ch, g); fwrite(cap_v, 1, (size_t)cw * ch, g); }
+        fclose(g);
+        printf("frame %d -> %s  %dx%d I420 (decode %s)\n",
+               alvo, argv[6], cap_w, cap_h, r ? "COM ERRO" : "limpo");
+        free(cap_buf); cap_buf = NULL;
     }
     else if (!strcmp(modo, "dump")) {
         int alvo = atoi(argv[5]);

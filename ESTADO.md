@@ -469,6 +469,38 @@ no **início do NAL** e corte pequeno. O `12/0` aparece como solução única em
 IDRs distintos (2188 e 2612) e também entre as três do 1625 — padrão de slice
 header, não coincidência. Isso reforça a anomalia abaixo.
 
+### VALIDADO em 2026-09-14: a tarja decide onde nenhum outro critério alcança
+
+Teste no IDR 2362, que é o caso difícil por definição: GOP inteiro escuro, nenhum
+vizinho íntegro, nenhum critério temporal aplicável.
+
+Varredura nas janelas da seção 6 (±1024 em volta do corte, que fica no byte
+11538, mais 256 no início do NAL): **zero soluções em volta do corte e UMA no
+início**. Pelo critério sintático, solução única — o caso mais forte que existe.
+
+A tarja reprovou:
+
+| IDR | topo | tarja | desvio | imagem |
+|---|---|---|---|---|
+| 2333 (bom) | 15,999 | **16,000** | 0,050 | 167,6 |
+| 3319 (bom) | 15,995 | **15,992** | 0,161 | 109,5 |
+| 3397 (bom) | 16,002 | **16,002** | 0,080 | 91,2 |
+| 2362 candidato | 16,000 | **19,248** | 0,432 | **17,5** |
+
+O candidato produz quadro quase preto com a tarja inferior em 19,25. **Sem a
+tarja ele entraria no `patches.txt` como reparo definitivo de um IDR**,
+destravaria 28 frames de lixo e passaria no `verify`.
+
+Dois subprodutos que valem tanto quanto:
+
+- **A tarja localiza.** Topo em 16,000 (certo) e base em 19,248 (errado) diz que
+  o erro está no fim do NAL, porque os macroblocos saem em ordem raster. Para o
+  2362 isso significa procurar **depois do byte 12562** — as janelas da seção 6
+  não alcançam o dano, e é por isso que ele parecia ter solução única.
+- **Custo irrisório.** A janela do corte levou 32 s e a do início 4 s, com 6
+  threads disputando CPU; o teste da tarja em si é uma decodificação por
+  candidato. O gargalo nunca foi medir, foi não ter o que medir.
+
 ### Ainda em aberto
 
 - **Anomalia do início do NAL:** 20% dos prefixos e 17% dos slice headers
