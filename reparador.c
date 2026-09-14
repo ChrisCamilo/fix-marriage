@@ -170,7 +170,7 @@ static int linhas_reais(const uint8_t *Y, int w, int h) {
      * A diferenca linha-a-linha e calculada UMA vez; o laco aninhado ingenuo
      * custava ~10 ms por frame e dominava a busca. */
     static _Thread_local unsigned char rep[2048];
-    static _Thread_local float dl[2048];
+    static _Thread_local float dl[2048], d30[2048];
     for (int y = 1; y < h; y++) {
         long s = 0, borda = 0, dentro = 0; int nb = 0, ni = 0, nv = 0;
         for (int x = 4; x < w; x += 4) {
@@ -179,7 +179,17 @@ static int linhas_reais(const uint8_t *Y, int w, int h) {
             if (x % 16 == 0) { borda += dh; nb++; } else { dentro += dh; ni++; }
         }
         dl[y] = (float)s / nv;
-        int repetida = (dl[y] < 1);
+        /* Borrao vertical e continuo entre linhas VIZINHAS -- comparar so com a
+         * linha de cima nao o detecta, e foi assim que a busca burlou a metrica
+         * pela terceira vez. O que o denuncia e a distancia longa: em imagem
+         * real a linha y difere bastante da y-30; num borrao, quase nao. */
+        long s30 = 0;
+        if (y >= 30) {
+            for (int x = 4; x < w; x += 4)
+                s30 += abs((int)Y[(size_t)y*w+x] - (int)Y[(size_t)(y-30)*w+x]);
+            d30[y] = (float)s30 / nv;
+        } else d30[y] = 1e9f;
+        int repetida = (dl[y] < 1) || (d30[y] < 2);
         /* degrau medio na borda do macrobloco > 2x o do interior = lixo */
         int blocada = (dentro > 0 && borda * ni > 2 * dentro * nb);
         rep[y] = repetida || blocada;
@@ -192,16 +202,27 @@ static int linhas_reais(const uint8_t *Y, int w, int h) {
      * inventado por mim a busca aprende a burlar; a media do proprio conteudo
      * real do frame, nao. Lixo de macrobloco tem diferenca linha-a-linha muito
      * fora da distribuicao natural da imagem acima dele. */
-    double soma = 0; int n = 0, seq = 0;
-    for (int y = y0 + 1; y < h; y++) {
-        int aceita;
-        if (n < 8) aceita = !rep[y];                  /* semente: ainda sem media */
-        else {
-            double mu = soma / n;
-            aceita = !rep[y] && dl[y] < 3.0 * mu + 2.0;
+    /* O que separa imagem real de borrao NAO e o nivel da diferenca, e a
+     * REGULARIDADE dela. Medido em 60 linhas consecutivas:
+     *   real:   8 9 8 7 9 7 7 6 7 6 6 6 ...   (suave)
+     *   borrao: 15 4 3 3 10 3 3 3 8 3 3 3 ... (periodo 4: degrau + copias)
+     * Saltos bruscos em 60 linhas: 0 no real, 8 no borrao. Limiar de nivel nao
+     * separa -- as linhas borradas ficam em 1,3-2,2 e passavam raspando pelo
+     * corte em 1. Contar salto brusco separa. */
+    int jan = 0, saltos = 0;
+    for (int y = y0 + 2; y < h; y++) {
+        float a = dl[y-1], b = dl[y];
+        int salto = (b > 3.0f * a + 1.0f) || (3.0f * b + 1.0f < a);
+        saltos += salto; jan++;
+        if (jan >= 40) {
+            if (saltos >= 4) return (y - 40) - y0;    /* aqui virou borrao */
+            saltos = 0; jan = 0;                      /* janela seguinte */
         }
-        if (aceita) { soma += dl[y]; n++; seq = 0; }
-        else if (++seq >= 20) return (y - 19) - y0;
+        if (rep[y]) {                                 /* propagacao pura */
+            int seq = 1;
+            while (y + seq < h && rep[y + seq] && seq < 20) seq++;
+            if (seq >= 20) return y - y0;
+        }
     }
     return h - y0;
 }
