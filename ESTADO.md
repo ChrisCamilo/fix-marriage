@@ -210,15 +210,31 @@ O casamento do quadro por `pts` e a exigência de imagem mudaram os números. N�
 | `propagado` | **0** | agora reprovam no critério, viram `quebrado` |
 | `quebrado` | 3257 | |
 
-**188 frames com imagem = 6,27 s** de 114,95 s. Mas isolado não se assiste; em
-trechos contínuos:
+**Depois dos reparos de 3435, 3439 e 3442: 191 frames com imagem**, e o `verify`
+dá `4 válidos, 4 falsos`.
 
-| trecho | frames | duração | onde |
-|---|---|---|---|
-| 3319–3427 | 109 | **3,64 s** | t=110,7 s, final do filme |
-| 2333–2359 | 27 | **0,90 s** | t=77,8 s |
+**Medir trecho contínuo em ordem de decodificação está errado** — quem assiste vê
+em ordem de exibição, e dentro do GOP elas não coincidem. Corrigido aqui;
+ordenando por `poc`:
 
-**4,54 s assistíveis.** Os outros 52 frames são ilhas de 1 a 4 quadros.
+| frames | duração | em decodificação |
+|---|---|---|
+| 108 | **3,60 s** | 3319–3426 |
+| 26 | **0,87 s** | 2333–2359 |
+| 10 | **0,33 s** | 3431–3442 |
+
+**4,80 s assistíveis** (era 4,54 s). O trecho de 10 frames é obra dos três
+reparos: antes morria em 4 quadros, porque o 3435 quebrado interrompia a
+exibição logo depois do 3436.
+
+O final do filme em ordem de exibição, com `*` marcando quebrado:
+
+```
+3426 3428* 3427 3430* 3429 3432* 3431 3434 3433 3436 3435 3438 3437 3440 3439 3442 3441* 3444* 3443*
+```
+
+Só **três buracos** — 3428, 3430 e 3432 — separam os 3,60 s do trecho novo.
+Fechá-los emenda tudo em ~4,0 s contínuos, e é o alvo de maior retorno no final.
 
 ### O final do filme é um fade, e isso é medida, não impressão
 
@@ -264,8 +280,8 @@ Varredura exaustiva do NAL inteiro dos seis quebrados do trecho final:
 
 | frame | bytes | soluções de 1 bit | melhor candidato |
 |---|---|---|---|
-| 3435 | 963 | **14** | campo e borda certos, tarja com desvio 0,41 (vizinhos ≤ 0,18) |
-| 3439 | 988 | 349 | campo 25 certo, tarja suja em todos |
+| 3435 | 963 | **14** | **REPARADO** (`114237506 4`): campo 34, tarja com desvio 0,41 (vizinhos ≤ 0,18) |
+| 3439 | 988 | 349 | **REPARADO** (`114244542 6`): imagem **perfeita**, linhas 136–949 uniformes em 25, como os vizinhos bons. 300 candidatos empatam nisso; a tarja desempatou |
 | 3441 | 940 | **1** | campo 16–19 e tarja 19–20: errado |
 | 3442 | 2939 | 959 | 15 com campo 23 e tarja perfeita, mas a fileira de macroblocos 944–949 sai +1,3 a +2,0 acima do campo (nos frames bons ela iguala o campo) |
 | 3443 | 261 | **0** | |
