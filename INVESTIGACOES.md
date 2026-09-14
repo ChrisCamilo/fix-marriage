@@ -246,6 +246,61 @@ cauda do fade, onde o encoder gasta menos bits e ela fica ruidosa.
 Os outros dois reparos ficam no limite: 3439 e 3442 dão desvio 0,468 contra
 0,408 do pior genuíno — 15% acima, marginal mas não absurdo.
 
+### O modelo posicional do cabeçalho: 666 âncoras com valor exato
+
+Descoberto fechando o GOP 2333. O erro de cabeçalho **não é o reparo, é a
+âncora** — sozinho não faz o frame decodificar, mas ancorando a varredura reduz
+a busca de pares a busca linear. Foi assim que o frame 2361 caiu: o bit do
+`frame_num` (provado) mais um segundo bit achado em 243 mil candidatos.
+
+Isso invalida a leitura anterior de que "os 536 candidatos de cabeçalho
+falharam". Eles foram testados **sozinhos**, que é o uso errado.
+
+#### A cadência é previsível, e o tamanho do GOP diz quando confiar
+
+Medido nos GOPs íntegros, posição dos frames de referência dentro do GOP:
+
+| GOP | referências | período |
+|---|---|---|
+| 2333, 3319, 3348, 3368 | `0, 1, 5, 9, 13, 17, 21, 25` | **4** |
+| 3397 | `0, 1, 5, 9, 13, `**`16`**`, 20, 24` | irregular |
+| 3426 (o fade) | `0, 1, 3, 5, 7, 9, 11, 13` | 2 |
+
+**95 dos 128 GOPs têm 29 quadros**, o tamanho padrão. Para eles vale:
+
+```
+posição 0        -> frame_num 0,   poc_lsb 0
+posição 4k-3     -> frame_num k,   poc_lsb 8k          (frame P)
+posição 4k-2+r   -> frame_num k+1, poc_lsb 8(k-1)+2+2r (frame B, r=0,1,2)
+```
+
+Conferido contra os quadros bons desses GOPs: **acerta 110, erra 10**, e os 10
+são todos do GOP 3397. Excluindo o irregular, o modelo é exato.
+
+#### O inventário
+
+Dos 2.606 quadros quebrados em GOP de 29 (fora o 3397):
+
+| distância entre o cabeçalho lido e o previsto | quadros | serventia |
+|---|---|---|
+| **0 bits** | **1.940** | cabeçalho correto — não procurar bit nele, o dano está nos dados |
+| **1 bit** | **268** | âncora direta, receita do 2361 |
+| **2+ bits** | **398** | âncora com valor conhecido |
+
+**666 âncoras com valor exato.** Não são candidatos a testar: são erros com
+correção conhecida por aritmética.
+
+#### As duas ressalvas
+
+**A armadilha 13 tranca tudo.** Nenhum dos 666 tem cadeia limpa hoje — todos
+estão em GOP escuro ou atrás de outro frame quebrado. É valor estocado, que rende
+conforme as cadeias forem liberadas de dentro das regiões boas para fora.
+
+**Em GOP totalmente escuro a cadência não é verificável.** O GOP 3397 prova que
+existe exceção. A previsão ali é hipótese forte, não prova — mas é
+auto-conferível: se um GOP desviar, vários quadros discordam de forma
+correlacionada, e isso aparece assim que um ou dois forem reparados.
+
 ### Ainda em aberto
 
 - **Anomalia do início do NAL:** 20% dos prefixos e 17% dos slice headers
