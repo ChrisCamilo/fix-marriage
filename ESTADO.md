@@ -198,6 +198,84 @@ Que 47 dos 53 trechos tenham apenas 2 a 5 frames diz que o dano é **denso e bem
 distribuído**, não concentrado: o decoder trava, recupera por poucos frames e
 trava de novo, ao longo do filme inteiro.
 
+### Medição de 2026-09-14 (depois da correção do pts)
+
+O casamento do quadro por `pts` e a exigência de imagem mudaram os números. Não
+é o arquivo que mudou, é a régua — e a régua anterior lia o quadro errado.
+
+| estado | frames | |
+|---|---|---|
+| `real` | **186** | decodifica limpo e tem conteúdo |
+| `uniforme` | 2 | |
+| `propagado` | **0** | agora reprovam no critério, viram `quebrado` |
+| `quebrado` | 3257 | |
+
+**188 frames com imagem = 6,27 s** de 114,95 s. Mas isolado não se assiste; em
+trechos contínuos:
+
+| trecho | frames | duração | onde |
+|---|---|---|---|
+| 3319–3427 | 109 | **3,64 s** | t=110,7 s, final do filme |
+| 2333–2359 | 27 | **0,90 s** | t=77,8 s |
+
+**4,54 s assistíveis.** Os outros 52 frames são ilhas de 1 a 4 quadros.
+
+### O final do filme é um fade, e isso é medida, não impressão
+
+Medindo só a área útil (linhas 136–943, sem as tarjas), o desvio padrão cai:
+41,9 no frame 3420 · 21,2 no 3423 · 6,4 no 3427 · 1,7 no 3429 · **0,00 do 3431
+em diante**. Dali para frente `min == max`: são campos de um único valor.
+
+A cadência do GOP 3426 é de **período 2**, e a ordem de exibição não é a de
+decodificação. Por `poc`: `3434 3433 3436 [3435] 3438 3437 3440 [3439] …`. Os
+valores caem linearmente: 43, 41, 38, 36, **34**, 32, 29, 27.
+
+Isso dá um gabarito aritmético — o valor de um frame quebrado é a média dos
+vizinhos de exibição. Foi assim que saiu o reparo do 3435. **Cuidado:** ancorar
+nos vizinhos de decodificação dá o frame errado; esse erro foi cometido e
+elegeu o candidato errado antes de ser pego.
+
+Assinatura de um frame bom do fade, que é o que um candidato precisa reproduzir:
+
+- topo (linhas 0–129) uniforme 16;
+- campo (136–**949**) uniforme, no valor previsto — inclusive as seis últimas
+  linhas, que valem o mesmo que o resto;
+- borda **seca** na linha 950, sem rampa: a rampa esfumada é o borrão da
+  ocultação;
+- tarja inferior (951–1079) uniforme 16, **até a última linha**.
+
+### Nenhum frame do fade é reparável com 1 bit
+
+Varredura exaustiva do NAL inteiro dos seis quebrados do trecho final:
+
+| frame | bytes | soluções de 1 bit | melhor candidato |
+|---|---|---|---|
+| 3435 | 963 | **14** | campo e borda certos, **tarja 1040–1079 suja** |
+| 3439 | 988 | 349 | campo 25 certo, tarja suja em todos |
+| 3441 | 940 | **1** | campo 16–19 e tarja 19–20: errado |
+| 3442 | 2939 | 959 | 15 com campo 23 e tarja limpa, mas linhas 944–949 saem 23–25 |
+| 3443 | 261 | **0** | |
+| 3444 | 266 | 2 | borda borrada |
+| 3428 | 5211 | 25537 | ambíguo demais |
+| 3430 | 7223 | 17448 | ambíguo demais |
+
+Todos precisam de **mais de um bit**. Cada solução de 1 bit conserta uma parte
+do quadro e deixa defeito em outra — é o sinal de que o dano é múltiplo, e a
+peneira por região do quadro é o que revela isso. Sem olhar a tarja inteira, o
+3442 passaria por resolvido com 15 candidatos "limpos".
+
+### `verify`: 4 patches ficaram insuficientes, não falsos
+
+Com o critério atual dá `2 válidos, 4 falsos`; com `VISUAL=0`, que é o critério
+da época em que entraram, dá `5 válidos, 1 falso`. Os patches dos frames 2362,
+2364, 2365 e 2366 continuam satisfazendo a sintaxe — o que mudou foi a régua,
+que ganhou a exigência de imagem e a correção do pts. **Não removê-los:** podem
+ser bits necessários de um reparo de vários bits. O append-only está certo aqui.
+
+O espelho disso é o patch novo do 3435, que aparece como falso sob `VISUAL=0`
+com `com=0 sem=0`: aquele frame sempre passou na sintaxe e só falhava na imagem.
+Os dois critérios medem coisas diferentes; nenhum sozinho decide.
+
 ## 5. Armadilhas de método — ler antes de medir qualquer coisa
 
 Cada uma delas me custou horas e produziu uma conclusão errada:
