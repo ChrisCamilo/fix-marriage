@@ -549,6 +549,76 @@ static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
     return total;
 }
 
+/* ---- criterio de referencia temporal ----
+ * Todas as metricas anteriores eram proxies inventados ("isto parece imagem?"),
+ * e a busca aprendeu a burlar cada uma. Aqui existe gabarito de verdade: a 30
+ * quadros por segundo o frame vizinho e quase identico ao alvo. Comparar o
+ * candidato com um vizinho INTEGRO nao e heuristica -- nenhum bit errado
+ * reproduz a cena certa por acaso. Vale so onde ha vizinho bom, que e a borda
+ * dos trechos que sobreviveram. */
+static uint8_t *ref_img = NULL;          /* so-leitura nos workers */
+static int ref_w = 0, ref_h = 0;
+
+static double mad_ref(const uint8_t *Y, int w, int h) {
+    if (!ref_img || w != ref_w || h != ref_h) return 1e9;
+    double s = 0; size_t n = 0;
+    for (size_t i = 0; i < (size_t)w * h; i += 3) { s += abs((int)Y[i] - (int)ref_img[i]); n++; }
+    return n ? s / n : 1e9;
+}
+
+typedef struct {
+    int alvo, ancora, ini;
+    double mad; int off, bit, idx;
+} WorkerR;
+
+static void *worker_ref(void *p) {
+    WorkerR *w = p;
+    int len = ix[w->alvo].size;
+    uint8_t *copia = malloc(len);
+    memcpy(copia, arq + ix[w->alvo].off, len);
+    if (!cap_buf) cap_buf = malloc((size_t)1920 * 1088);
+    for (;;) {
+        int k = atomic_fetch_add(&prox_cand, 1);
+        if (k >= n_cand) break;
+        int off = w->ini + k / 8, bit = k % 8;
+        copia[off] ^= (1 << bit);
+        decodifica(w->ancora, w->alvo, copia, len, NULL);
+        double m = cap_w > 0 ? mad_ref(cap_buf, cap_w, cap_h) : 1e9;
+        copia[off] ^= (1 << bit);
+        if (m < w->mad || (m == w->mad && k < w->idx)) {
+            w->mad = m; w->off = off; w->bit = bit; w->idx = k;
+        }
+    }
+    free(copia);
+    if (cap_buf) { free(cap_buf); cap_buf = NULL; }
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
+
+static double melhor_ref(int ancora, int alvo, int ini, int fim, int nthr,
+                         int *off_out, int *bit_out) {
+    if (fim <= ini) return 1e9;
+    n_cand = (fim - ini) * 8;
+    atomic_store(&prox_cand, 0);
+    WorkerR *w = calloc(nthr, sizeof *w);
+    pthread_t *th = calloc(nthr, sizeof *th);
+    for (int i = 0; i < nthr; i++) {
+        w[i].alvo = alvo; w[i].ancora = ancora; w[i].ini = ini;
+        w[i].mad = 1e9; w[i].idx = n_cand + 1;
+        pthread_create(&th[i], NULL, worker_ref, &w[i]);
+    }
+    double mad = 1e9; int off = -1, bit = -1, idx = n_cand + 1;
+    for (int i = 0; i < nthr; i++) {
+        pthread_join(th[i], NULL);
+        if (w[i].mad < mad || (w[i].mad == mad && w[i].idx < idx)) {
+            mad = w[i].mad; off = w[i].off; bit = w[i].bit; idx = w[i].idx;
+        }
+    }
+    free(w); free(th);
+    *off_out = off; *bit_out = bit;
+    return mad;
+}
+
 /* ---- recuperacao incremental ----
  * Exigir frame perfeito nao funciona quando ha varios bits corrompidos por
  * frame: nenhum flip sozinho conserta tudo, e a busca devolve zero. Aqui o
@@ -891,6 +961,57 @@ int main(int argc, char **argv) {
                feitos, testes, acima, testes ? 100.0 * acima / testes : 0.0);
         free(R); free(cap_buf); cap_buf = NULL;
     }
+    /* Recupera um frame usando um vizinho INTEGRO como gabarito. */
+    else if (!strcmp(modo, "vizinho")) {
+        int alvo = atoi(argv[5]);
+        int ref  = atoi(argv[6]);
+        int jan  = argc > 7 ? atoi(argv[7]) : 0;      /* 0 = NAL inteiro */
+        int passos = argc > 8 ? atoi(argv[8]) : 4;
+        int nthr = quantas_threads();
+        exigir_imagem = 0;
+        cap_buf = malloc((size_t)1920 * 1088);
+
+        if (decodifica(ancora_de(ref), ref, NULL, 0, NULL) != 0 || cap_w <= 0) {
+            fprintf(stderr, "referencia %d nao decodifica limpo -- escolha outro\n", ref);
+            return 1;
+        }
+        ref_w = cap_w; ref_h = cap_h;
+        ref_img = malloc((size_t)ref_w * ref_h);
+        memcpy(ref_img, cap_buf, (size_t)ref_w * ref_h);
+
+        int anc = ancora_de(alvo), len = ix[alvo].size;
+        decodifica(anc, alvo, NULL, 0, NULL);
+        double m0 = cap_w > 0 ? mad_ref(cap_buf, cap_w, cap_h) : 1e9;
+        printf("frame %d (%d bytes, ancora %d) vs referencia %d: "
+               "diferenca inicial %.2f\n", alvo, len, anc, ref, m0);
+        printf("  (quanto menor a diferenca, mais parecido com o vizinho bom)\n");
+        uint8_t *base = arq + ix[alvo].off;
+
+        for (int p = 0; p < passos; p++) {
+            int ini, fim;
+            if (jan == 0) { ini = 5; fim = len; }
+            else { int c = acha_consumo(alvo);
+                   ini = c - jan; if (ini < 0) ini = 0;
+                   fim = c + jan; if (fim > len) fim = len; }
+            time_t t0 = time(NULL);
+            int off, bit;
+            double m = melhor_ref(anc, alvo, ini, fim, nthr, &off, &bit);
+            if (m >= m0) {
+                printf("  passo %d: sem ganho (%.2f vs %.2f) [%.0fs]\n",
+                       p+1, m, m0, difftime(time(NULL), t0));
+                break;
+            }
+            base[off] ^= (1 << bit);
+            printf("  passo %d: flip off %d bit %d | diferenca %.2f -> %.2f "
+                   "(-%.2f) [%.0fs]\n", p+1, off, bit, m0, m, m0 - m,
+                   difftime(time(NULL), t0));
+            m0 = m;
+            fflush(stdout);
+        }
+        printf("[+] frame %d terminou com diferenca %.2f para o vizinho %d\n",
+               alvo, m0, ref);
+        free(ref_img); ref_img = NULL; free(cap_buf); cap_buf = NULL;
+    }
     /* Recuperacao incremental de um frame: aceita o flip que faz a imagem
      * crescer e repete. NAO grava patches -- imprime o que achou. */
     else if (!strcmp(modo, "recupera")) {
@@ -906,9 +1027,14 @@ int main(int argc, char **argv) {
         uint8_t *base = arq + ix[alvo].off;
 
         for (int p = 0; p < passos; p++) {
-            int c = acha_consumo(alvo);
-            int ini = c - jan; if (ini < 0) ini = 0;
-            int fim = c + jan; if (fim > ix[alvo].size) fim = ix[alvo].size;
+            int ini, fim, c = 0;
+            if (jan == 0) {                 /* forca bruta: o NAL inteiro */
+                ini = 5; fim = ix[alvo].size;
+            } else {
+                c = acha_consumo(alvo);
+                ini = c - jan; if (ini < 0) ini = 0;
+                fim = c + jan; if (fim > ix[alvo].size) fim = ix[alvo].size;
+            }
             time_t t0 = time(NULL);
             int off, bit;
             int lin = melhor_flip(alvo, ini, fim, nthr, &off, &bit);
@@ -916,6 +1042,16 @@ int main(int argc, char **argv) {
                 printf("  passo %d: consumo %d, janela [%d,%d) -- sem ganho "
                        "(melhor %d vs %d) [%.0fs]\n",
                        p+1, c, ini, fim, lin, L, difftime(time(NULL), t0));
+                break;
+            }
+            /* Parada: depois de acertar o frame a busca continua "melhorando" e
+             * comeca a estraga-lo. No oraculo o conserto verdadeiro deu +596 e o
+             * falso seguinte +45, ja com o frame completo. Ganho pequeno sobre
+             * imagem quase inteira e sinal de que passou do ponto. */
+            if (L > 700 && lin - L < L / 10) {
+                printf("  passo %d: ganho de apenas +%d sobre %d linhas -- "
+                       "provavelmente o frame ja esta correto, parando [%.0fs]\n",
+                       p+1, lin - L, L, difftime(time(NULL), t0));
                 break;
             }
             base[off] ^= (1 << bit);
