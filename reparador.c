@@ -632,7 +632,8 @@ static void *worker_par2(void *p) {
  * Imprime as medidas e deixa a decisao para quem le. */
 typedef struct { long off; int bit; int pmin, pmax, l949, l952, l960, bmin, bmax;
                  double bmed, bdes, tmed, dref;
-                 double tmed2, tdes2; int tmaxdev; double tfora; } Campo;
+                 double tmed2, tdes2; int tmaxdev; double tfora;
+                 double imed, ides, ibloc; } Campo;
 static Campo *campos = NULL;
 static int n_campos = 0;
 static int campo_alvo = 0;
@@ -706,6 +707,21 @@ static void *worker_campo(void *p) {
         for (int y = 0; y < 130 && y < H; y++)
             for (int x = 0; x < W; x += 4) { tsoma += cap_buf[(size_t)y * W + x]; tn++; }
         double tmed = tn ? tsoma / tn : 0;
+        /* JUIZ DE IMAGEM: so a area que se assiste, linhas 136-949. E o juiz que
+         * MANDA -- ver CRITERIOS.md. Blocagem baixa nao e defeito; dano de
+         * macrobloco a EMPURRA PARA CIMA. */
+        double ib = 0, ii = 0; long inb = 0, ini_ = 0;
+        double isoma = 0, iq = 0; long inn = 0;
+        for (int y = 144; y < 944 && y < H; y++)
+            for (int x = 1; x < W; x++) {
+                int v = cap_buf[(size_t)y * W + x];
+                int dd = abs(v - (int)cap_buf[(size_t)y * W + x - 1]);
+                if (x % 16 == 0) { ib += dd; inb++; } else { ii += dd; ini_++; }
+                if ((x & 1) == 0) { isoma += v; iq += (double)v * v; inn++; }
+            }
+        double imed = inn ? isoma / inn : 0;
+        double ides = inn ? sqrt(iq / inn - imed * imed) : 0;
+        double ibloc = (inb && ini_ && ii > 0) ? (ib / inb) / (ii / ini_) : 0;
         double dref = -1;
         if (alvo_img && W == alvo_w) {
             double sd = 0; long nd = 0;
@@ -732,6 +748,7 @@ static void *worker_campo(void *p) {
         campos[k].tmed2 = tmed2; campos[k].tdes2 = tdes2;
         campos[k].tmaxdev = tmaxdev;
         campos[k].tfora = tn2 ? 100.0 * tfora / tn2 : 0;
+        campos[k].imed = imed; campos[k].ides = ides; campos[k].ibloc = ibloc;
     }
     free(copia); free(cap_buf); cap_buf = NULL;
     if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
@@ -1397,15 +1414,16 @@ int main(int argc, char **argv) {
         for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_campo, NULL);
         for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
         free(th);
-        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max tarja_media tarja_desvio topo_media dif_referencia trans_media trans_desvio trans_maxdev trans_fora%\n");
+        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max tarja_media tarja_desvio topo_media dif_referencia trans_media trans_desvio trans_maxdev trans_fora% img_media img_desvio img_blocagem\n");
         for (int k = 0; k < n_campos; k++) {
             if (campos[k].pmin < 0) continue;
-            printf("%ld %d %d %d %d %d %d %d %d %.3f %.3f %.3f %.4f %.2f %.2f %d %.3f\n",
+            printf("%ld %d %d %d %d %d %d %d %d %.3f %.3f %.3f %.4f %.2f %.2f %d %.3f %.2f %.2f %.4f\n",
                    campos[k].off, campos[k].bit, campos[k].pmin, campos[k].pmax,
                    campos[k].l949, campos[k].l952, campos[k].l960,
                    campos[k].bmin, campos[k].bmax,
                    campos[k].bmed, campos[k].bdes, campos[k].tmed, campos[k].dref,
-                   campos[k].tmed2, campos[k].tdes2, campos[k].tmaxdev, campos[k].tfora);
+                   campos[k].tmed2, campos[k].tdes2, campos[k].tmaxdev, campos[k].tfora,
+                   campos[k].imed, campos[k].ides, campos[k].ibloc);
         }
         free(campos);
     }

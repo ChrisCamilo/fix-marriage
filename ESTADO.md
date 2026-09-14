@@ -121,6 +121,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 | arquivo | o que tem |
 |---|---|
 | [`RESULTADOS.md`](RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
+| [`CRITERIOS.md`](CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
 | [`ARMADILHAS.md`](ARMADILHAS.md) | **13 maneiras de medir errado** que já produziram conclusão falsa aqui |
 | [`INVESTIGACOES.md`](INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
 | [`RASTREIO.md`](RASTREIO.md) | **toda varredura já feita**, por alvo — consultar antes de disparar qualquer corrida |
