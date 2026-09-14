@@ -509,6 +509,32 @@ Dois subprodutos que valem tanto quanto:
   threads disputando CPU; o teste da tarja em si é uma decodificação por
   candidato. O gargalo nunca foi medir, foi não ter o que medir.
 
+### A tarja disse NAO a 24 candidatos do IDR 2362 — e o IDR precisa de 2+ bits
+
+Continuação do teste acima, varrendo a faixa que a armadilha 9 indica, `[5,
+12562)`: **24 soluções de 1 bit** em 176 s (6 threads disputando CPU). A janela
+de ±1024 da seção 6 tinha achado **uma só**, e no lugar errado.
+
+As soluções se concentram em **rel 8900–10400**, ou seja ~1100 a 2600 bytes antes
+do corte (11538). A armadilha 9 acertou a região.
+
+A tarja reprovou **todas as 24**:
+
+| | topo | tarja | desvio | campo |
+|---|---|---|---|---|
+| IDRs bons | 16,00 | **16,00** | 0,05–0,16 | conteúdo |
+| 23 dos 24 candidatos | **16,000** | **90 a 158** | 50 a 72 | 0–255 |
+| candidato rel 75 | 16,000 | 19,2 | 0,43 | 16–19 (preto) |
+
+O padrão importa: o **topo sai certo** em 23 deles, e a tarja de baixo sai
+destruída. Não é um filtro que rejeita tudo por reflexo — ele distingue as duas
+metades do mesmo quadro. A decodificação anda certo e diverge antes do fim.
+
+**Conclusão: o IDR 2362 não é reparável com 1 bit.** Bit depois do corte não
+adianta (o decoder nem chega lá), e a faixa antes do corte está varrida. Sem a
+tarja, o resultado teria sido "24 soluções, escolha uma" — e qualquer escolha
+destravaria 28 frames com a tarja inferior em ruína.
+
 ### Ainda em aberto
 
 - **Anomalia do início do NAL:** 20% dos prefixos e 17% dos slice headers
