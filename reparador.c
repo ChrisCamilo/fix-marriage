@@ -8,6 +8,7 @@
  *   gcc -O2 -o reparador reparador.c $(pkg-config --cflags --libs libavcodec libavutil)
  */
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -564,6 +565,49 @@ static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
     return total;
 }
 
+/* ---- modo varre2: pares de bits ----
+ * So faz sentido depois que o de 1 bit devolve zero: ai o dano e multiplo e a
+ * busca linear nao alcanca. O custo e quadratico, entao vale apenas para NAL
+ * pequeno -- o frame 3443 tem 261 bytes, que sao 2 milhoes de pares; um IDR de
+ * 220 mil bytes seriam 10^12, que e o "programa de meses" a evitar.
+ *
+ * Determinismo: cada par recebe um indice unico k, distribuido por contador
+ * atomico, e a saida sai ordenada por esse indice. Mesma regra da varredura de
+ * 1 bit. */
+static int alvo2;
+static int n_bits2;
+static _Atomic long prox_par;
+static long n_pares;
+static _Atomic int achados2;
+typedef struct { int a, b; } Par;
+static Par pares[4096];
+static _Atomic int n_pares_achados;
+
+static void *worker_par2(void *p) {
+    (void)p;
+    int alvo = alvo2, len = ix[alvo].size, anc = ancora_de(alvo);
+    uint8_t *copia = malloc(len);
+    cap_buf = malloc((size_t)1920 * 1088);
+    for (;;) {
+        long k = atomic_fetch_add(&prox_par, 1);
+        if (k >= n_pares) break;
+        /* k -> (i, j) com i < j, sem tabela: percorre triangular */
+        long i = 0, resto = k;
+        while (resto >= n_bits2 - i - 1) { resto -= n_bits2 - i - 1; i++; }
+        long j = i + 1 + resto;
+        memcpy(copia, arq + ix[alvo].off, len);
+        copia[5 + i / 8] ^= (1 << (i % 8));
+        copia[5 + j / 8] ^= (1 << (j % 8));
+        if (decodifica(anc, alvo, copia, len, NULL) == 0) {
+            int n = atomic_fetch_add(&n_pares_achados, 1);
+            if (n < 4096) { pares[n].a = (int)i; pares[n].b = (int)j; }
+        }
+    }
+    free(copia); free(cap_buf); cap_buf = NULL;
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
+
 /* ---- modo campo: mede o quadro resultante de cada candidato ----
  * Nasceu do trecho final do filme, que e um fade: dali para a frente o frame
  * certo e um campo UNIFORME de valor previsivel, e o valor sai da media dos
@@ -575,7 +619,8 @@ static int conta_solucoes_par(int ancora, int alvo, int ini, int fim,
  *     a ocultacao deixa uma rampa esfumada, que e o borrao vertical.
  *   - o fundo da tarja e uniforme 16; a ocultacao poe ruido la.
  * Imprime as medidas e deixa a decisao para quem le. */
-typedef struct { long off; int bit; int pmin, pmax, l949, l952, l960, bmin, bmax; } Campo;
+typedef struct { long off; int bit; int pmin, pmax, l949, l952, l960, bmin, bmax;
+                 double bmed, bdes, tmed; } Campo;
 static Campo *campos = NULL;
 static int n_campos = 0;
 static int campo_alvo = 0;
@@ -600,13 +645,26 @@ static void *worker_campo(void *p) {
                 if (v < pmin) pmin = v;
                 if (v > pmax) pmax = v;
             }
+        /* A tarja nao e chapada: nos frames bons ela varia de 9 a 24, com media
+         * EXATAMENTE 16,00 em todo o filme -- e grao que o encoder preservou.
+         * Entao o gabarito e a media e o desvio, nao o intervalo. Filtrar por
+         * "tarja uniforme 16" rejeita frame realista e premia frame liso
+         * demais; foi erro cometido antes de medir o filme inteiro. */
         int bmin = 255, bmax = 0;
-        for (int y = 951; y < H; y++)          /* a tarja INTEIRA, ate a ultima linha */
+        double bsoma = 0, bq = 0; long bn = 0;
+        for (int y = 951; y < H; y++)
             for (int x = 0; x < W; x += 4) {
                 int v = cap_buf[(size_t)y * W + x];
                 if (v < bmin) bmin = v;
                 if (v > bmax) bmax = v;
+                bsoma += v; bq += (double)v * v; bn++;
             }
+        double bmed = bn ? bsoma / bn : 0;
+        double bdes = bn ? sqrt(bq / bn - bmed * bmed) : 0;
+        double tsoma = 0; long tn = 0;
+        for (int y = 0; y < 130 && y < H; y++)
+            for (int x = 0; x < W; x += 4) { tsoma += cap_buf[(size_t)y * W + x]; tn++; }
+        double tmed = tn ? tsoma / tn : 0;
         long s9 = 0, s2 = 0, s6 = 0;
         for (int x = 0; x < W; x++) {
             s9 += cap_buf[(size_t)949 * W + x];
@@ -617,6 +675,7 @@ static void *worker_campo(void *p) {
         campos[k].l949 = (int)(s9 / W); campos[k].l952 = (int)(s2 / W);
         campos[k].l960 = (int)(s6 / W);
         campos[k].bmin = bmin; campos[k].bmax = bmax;
+        campos[k].bmed = bmed; campos[k].bdes = bdes; campos[k].tmed = tmed;
     }
     free(copia); free(cap_buf); cap_buf = NULL;
     if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
@@ -1196,6 +1255,36 @@ int main(int argc, char **argv) {
         free(cap_buf); cap_buf = NULL;
     }
     /* Despeja o plano Y de um frame como PGM, para inspecao visual. */
+    else if (!strcmp(modo, "varre2")) {
+        alvo2 = atoi(argv[5]);
+        int len = ix[alvo2].size;
+        n_bits2 = (len - 5) * 8;
+        n_pares = (long)n_bits2 * (n_bits2 - 1) / 2;
+        int nthr = quantas_threads();
+        printf("frame %d: %d bytes, %d bits, %ld pares, %d threads\n",
+               alvo2, len, n_bits2, n_pares, nthr);
+        fflush(stdout);
+        atomic_store(&prox_par, 0);
+        atomic_store(&n_pares_achados, 0);
+        time_t t0 = time(NULL);
+        pthread_t *th = calloc(nthr, sizeof *th);
+        for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_par2, NULL);
+        for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
+        free(th);
+        int n = atomic_load(&n_pares_achados);
+        printf("[+] frame %d: %d pares resolvem [%.0fs]\n",
+               alvo2, n, difftime(time(NULL), t0));
+        FILE *g = argc > 6 ? fopen(argv[6], "w") : NULL;
+        for (int k = 0; k < n && k < 4096; k++) {
+            long o1 = ix[alvo2].off + 5 + pares[k].a / 8;
+            long o2 = ix[alvo2].off + 5 + pares[k].b / 8;
+            if (g) fprintf(g, "%ld %d %ld %d\n", o1, pares[k].a % 8, o2, pares[k].b % 8);
+            else if (k < 30)
+                printf("    off %ld bit %d  +  off %ld bit %d\n",
+                       o1, pares[k].a % 8, o2, pares[k].b % 8);
+        }
+        if (g) { fclose(g); printf("    gravados em %s\n", argv[6]); }
+    }
     else if (!strcmp(modo, "campo")) {
         campo_alvo = atoi(argv[5]);
         FILE *f = fopen(argv[6], "r");
@@ -1215,13 +1304,14 @@ int main(int argc, char **argv) {
         for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_campo, NULL);
         for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
         free(th);
-        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max%s", "\n");
+        printf("off bit campo_min campo_max L949 L952 L960 tarja_min tarja_max tarja_media tarja_desvio topo_media\n");
         for (int k = 0; k < n_campos; k++) {
             if (campos[k].pmin < 0) continue;
-            printf("%ld %d %d %d %d %d %d %d %d%s",
+            printf("%ld %d %d %d %d %d %d %d %d %.3f %.3f %.3f\n",
                    campos[k].off, campos[k].bit, campos[k].pmin, campos[k].pmax,
                    campos[k].l949, campos[k].l952, campos[k].l960,
-                   campos[k].bmin, campos[k].bmax, "\n");
+                   campos[k].bmin, campos[k].bmax,
+                   campos[k].bmed, campos[k].bdes, campos[k].tmed);
         }
         free(campos);
     }
