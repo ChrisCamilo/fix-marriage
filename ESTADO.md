@@ -35,6 +35,15 @@ Ordem de exibição confirmada por duas fontes independentes (ctts × POC).
 
 ## 2. Arquivos que importam
 
+> ### NÃO EXISTE OUTRA CÓPIA DESTE ARQUIVO
+> Não há backup, não há mídia original de câmera, não há segunda via com quem
+> produziu o vídeo. Este MP4 é tudo o que restou deste registro.
+>
+> Duas consequências práticas: **não sugerir "procurar outra cópia"** — já está
+> descartado; e tratar o original com o cuidado que isso exige, nunca
+> modificando e conferindo `sha256sum -c CHECKSUMS.txt` na dúvida. Não há
+> segunda chance se ele for corrompido.
+
 Tudo mora na raiz do projeto — **não existe subdiretório `rep/`**. O nome do
 vídeo tem espaços e `&`, então precisa vir sempre entre aspas na linha de comando.
 
