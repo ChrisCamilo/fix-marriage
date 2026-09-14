@@ -227,6 +227,35 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
      e é vídeo real e bom. Sem um exemplo bom conhecido, o limiar sai errado.
    - Na dúvida, **olhe a imagem**. Despejar o frame com o modo `dump` e abrir
      custa segundos e responde o que métrica nenhuma respondeu aqui.
+8. **A busca aprende a burlar qualquer métrica que você inventar.** Cinco
+   tentativas foram exploradas em sequência no IDR 3191, cada uma "melhorando"
+   o frame enquanto a imagem piorava:
+
+   | métrica | pontuou | imagem real |
+   |---|---|---|
+   | linhas que diferem da anterior | 950 | ~200 |
+   | + linha blocada é ruim | 755 | ~200 |
+   | + média ancorada no conteúdo | 723 | ~200 |
+   | + diferença para a linha y−30 | 723 | ~200 |
+   | + **regularidade** (saltos bruscos) | 241 | ~209 ✓ |
+
+   São bilhões de candidatos: a busca sempre acha o que maximiza o número, não
+   o que conserta o vídeo. **Nunca confie num ganho reportado sem despejar a
+   imagem e olhar.**
+   - O que finalmente funcionou não foi limiar de **nível**, e sim de
+     **regularidade**. Medindo linhas consecutivas: real dá `8 9 8 7 9 7 7 6`,
+     borrão dá `15 4 3 3 10 3 3 3` — período 4, um degrau e três cópias, que é
+     o preenchimento copiando a última linha boa para baixo. Saltos bruscos em
+     60 linhas: 0 no real, 8 no borrão. Limiar de nível não separa, porque as
+     linhas borradas ficam em 1,3–2,2 e passam raspando por qualquer corte.
+   - Calibre sempre contra **falsas recuperações guardadas**, não só contra
+     frames bons e ruins. Elas são o conjunto de teste que importa.
+9. **O bit corrompido fica ~2600 bytes ANTES de onde o decoder para.** Medido
+   com erro injetado em posição conhecida: bit em `rel=20000`, fronteira de
+   consumo em `22623`. Uma janela de ±2048 centrada no consumo **não alcança o
+   bit verdadeiro** — a busca então escolhe o melhor bit falso disponível e
+   reporta ganho pequeno. Use janela de 8192 ou mais, e desconfie de ganho
+   pequeno: pode ser sinal de que a janela não cobriu o alvo.
 
 ## 6. Questões abertas
 
