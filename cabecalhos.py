@@ -1,7 +1,7 @@
 """cabecalhos.py - acha erro de cabecalho com prova aritmetica.
 
-Todo criterio do reparador.c e proxy visual ("isto parece imagem?"), e a secao 5
-do ESTADO.md conta como a busca aprendeu a burlar cinco deles seguidos. Os campos
+Todo criterio do reparador.c e proxy visual ("isto parece imagem?"), e o ARMADILHAS.md
+conta como a busca aprendeu a burlar cinco deles seguidos. Os campos
 do slice header nao sao proxy: dada a posicao do frame no GOP, a norma fixa
 frame_num e o encoder fixa poc_lsb. Erro neles se demonstra por aritmetica.
 

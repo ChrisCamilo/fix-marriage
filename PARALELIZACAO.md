@@ -10,7 +10,7 @@ Subir `ctx->thread_count`. O comentário no `reparador.c` que fixa em 1 —
 - `meu_log` escreve em globais (`log_erros`, `log_bytestream`, `log_ocultados`)
   sem nenhum mutex. Com threads internas do libavcodec isso é corrida de dados.
 - Threading de frame muda a ordem de emissão e a atribuição de erros. É a
-  armadilha 3 da seção 5 do `ESTADO.md`, que já produziu dois reparos falsos.
+  armadilha 3 da `ARMADILHAS.md`, que já produziu dois reparos falsos.
 
 Ganhar 3x aceitando reparo errado não é ganho. **`thread_count` continua 1.**
 
@@ -109,8 +109,7 @@ A mediana das soluções `@corte` está a 12 bytes do corte, ou seja, muitas sã
 achadas quase imediatamente e não se beneficiam. O ganho concentra-se nos casos
 caros — que são justamente os que hoje dominam o relógio.
 
-**Ortogonal e provavelmente maior para frames comuns:** a melhoria 2 da seção 7
-do `ESTADO.md`, cachear o estado do decoder na âncora. Hoje cada candidato de um
+**Ortogonal e provavelmente maior para frames comuns:** a melhoria 2 do `MELHORIAS.md`, cachear o estado do decoder na âncora. Hoje cada candidato de um
 frame comum redecodifica o GOP inteiro desde o IDR. Para IDR a cadeia tem
 tamanho 1 e só o threading ajuda; para o resto do filme, as duas se somam.
 

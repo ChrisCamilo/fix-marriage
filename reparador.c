@@ -180,7 +180,7 @@ static double propagacao(const uint8_t *Y, int w, int h) {
  * primeira linha a partir da qual 20 seguidas sao copia da anterior. E o proxy
  * util de "quao corrompido": mede o que sobrou de imagem, nao quanto byte o
  * decoder leu. Devolve -1 para quadro de ocultacao (poucos tons distintos),
- * que nao e imagem nenhuma -- armadilha 1 da secao 5. */
+ * que nao e imagem nenhuma -- armadilha 1 do ARMADILHAS.md. */
 static int linhas_reais(const uint8_t *Y, int w, int h) {
     int hist[256] = {0}, distintos = 0;
     for (size_t i = 0; i < (size_t)w*h; i += 97) hist[Y[i]] = 1;
@@ -192,7 +192,7 @@ static int linhas_reais(const uint8_t *Y, int w, int h) {
      *   - blocada:  degraus fortes na grade 16x16 -> lixo de macrobloco.
      * Contar so a repeticao foi um erro caro: a busca incremental "melhorava" o
      * frame trocando propagacao limpa por ruido embaralhado, que nao repete e
-     * por isso pontuava alto. Armadilha 2 da secao 5, na pratica.
+     * por isso pontuava alto. Armadilha 2 do ARMADILHAS.md, na pratica.
      * A diferenca linha-a-linha e calculada UMA vez; o laco aninhado ingenuo
      * custava ~10 ms por frame e dominava a busca. */
     static _Thread_local unsigned char rep[2048];
@@ -299,7 +299,7 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     int esperado = alvo - ancora + 1;
     int ok = (log_erros == 0 && quadros == esperado);
     /* Segunda parte do criterio: a imagem tem que existir. Sem isto passa
-     * slice que termina cedo e vira listra -- armadilha 7 da secao 5. */
+     * slice que termina cedo e vira listra -- armadilha 7 do ARMADILHAS.md. */
     if (ok && exigir_imagem)
         ok = (cap_w > 0 && propagacao(cap_buf, cap_w, cap_h) < 0.995);
     return ok ? 0 : 1;
@@ -744,7 +744,7 @@ static void *worker_testa(void *p) {
  * foi implementado aqui, medido e DESCARTADO em 2026-09-14. Dava 31x de ganho e
  * resultado nao reproduzivel: candidato quebrado deixa estado para tras, entao a
  * nota de um candidato passa a depender de quais candidatos vieram antes na
- * mesma thread. Postmortem no item 6 da secao 7 do ESTADO.md. Nao reimplementar.
+ * mesma thread. Postmortem no item 6 do MELHORIAS.md. Nao reimplementar.
  */
 
 /* ---- criterio de referencia temporal ----
@@ -1360,7 +1360,7 @@ int main(int argc, char **argv) {
         /* Lista o ponto de corte de todo IDR que nao decodifica. E o que define
          * a faixa a varrer: a armadilha 9 mede o bit ~2600 bytes ANTES do corte,
          * entao a janela util e [5, corte+folga] -- e nao a de +-1024 em volta do
-         * corte que a secao 6 usou, que erra o alvo quando o corte e cedo. */
+         * corte das varreduras antigas, que erra o alvo quando o corte e cedo. */
         int folga = argc > 5 ? atoi(argv[5]) : 1024;
         cap_buf = malloc((size_t)1920 * 1088);
         long total = 0; int n = 0;
@@ -1393,7 +1393,7 @@ int main(int argc, char **argv) {
         int alvo = atoi(argv[5]);
         int len = ix[alvo].size, anc = ancora_de(alvo);
         /* Janela opcional. Sem ela varre o NAL inteiro; com ela repete o recorte
-         * da secao 6 do ESTADO.md (em volta do corte e no inicio do NAL), que e
+         * do INVESTIGACOES.md (em volta do corte e no inicio do NAL), que e
          * ordens de grandeza mais barato num IDR de 150 KB. */
         int jini = argc > 7 ? atoi(argv[7]) : 5;
         int jfim = argc > 8 ? atoi(argv[8]) : len;

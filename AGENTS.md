@@ -2,7 +2,8 @@
 
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
-resultados medidos e uma seção de armadilhas de método que custaram horas.
+comandos e o mapa dos outros documentos. E leia o `ARMADILHAS.md` antes de medir
+qualquer coisa — são treze maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
 
@@ -33,7 +34,7 @@ Antes de qualquer operação de git que possa descartar trabalho, confira o
 O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
 com zero linhas de log**. Nada mais conta.
 
-A seção 5 do `ESTADO.md` lista seis maneiras de medir errado que já produziram
+A `ARMADILHAS.md` lista seis maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As duas que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
@@ -47,12 +48,12 @@ Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
 `0 falsos`. Rodar `verify` **sem** `BASE_N` acusa ~1328 falsos por construção,
-o que é esperado e não é bug — veja a seção 4 do `ESTADO.md`.
+o que é esperado e não é bug — veja a `RESULTADOS.md`.
 
-## 4. Manter o `ESTADO.md` vivo
+## 4. Manter a documentação viva
 
 Ele é a memória do projeto entre sessões. Depois de qualquer corrida que mude
-resultado, **atualizar a seção 4** com números medidos, não estimados:
+resultado, **atualizar o `RESULTADOS.md`** com números medidos, não estimados:
 
 - frames perfeitos / 3445, e a que tempo isso corresponde
 - trechos contínuos e quanto dá para assistir de fato
@@ -64,7 +65,7 @@ os dois num número só foi uma confusão real que aconteceu aqui.
 
 Quando um parâmetro for resolvido, escrever no `ESTADO.md` que está resolvido,
 para ninguém reinvestigar. Quando uma hipótese for descartada, registrar que foi
-testada e o resultado — a seção 6 existe para isso.
+testada e o resultado — o `INVESTIGACOES.md` existe para isso.
 
 ## 5. Ordem de ataque
 

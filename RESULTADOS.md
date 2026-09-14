@@ -1,0 +1,229 @@
+# Resultados medidos
+
+Números medidos do reparo. Atualizar depois de qualquer corrida que mude
+resultado, sempre com o filtro da armadilha 12 aplicado (ver `ARMADILHAS.md`).
+
+Medido em 2026-09-13 com `report` (ffmpeg 8.1.1). O critério agora tem **duas
+partes**, e a segunda é indispensável: além do sintático (flush, quadros ==
+pacotes, zero logs), exige-se que a imagem não seja propagação vertical — ver
+armadilha 7 do `ARMADILHAS.md`. Sem ela o número fica ~2x inflado por lixo.
+
+| classificação | frames | o que é |
+|---|---|---|
+| **real** | **149** | decodifica limpo **e** tem imagem de verdade |
+| propagado | 137 | "limpo", mas slice terminou cedo: listra vertical |
+| uniforme | 16 | imagem chapada (preto/fade); pode ser legítima |
+| quebrado | 3143 | falha no critério sintático |
+
+Os 149 reais estão em **apenas 4 trechos contínuos** — não em 53, como a medida
+antiga sugeria:
+
+| trecho | frames | duração | início | origem |
+|---|---|---|---|---|
+| **3319–3444** | **126** | **4,20 s** | 110,74 s | íntegro, **o final do filme inteiro** |
+| 2333–2359 | 27 | 0,90 s | 77,84 s | íntegro por conta própria |
+| 1138–1141 | 4 | 0,13 s | 37,97 s | — |
+
+**Vídeo real hoje: 5,10 s de 114,95 s.** Confirmado por inspeção visual: o frame
+2333 mostra o noivo ajustando a gravata diante do espelho; o 3319 mostra o noivo
+calçando o sapato.
+
+**O trecho final está completo, sem nenhum frame corrompido.** São 5 GOPs
+seguidos (IDRs 3319, 3348, 3368, 3397, 3426) e os 126 frames decodificam. Os
+últimos ~10 frames aparecem como `uniforme`/`propagado` nas classificações
+automáticas, mas **são o fade para preto que encerra o filme**, não dano: o
+brilho médio cai monotonicamente 54,5 → 44,5 → 36,5 → 32,7 → 25,9 → 22,8 → 16,0
+e o número de tons vai de 110 a 1. Não tentar "consertar" esses frames.
+
+**Os 5 reparos do `patches.txt` não produziram nenhum frame com imagem.** Eles
+pertencem aos frames **2362–2366**, e os cinco estão classificados como
+`propagado` — listra vertical. O trecho real de 0,90 s é o 2333–2359, que não
+tem patch algum: estava íntegro por conta própria. A anotação antiga de "1,03 s
+a partir de 77,84 s exigiu 4 reparos" confundia as duas coisas, porque só media
+pelo critério sintático.
+
+Ou seja: **todo o vídeo real que existe hoje sobreviveu sozinho.** O trabalho de
+reparo até aqui rendeu zero segundo de imagem.
+
+A medida anterior dizia "306 perfeitos, 5,61 s assistíveis". Dos 306, **137 eram
+listra vertical** e 16 chapados. E a região intacta encolheu de 4,20 s para
+3,87 s: os frames 3435–3444 também são propagados.
+
+**Atenção:** a contagem de keyframes abaixo usa só o critério sintático, de
+antes da armadilha 7 ser conhecida. Os IDRs 29, 128, 215 e 323 foram inspecionados
+visualmente e são **listra vertical**, apesar de constarem como "perfeitos". O
+número real de IDRs com imagem é muito menor que 57 e precisa ser remedido.
+
+**Keyframes: 57 dos 128 IDRs decodificam perfeitos**, espalhados por todo o
+filme (0,0 / 1,0 / 4,3 / 6,2 / 7,2 / 10,8 / 12,7 / 13,7 / 14,6 / 15,2 / 17,2 /
+24,5 / 25,5 / 27,2 / 31,8 / 36,9 / 37,9 / 40,1 / 41,0 / 42,3 / 43,3 / 44,1 /
+47,0 / 49,9 / 52,8 / 56,2 / 59,1 / 61,2 / 62,1 / 65,0 / 66,0 / 67,0 / 67,9 /
+69,1 / 72,0 / 74,0 / 77,8 / 78,8 / 80,7 / 86,2 / 89,1 / 90,1 / 91,0 / 93,5 /
+95,4 / 96,2 / 98,2 / 100,0 / 101,7 / 104,3 / 106,5 / 107,4 / 110,7 / 111,7 /
+112,4 / 113,3 / 114,3 s). A anotação antiga de "7 keyframes" é de antes da
+correção do SPS/PPS.
+
+**Isto tem consequência estratégica.** Todo reparo ancora no IDR anterior
+(`ancora_de`), então um GOP cujo IDR está quebrado é irreparável enquanto o IDR
+não for consertado — os ~27 frames dele estão bloqueados. Há 57 GOPs com âncora
+limpa, prontos para reparo, e **71 GOPs bloqueados pelo próprio IDR**. Consertar
+IDR quebrado rende muito mais que consertar frame comum: destrava o GOP inteiro.
+
+Os 5 reparos reais foram revalidados sob o ffmpeg 8.1.1: `verify` com
+`BASE_N=1338` dá **5 válidos, 0 falsos**.
+
+Rodar `verify` sem `BASE_N` julga também os 1338 base e reporta 1328 "falsos".
+Isso é esperado e não indica problema: o teste pergunta "sem este bit o frame
+quebra e com ele fecha perfeito?", e um frame com outra corrupção no corpo nunca
+fecha, por mais correto que esteja o cabeçalho. Dado útil desse run: **10 dos
+1338 base validam sozinhos** — frames cuja corrupção era só de cabeçalho.
+Reforça a anomalia do início do NAL do `INVESTIGACOES.md`.
+
+**A anotação antiga de "2808 dos 3445 frames" era a contagem do ffmpeg** — a
+métrica que a armadilha 1 do `ARMADILHAS.md` desmascara. O número rigoroso é 306.
+
+Que 47 dos 53 trechos tenham apenas 2 a 5 frames diz que o dano é **denso e bem
+distribuído**, não concentrado: o decoder trava, recupera por poucos frames e
+trava de novo, ao longo do filme inteiro.
+
+### Medição de 2026-09-14 (depois da correção do pts)
+
+O casamento do quadro por `pts` e a exigência de imagem mudaram os números. Não
+é o arquivo que mudou, é a régua — e a régua anterior lia o quadro errado.
+
+| estado | frames | |
+|---|---|---|
+| `real` | **186** | decodifica limpo e tem conteúdo |
+| `uniforme` | 2 | |
+| `propagado` | **0** | agora reprovam no critério, viram `quebrado` |
+| `quebrado` | 3257 | |
+
+**Depois dos reparos de 3435, 3439 e 3442: 151 frames com imagem confiável**
+(5,04 s), e o `verify` dá `5 válidos, 4 falsos`.
+
+O número bruto do modo `estado` é 191, mas **40 deles não valem**: estão em GOPs
+cujo IDR não decodifica, e saem em listras verticais mesmo passando no critério.
+Ver armadilha 12 do `ARMADILHAS.md`. Contagem honesta é sempre com o filtro do IDR.
+
+**Medir trecho contínuo em ordem de decodificação está errado** — quem assiste vê
+em ordem de exibição, e dentro do GOP elas não coincidem. Corrigido aqui;
+ordenando por `poc`:
+
+| frames | duração | em decodificação |
+|---|---|---|
+| 108 | **3,60 s** | 3319–3426 |
+| 26 | **0,87 s** | 2333–2359 |
+| 10 | **0,33 s** | 3431–3442 |
+
+**4,80 s assistíveis** (era 4,54 s). O trecho de 10 frames é obra dos três
+reparos: antes morria em 4 quadros, porque o 3435 quebrado interrompia a
+exibição logo depois do 3436.
+
+O final do filme em ordem de exibição, com `*` marcando quebrado:
+
+```
+3426 3428* 3427 3430* 3429 3432* 3431 3434 3433 3436 3435 3438 3437 3440 3439 3442 3441* 3444* 3443*
+```
+
+Só **três buracos** — 3428, 3430 e 3432 — separam os 3,60 s do trecho novo.
+Fechá-los emenda tudo em ~4,0 s contínuos, e é o alvo de maior retorno no final.
+
+### O final do filme é um fade, e isso é medida, não impressão
+
+Medindo só a área útil (linhas 136–943, sem as tarjas), o desvio padrão cai:
+41,9 no frame 3420 · 21,2 no 3423 · 6,4 no 3427 · 1,7 no 3429 · **0,00 do 3431
+em diante**. Dali para frente `min == max`: são campos de um único valor.
+
+A cadência do GOP 3426 é de **período 2**, e a ordem de exibição não é a de
+decodificação. Por `poc`: `3434 3433 3436 [3435] 3438 3437 3440 [3439] …`. Os
+valores caem linearmente: 43, 41, 38, 36, **34**, 32, 29, 27.
+
+Isso dá um gabarito aritmético — o valor de um frame quebrado é a média dos
+vizinhos de exibição. Foi assim que saiu o reparo do 3435. **Cuidado:** ancorar
+nos vizinhos de decodificação dá o frame errado; esse erro foi cometido e
+elegeu o candidato errado antes de ser pego.
+
+Assinatura de um frame bom do fade, que é o que um candidato precisa reproduzir:
+
+- topo (linhas 0–129) uniforme 16;
+- campo (136–**949**) uniforme, no valor previsto — inclusive as seis últimas
+  linhas, que valem o mesmo que o resto;
+- borda **seca** na linha 950, sem rampa: a rampa esfumada é o borrão da
+  ocultação;
+- tarja inferior (951–1079) com **média 16,00 e desvio ≤ 0,18**.
+
+**A tarja NÃO é chapada** — corrigido em 2026-09-14 depois de medir o filme
+inteiro. Nos frames bons ela varia de **9 a 24**, com média exatamente 16,00 no
+topo e embaixo, em qualquer ponto do filme: é grão que o encoder preservou.
+Filtrar por "tarja uniforme 16" rejeita frame realista e premia frame liso
+demais. Esse erro foi cometido e descartou 15 candidatos corretos do frame 3442
+antes de ser pego.
+
+**A tarja é o gabarito mais útil que este projeto tem**, e não estava sendo
+usada. Ela cobre ~25% de cada quadro (259 de 1080 linhas), o conteúdo dela é
+conhecido *a priori* e vale para **todo frame do filme** — inclusive onde não há
+vizinho íntegro, que é onde todos os outros critérios falham. E localiza o erro:
+o topo é decodificado primeiro e a tarja de baixo por último, então topo limpo
+com tarja suja diz que o bit ruim está no fim do NAL.
+
+### Nenhum frame do fade é reparável com 1 bit
+
+Varredura exaustiva do NAL inteiro dos seis quebrados do trecho final:
+
+| frame | bytes | soluções de 1 bit | melhor candidato |
+|---|---|---|---|
+| 3435 | 963 | **14** | **REPARADO** (`114237506 4`): campo 34, tarja com desvio 0,41 (vizinhos ≤ 0,18) |
+| 3439 | 988 | 349 | **REPARADO** (`114244542 6`): imagem **perfeita**, linhas 136–949 uniformes em 25, como os vizinhos bons. 300 candidatos empatam nisso; a tarja desempatou |
+| 3441 | 940 | **1** | campo 16–19 e tarja 19–20: errado |
+| 3442 | 2939 | 959 | 15 com campo 23 e tarja perfeita, mas a fileira de macroblocos 944–949 sai +1,3 a +2,0 acima do campo (nos frames bons ela iguala o campo) |
+| 3443 | 261 | **0** | |
+| 3444 | 266 | 2 | borda borrada |
+| 3428 | 5211 | 25537 | ambíguo demais |
+| 3430 | 7223 | 17448 | ambíguo demais |
+
+Todos precisam de **mais de um bit**, e isso foi reconfirmado com o critério
+corrigido da tarja. A busca linear pelo segundo bit do 3435 (fixando o primeiro,
+já aplicado, e varrendo o resto) achou 1244 soluções e **nenhuma** melhora a
+tarja — 1205 delas dão a tarja idêntica, o que diz que aquele defeito não está
+neste NAL. Cada solução de 1 bit conserta uma parte
+do quadro e deixa defeito em outra — é o sinal de que o dano é múltiplo, e a
+peneira por região do quadro é o que revela isso. Sem olhar a tarja inteira, o
+3442 passaria por resolvido com 15 candidatos "limpos".
+
+### Descartado: "um bit conserta a imagem, outro conserta a tarja"
+
+Hipótese natural depois de ver que as soluções de 1 bit acertam o campo e erram
+a tarja. **Testada e negativa** no frame 3435, em 2026-09-14.
+
+Método (e vale reaproveitar, porque é linear em vez de quadrático): fixar cada
+uma das 14 soluções de 1 bit como âncora e varrer o NAL inteiro atrás de um
+segundo bit. São 1244 a 3381 segundos bits por âncora, **35.291 pares no total,
+e nenhum melhora a tarja**. Com a âncora aplicada no `patches.txt`, 1205 dos
+1244 dão a tarja *idêntica* — mil flips que não mexem naquela região dizem que
+o defeito não está codificado ali.
+
+Alcance do resultado, para não virar conclusão maior do que é: só cobre pares em
+que **um dos bits é, sozinho, solução completa**. Um par em que nenhum dos dois
+funciona isolado ficaria de fora, e esse espaço tem 29,4 milhões de pares — 0,12%
+foi testado. Mas foi o subconjunto que a hipótese previa.
+
+A hipótese só se aplicaria a 3 dos 6 frames do fade de qualquer forma: 3435,
+3439 e 3442 têm solução de 1 bit que acerta o campo (34, 25 e 23, os valores que
+o fade prevê); 3441 e 3444 não, e o 3443 não tem solução de 1 bit nenhuma.
+
+Custo da varredura exaustiva de pares, para quem for tentar: o `varre2` roda
+~170 pares/s por frame pequeno. O 3443 (261 bytes) são 2,1 milhões de pares,
+~3,5 h — foi iniciado e interrompido por decisão de prioridade. O 3442 (2939
+bytes) seriam 275 milhões, ~450 h. Não é caminho para NAL grande.
+
+### `verify`: 4 patches ficaram insuficientes, não falsos
+
+Com o critério atual dá `2 válidos, 4 falsos`; com `VISUAL=0`, que é o critério
+da época em que entraram, dá `5 válidos, 1 falso`. Os patches dos frames 2362,
+2364, 2365 e 2366 continuam satisfazendo a sintaxe — o que mudou foi a régua,
+que ganhou a exigência de imagem e a correção do pts. **Não removê-los:** podem
+ser bits necessários de um reparo de vários bits. O append-only está certo aqui.
+
+O espelho disso é o patch novo do 3435, que aparece como falso sob `VISUAL=0`
+com `com=0 sem=0`: aquele frame sempre passou na sintaxe e só falhava na imagem.
+Os dois critérios medem coisas diferentes; nenhum sozinho decide.
