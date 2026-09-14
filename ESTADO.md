@@ -242,7 +242,21 @@ Assinatura de um frame bom do fade, que é o que um candidato precisa reproduzir
   linhas, que valem o mesmo que o resto;
 - borda **seca** na linha 950, sem rampa: a rampa esfumada é o borrão da
   ocultação;
-- tarja inferior (951–1079) uniforme 16, **até a última linha**.
+- tarja inferior (951–1079) com **média 16,00 e desvio ≤ 0,18**.
+
+**A tarja NÃO é chapada** — corrigido em 2026-09-14 depois de medir o filme
+inteiro. Nos frames bons ela varia de **9 a 24**, com média exatamente 16,00 no
+topo e embaixo, em qualquer ponto do filme: é grão que o encoder preservou.
+Filtrar por "tarja uniforme 16" rejeita frame realista e premia frame liso
+demais. Esse erro foi cometido e descartou 15 candidatos corretos do frame 3442
+antes de ser pego.
+
+**A tarja é o gabarito mais útil que este projeto tem**, e não estava sendo
+usada. Ela cobre ~25% de cada quadro (259 de 1080 linhas), o conteúdo dela é
+conhecido *a priori* e vale para **todo frame do filme** — inclusive onde não há
+vizinho íntegro, que é onde todos os outros critérios falham. E localiza o erro:
+o topo é decodificado primeiro e a tarja de baixo por último, então topo limpo
+com tarja suja diz que o bit ruim está no fim do NAL.
 
 ### Nenhum frame do fade é reparável com 1 bit
 
@@ -250,16 +264,20 @@ Varredura exaustiva do NAL inteiro dos seis quebrados do trecho final:
 
 | frame | bytes | soluções de 1 bit | melhor candidato |
 |---|---|---|---|
-| 3435 | 963 | **14** | campo e borda certos, **tarja 1040–1079 suja** |
+| 3435 | 963 | **14** | campo e borda certos, tarja com desvio 0,41 (vizinhos ≤ 0,18) |
 | 3439 | 988 | 349 | campo 25 certo, tarja suja em todos |
 | 3441 | 940 | **1** | campo 16–19 e tarja 19–20: errado |
-| 3442 | 2939 | 959 | 15 com campo 23 e tarja limpa, mas linhas 944–949 saem 23–25 |
+| 3442 | 2939 | 959 | 15 com campo 23 e tarja perfeita, mas a fileira de macroblocos 944–949 sai +1,3 a +2,0 acima do campo (nos frames bons ela iguala o campo) |
 | 3443 | 261 | **0** | |
 | 3444 | 266 | 2 | borda borrada |
 | 3428 | 5211 | 25537 | ambíguo demais |
 | 3430 | 7223 | 17448 | ambíguo demais |
 
-Todos precisam de **mais de um bit**. Cada solução de 1 bit conserta uma parte
+Todos precisam de **mais de um bit**, e isso foi reconfirmado com o critério
+corrigido da tarja. A busca linear pelo segundo bit do 3435 (fixando o primeiro,
+já aplicado, e varrendo o resto) achou 1244 soluções e **nenhuma** melhora a
+tarja — 1205 delas dão a tarja idêntica, o que diz que aquele defeito não está
+neste NAL. Cada solução de 1 bit conserta uma parte
 do quadro e deixa defeito em outra — é o sinal de que o dano é múltiplo, e a
 peneira por região do quadro é o que revela isso. Sem olhar a tarja inteira, o
 3442 passaria por resolvido com 15 candidatos "limpos".
