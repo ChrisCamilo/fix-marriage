@@ -282,6 +282,32 @@ do quadro e deixa defeito em outra — é o sinal de que o dano é múltiplo, e 
 peneira por região do quadro é o que revela isso. Sem olhar a tarja inteira, o
 3442 passaria por resolvido com 15 candidatos "limpos".
 
+### Descartado: "um bit conserta a imagem, outro conserta a tarja"
+
+Hipótese natural depois de ver que as soluções de 1 bit acertam o campo e erram
+a tarja. **Testada e negativa** no frame 3435, em 2026-09-14.
+
+Método (e vale reaproveitar, porque é linear em vez de quadrático): fixar cada
+uma das 14 soluções de 1 bit como âncora e varrer o NAL inteiro atrás de um
+segundo bit. São 1244 a 3381 segundos bits por âncora, **35.291 pares no total,
+e nenhum melhora a tarja**. Com a âncora aplicada no `patches.txt`, 1205 dos
+1244 dão a tarja *idêntica* — mil flips que não mexem naquela região dizem que
+o defeito não está codificado ali.
+
+Alcance do resultado, para não virar conclusão maior do que é: só cobre pares em
+que **um dos bits é, sozinho, solução completa**. Um par em que nenhum dos dois
+funciona isolado ficaria de fora, e esse espaço tem 29,4 milhões de pares — 0,12%
+foi testado. Mas foi o subconjunto que a hipótese previa.
+
+A hipótese só se aplicaria a 3 dos 6 frames do fade de qualquer forma: 3435,
+3439 e 3442 têm solução de 1 bit que acerta o campo (34, 25 e 23, os valores que
+o fade prevê); 3441 e 3444 não, e o 3443 não tem solução de 1 bit nenhuma.
+
+Custo da varredura exaustiva de pares, para quem for tentar: o `varre2` roda
+~170 pares/s por frame pequeno. O 3443 (261 bytes) são 2,1 milhões de pares,
+~3,5 h — foi iniciado e interrompido por decisão de prioridade. O 3442 (2939
+bytes) seriam 275 milhões, ~450 h. Não é caminho para NAL grande.
+
 ### `verify`: 4 patches ficaram insuficientes, não falsos
 
 Com o critério atual dá `2 válidos, 4 falsos`; com `VISUAL=0`, que é o critério
