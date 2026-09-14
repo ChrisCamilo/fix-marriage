@@ -99,7 +99,48 @@ Python é o do Windows (`C:\Python314`), chamado como `python`. Dentro de string
 passada com `python -c`, usar caminho `C:/...`; o Git Bash só converte `/c/...`
 quando é argumento.
 
-## 7. Commits — um por ideia
+## 7. Paralelizar tudo que der, sem abrir mão do determinismo
+
+Trabalho que testa candidatos independentes **deve** ser paralelizado. A máquina
+tem 28 núcleos e as corridas duram dezenas de minutos; deixar isso numa thread
+só é desperdício. A máquina já existe no `reparador.c` (`varre_par`) — use-a em
+vez de escrever laço sequencial novo. Já aconteceu de eu paralelizar um modo e,
+logo depois, escrever outro com laços sequenciais próprios ao lado.
+
+**Onde não paralelizar:** o `thread_count` do libavcodec fica em 1. Detalhes e
+justificativa na seção 1 do `PARALELIZACAO.md`.
+
+O determinismo vem do desenho, não de sorte de escalonamento:
+
+- candidatos numerados na ordem da varredura sequencial;
+- distribuídos por contador atômico, não por blocos fixos — o custo varia muito
+  com a posição do bit;
+- saída ordenada pelo índice do candidato no final;
+- com parada antecipada, vale a **regra do menor índice**: ao achar solução em
+  `k`, parar de puxar índices `>= k` mas terminar os já em voo com índice menor.
+  Nunca "a primeira que chegar" — há frames com milhares de soluções válidas, e
+  a escolha por ordem de chegada pegaria bit errado.
+
+### Validação obrigatória
+
+**Toda paralelização se prova comparando `THREADS=1` com o default.** Não é
+opcional e não se pula por parecer óbvio:
+
+```bash
+THREADS=1 ./reparador.exe "$MP4" index.txt patches.txt <modo> > seq.txt
+              ./reparador.exe "$MP4" index.txt patches.txt <modo> > par.txt
+# iguais ignorando só o campo de tempo:
+diff <(sed -E 's/ *\[[0-9.]+s\]//' seq.txt) <(sed -E 's/ *\[[0-9.]+s\]//' par.txt)
+```
+
+`THREADS=1` cai no caminho sequencial original, então a comparação é honesta:
+mesmo binário, mesma máquina, mesmos dados. Se divergir, **o desenho está errado
+— corrija o código, nunca ajuste a referência.**
+
+Referência já validada: modo `unico` sobre os 71 IDRs deu saída byte a byte
+idêntica (mesmo SHA-256) em 1, 6 e 10 threads, com ganho de 4,8x e 6,5x.
+
+## 8. Commits — um por ideia
 
 **Cada commit carrega uma ideia só.** Se a mensagem precisa de "e" para dizer o
 que foi feito, provavelmente são dois commits.
@@ -120,7 +161,7 @@ E a descoberta que motivou a mudança entra na mensagem: foi assim que ficou
 registrado que o IDR 1802 tem duas soluções de 1 bit válidas, informação que se
 perderia se o commit dissesse apenas "adiciona modo unico".
 
-## 8. Higiene
+## 9. Higiene
 
 - Finais de linha **LF** nos dados. O `.gitattributes` segura isso contra o
   `core.autocrlf`; o `reparador.c` grava com `fopen(...,"ab")` e o
