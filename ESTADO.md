@@ -227,11 +227,38 @@ header, não coincidência. Isso reforça a anomalia abaixo.
 - **Densidade real:** todas as estimativas que circulei (27.000 reparos, depois
   2.100) foram medidas com PPS errado ou métrica furada. Refazer do zero.
 
-## 7. Melhorias previstas no reparador
+## 7. Melhorias no reparador
 
-1. **Janela dupla** — buscar também nos primeiros ~64 bytes. Hoje ele marcou
-   os frames 2360 e 2361 como duros, mas o bit deles estava nos bytes 4 e 1.
-2. **Cache do estado do decoder na âncora** — hoje redecodifica o GOP inteiro a
-   cada tentativa. Maior ganho de velocidade disponível.
-3. **Busca de 2 bits** em janela estreita, para os duros.
-4. **Paralelizar por GOP** — são independentes.
+### Feitas
+
+1. **Janela dupla** — buscar também no início do NAL. Feito, e não é opcional:
+   quando o corte cai antes do byte ~64 a janela `[corte-j, corte+3]` colapsa e
+   essa é a única busca que de fato acontece. Resolveu 7 dos 45 IDRs.
+2. **Paralelização da enumeração exaustiva** — feita, com saída byte a byte
+   idêntica à sequencial (mesmo SHA-256), validada em 6 e 10 threads:
+
+   | threads | tempo (71 IDRs) | ganho | eficiência |
+   |---|---|---|---|
+   | 1 (sequencial) | 2064 s | 1,0x | 100% |
+   | 6 (default) | 430 s | 4,8x | 80% |
+   | 10 | 319 s | 6,5x | 65% |
+
+   Controlada por `THREADS`, default 6, teto em `núcleos-2`. Retorno decrescente
+   claro: 10 threads dão 26% mais velocidade por 67% mais threads. Desenho e
+   justificativa em `PARALELIZACAO.md`. **Não** mexer no `thread_count` do
+   libavcodec — ver seção 1 daquele documento.
+
+### Pendentes
+
+3. **Cache do estado do decoder na âncora** — hoje cada candidato de um frame
+   comum redecodifica o GOP inteiro desde o IDR. Continua sendo o maior ganho
+   disponível para frames não-IDR; para IDR a cadeia tem tamanho 1 e só o
+   threading ajuda. Soma-se à paralelização, não a substitui.
+4. **Paralelizar a busca com parada antecipada** (`busca1`) — ainda sequencial.
+   Exige a regra do menor índice descrita em `PARALELIZACAO.md`, porque com
+   múltiplas soluções "a primeira que chegar" escolheria bit errado.
+
+### Descartada
+
+5. ~~**Busca de 2 bits**~~ — implementada e testada: 0 soluções em todas as
+   corridas. E a seção 6 mostra que a premissa estava errada de qualquer forma.
