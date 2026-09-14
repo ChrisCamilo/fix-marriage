@@ -391,12 +391,12 @@ static int conta(int ancora, int alvo, int ini, int fim,
         : conta_solucoes_par(ancora, alvo, ini, fim, offs, bits, max, g, nthr);
 }
 
-/* Default 6, teto em nucleos-2: corridas duram dezenas de minutos e a maquina
- * precisa continuar usavel. THREADS=1 usa o caminho sequencial original. */
+/* Default 12, teto em nucleos-2 para nao saturar a maquina em corridas longas.
+ * THREADS=1 usa o caminho sequencial original, para a comparacao A/B. */
 static int quantas_threads(void) {
     const char *s = getenv("NUMBER_OF_PROCESSORS");
     int nc = s ? atoi(s) : 4; if (nc < 1) nc = 4;
-    int n = getenv("THREADS") ? atoi(getenv("THREADS")) : 6;
+    int n = getenv("THREADS") ? atoi(getenv("THREADS")) : 12;
     if (n > nc - 2) n = nc - 2;
     if (n < 1) n = 1;
     return n;

@@ -73,14 +73,18 @@ threads. Não é "quase igual": é igual por construção.
 
 ## 5. Quantas threads
 
-**Não usar todas.** A máquina tem 28 núcleos; a proposta é default **6**,
-configurável por variável de ambiente, com teto em `nproc - 2`:
+**Não usar todas.** A máquina tem 28 núcleos; o default é **12**, configurável
+por variável de ambiente, com teto em `nproc - 2`:
 
 ```c
-int n = getenv("THREADS") ? atoi(getenv("THREADS")) : 6;
+int n = getenv("THREADS") ? atoi(getenv("THREADS")) : 12;
 if (n > nucleos - 2) n = nucleos - 2;
 if (n < 1) n = 1;
 ```
+
+O default começou em 6, pela eficiência por thread. Passou a 12 por decisão
+explícita: o que importa é o relógio, não a eficiência — mesmo com retorno
+decrescente, terminar antes vale mais do que manter núcleos ociosos.
 
 Razões para não saturar:
 
