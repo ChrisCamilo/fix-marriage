@@ -92,6 +92,11 @@ static void abre_decoder(void) {
 static _Thread_local uint8_t *cap_buf = NULL;
 static _Thread_local int cap_w = 0, cap_h = 0;
 
+/* Criterio de 2 partes ligado por padrao. VISUAL=0 volta ao criterio so
+ * sintatico, que aceita listra vertical -- serve para reproduzir medidas
+ * antigas, nao para decidir reparo. */
+static int exigir_imagem = 1;
+
 static void captura_frame(AVFrame *fr) {
     if (!cap_buf || fr->width <= 0) return;
     cap_w = fr->width; cap_h = fr->height;
@@ -155,6 +160,7 @@ static void difere(const uint8_t *A, const uint8_t *B, int w, int h,
  * O flush e essencial: sem ele a reordenacao de B-frames mascara falhas. */
 static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
                       int *quadros_out) {
+    if (exigir_imagem && !cap_buf) cap_buf = malloc((size_t)1920 * 1088);
     abre_decoder();
     log_zerar();
     AVPacket *pkt = av_packet_alloc();
@@ -175,7 +181,12 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     av_frame_free(&fr); av_packet_free(&pkt);
     if (quadros_out) *quadros_out = quadros;
     int esperado = alvo - ancora + 1;
-    return (log_erros == 0 && quadros == esperado) ? 0 : 1;
+    int ok = (log_erros == 0 && quadros == esperado);
+    /* Segunda parte do criterio: a imagem tem que existir. Sem isto passa
+     * slice que termina cedo e vira listra -- armadilha 7 da secao 5. */
+    if (ok && exigir_imagem)
+        ok = (cap_w > 0 && propagacao(cap_buf, cap_w, cap_h) < 0.995);
+    return ok ? 0 : 1;
 }
 
 static int ancora_de(int alvo) {
@@ -491,6 +502,9 @@ int main(int argc, char **argv) {
                : "674d4029965200f0044fcb29010101400000fa40003a9821",
                getenv("PPS") ? getenv("PPS") : "68eb7352");
     av_log_set_callback(meu_log);
+    if (getenv("VISUAL")) exigir_imagem = atoi(getenv("VISUAL"));
+    fprintf(stderr, "[+] criterio: sintatico%s\n",
+            exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");
     carrega_patches(f_pt);
 
     if (!strcmp(modo, "repair")) {
