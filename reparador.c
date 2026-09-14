@@ -624,11 +624,26 @@ int main(int argc, char **argv) {
             double m_limpo = blocagem(R, w, h);
             uint8_t *base = arq + ix[t].off;
 
-            /* injeta: primeiro flip a partir do meio do NAL que quebre o decode */
-            Sol inj;
-            if (varre_par(t, t, len / 2, len, 1, 1, 0, &inj, 1, nthr) == 0)
-                continue;                                          /* nao consegui quebrar */
-            int oi = inj.off, bi = inj.bit;
+            /* Injeta um erro. Amostra posicoes ESPARSAS em vez de varrer: serve
+             * qualquer flip que quebre, e varrer linearmente do meio ate o fim
+             * custava ~900 mil decodificacoes num IDR grande. Fica sequencial de
+             * proposito: o custo e limitado a 256*8 decodificacoes e na pratica
+             * termina nas primeiras, entao paralelizar so somaria complexidade. */
+            int oi = -1, bi = -1, tentativas = 0;
+            int passo = len / 256; if (passo < 1) passo = 1;
+            for (int off = len / 4; off < len && oi < 0; off += passo)
+                for (int b = 0; b < 8; b++) {
+                    tentativas++;
+                    base[off] ^= (1 << b);
+                    int r = decodifica(t, t, NULL, 0, NULL);
+                    base[off] ^= (1 << b);
+                    if (r != 0) { oi = off; bi = b; break; }
+                }
+            if (oi < 0) {
+                printf("IDR %5d: nenhum flip quebrou em %d tentativas -- pulado\n",
+                       t, tentativas);
+                fflush(stdout); continue;
+            }
             base[oi] ^= (1 << bi);
 
             int corte = acha_corte(t, t);
@@ -656,9 +671,10 @@ int main(int argc, char **argv) {
             feitos++;
             if (rank == 1) acertos++;
             if (rank <= 10) top10++;
-            printf("IDR %5d: %5d candidatos | verdadeiro em %d/%d | blocagem: limpo %.3f, "
-                   "verdadeiro %.3f [%.0fs]\n",
-                   t, n, rank, n, m_limpo, m_true, difftime(time(NULL), t0));
+            printf("IDR %5d: injetado %d/%d (%d tent.) | %5d candidatos | "
+                   "verdadeiro em %d/%d | blocagem limpo %.3f vs verdadeiro %.3f [%.0fs]\n",
+                   t, oi, bi, tentativas, n, rank, n, m_limpo, m_true,
+                   difftime(time(NULL), t0));
             fflush(stdout);
         }
         printf("\n[+] amostras: %d | verdadeiro em 1o lugar: %d | no top 10: %d\n",
