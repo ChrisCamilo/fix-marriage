@@ -107,6 +107,10 @@ static _Thread_local uint64_t cap_hash = 0;
  * outro frame. O sintoma era diferenca 0,00 entre frames consecutivos bons --
  * eu estava comparando a mesma imagem com ela mesma. */
 static _Thread_local int cap_alvo = -1;
+/* So para inspecao: aceita qualquer quadro emitido, nao so o do alvo.
+ * Nunca ligar durante busca -- e o casamento por pts que impede a
+ * ocultacao (copia do frame anterior) de passar por reparo. */
+static _Thread_local int cap_qualquer = 0;
 
 static void captura_frame(AVFrame *fr) {
     if (!cap_buf || fr->width <= 0) return;
@@ -259,7 +263,7 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     /* Zerar antes de decodificar. Se nenhum quadro sair, estes tem que denunciar
      * a ausencia em vez de manter o valor da decodificacao anterior -- foi o que
      * fez a busca binaria de acha_consumo ler "nao mudou" e convergir para 5. */
-    cap_hash = 0; cap_w = 0; cap_h = 0; cap_alvo = alvo;
+    cap_hash = 0; cap_w = 0; cap_h = 0; cap_alvo = cap_qualquer ? -1 : alvo;
     abre_decoder();
     log_zerar();
     AVPacket *pkt = av_packet_alloc();
@@ -1109,14 +1113,28 @@ int main(int argc, char **argv) {
         const char *saida = argv[6];
         cap_buf = malloc((size_t)1920 * 1088);
         int r = decodifica(ancora_de(alvo), alvo, NULL, 0, NULL);
-        if (cap_w <= 0) { fprintf(stderr, "sem imagem capturada\n"); return 1; }
+        /* Frame que nao decodifica nao produz quadro com o pts dele -- a captura
+         * casada por pts devolve vazio, que e a resposta correta. Mas para
+         * INSPECAO interessa ver o que o decoder poe na tela no lugar dele: o
+         * quadro de ocultacao. Por isso a segunda tentativa, sem casar o pts, e
+         * rotulada como ocultacao para ninguem confundir com o frame. */
+        int ocultacao = 0;
+        if (cap_w <= 0) {
+            cap_qualquer = 1;
+            r = decodifica(ancora_de(alvo), alvo, NULL, 0, NULL);
+            cap_qualquer = 0;
+            ocultacao = 1;
+        }
+        if (cap_w <= 0) { fprintf(stderr, "sem imagem nenhuma\n"); return 1; }
         FILE *g = fopen(saida, "wb");
         fprintf(g, "P5\n%d %d\n255\n", cap_w, cap_h);
         fwrite(cap_buf, 1, (size_t)cap_w * cap_h, g);
         fclose(g);
-        printf("frame %d (ancora %d, decode %s) -> %s  %dx%d | "
+        printf("frame %d (ancora %d, decode %s)%s -> %s  %dx%d | "
                "propagacao %.1f%% | blocagem %.3f\n",
-               alvo, ancora_de(alvo), r ? "COM ERRO" : "limpo", saida, cap_w, cap_h,
+               alvo, ancora_de(alvo), r ? "COM ERRO" : "limpo",
+               ocultacao ? "  [!] OCULTACAO, nao e o frame" : "",
+               saida, cap_w, cap_h,
                100 * propagacao(cap_buf, cap_w, cap_h), blocagem(cap_buf, cap_w, cap_h));
     }
     else {
