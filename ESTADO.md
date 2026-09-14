@@ -180,12 +180,50 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
 
 ## 6. Questões abertas
 
+### RESOLVIDO em 2026-09-13: o critério não localiza o bit — não reinvestigar
+
+A pergunta era "o dano é de 1 ou de 2 bits?". **A pergunta estava mal posta.**
+Medido com o modo `unico`, que enumera *todas* as inversões de 1 bit que fazem
+o IDR decodificar perfeito, nos 71 IDRs quebrados:
+
+| soluções de 1 bit | IDRs |
+|---|---|
+| 0 | 26 |
+| 1 (única) | 2 |
+| 2–9 | 7 |
+| **100+** | **36** |
+
+Pior caso: **4467 inversões distintas** de 1 bit no mesmo IDR, todas passando no
+critério rigoroso. As soluções saem em blocos de bytes vizinhos em torno do
+corte (ex.: `14940/0 14940/1 14940/3 14940/6 14941/0 …`).
+
+Consequência: **decodificação perfeita prova coerência sintática, não que aquele
+era o bit corrompido.** É a armadilha 2 da seção 5 numa forma que ela não
+previa — lá o alerta era "o CABAC anda mais um pouco", aqui são decodificações
+completas e limpas. Não adianta buscar 2 bits: se 1 bit já tem milhares de
+soluções, 2 bits tem ordens de grandeza mais.
+
+Como isto foi descoberto: o IDR 1802 recebeu soluções diferentes em duas
+corridas com ordens de varredura distintas (`off 63 bit 2` e `off 19344 bit 0`).
+Sem esse acaso, 44 reparos arbitrários teriam entrado no `patches.txt`, passado
+no `verify` e produzido imagem errada sem nenhum sinal.
+
+**Onde o critério ainda decide:** nos 9 IDRs com 1 a 9 soluções, todos com o bit
+no **início do NAL** e corte pequeno. O `12/0` aparece como solução única em dois
+IDRs distintos (2188 e 2612) e também entre as três do 1625 — padrão de slice
+header, não coincidência. Isso reforça a anomalia abaixo.
+
+### Ainda em aberto
+
 - **Anomalia do início do NAL:** 20% dos prefixos e 17% dos slice headers
   corrompidos, contra interior quase limpo. Fator ~400x que nenhum modelo
   uniforme explica. Testei a hipótese de "janela de 16 bytes" em 14 keyframes:
   **0 de 14**. A anomalia é real mas não é uma regra simples de reparo.
-- **Unidade de dano:** nunca testei busca de 2 bits. Se o dano for de 2 bits,
-  toda busca de 1 bit está condenada nos frames duros.
+- **Segundo critério, independente da sintaxe.** É o que falta para reparar os
+  36 IDRs com solução ambígua. O caminho natural é coerência visual: uma
+  inversão errada em dados de resíduo produz macroblocos destoantes mesmo
+  decodificando limpo. Comparar o keyframe candidato com vizinhos temporais
+  discriminaria o que a sintaxe não discrimina.
 - **Densidade real:** todas as estimativas que circulei (27.000 reparos, depois
   2.100) foram medidas com PPS errado ou métrica furada. Refazer do zero.
 
