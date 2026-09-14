@@ -99,8 +99,18 @@ static int exigir_imagem = 1;
 
 static _Thread_local uint64_t cap_hash = 0;
 
+/* Indice do frame que se quer capturar. O `decodifica` marca cada pacote com
+ * pts = indice, e so o quadro que volta com esse pts e copiado.
+ *
+ * Guardar "o ultimo quadro recebido" estava ERRADO: com reordenacao de B-frames
+ * a ordem de saida nao e a de decodificacao, entao o ultimo a sair podia ser
+ * outro frame. O sintoma era diferenca 0,00 entre frames consecutivos bons --
+ * eu estava comparando a mesma imagem com ela mesma. */
+static _Thread_local int cap_alvo = -1;
+
 static void captura_frame(AVFrame *fr) {
     if (!cap_buf || fr->width <= 0) return;
+    if (cap_alvo >= 0 && fr->pts != cap_alvo) return;
     cap_w = fr->width; cap_h = fr->height;
     uint64_t hh = 1469598103934665603ULL;
     for (int y = 0; y < cap_h; y++) {
@@ -249,7 +259,7 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     /* Zerar antes de decodificar. Se nenhum quadro sair, estes tem que denunciar
      * a ausencia em vez de manter o valor da decodificacao anterior -- foi o que
      * fez a busca binaria de acha_consumo ler "nao mudou" e convergir para 5. */
-    cap_hash = 0; cap_w = 0; cap_h = 0;
+    cap_hash = 0; cap_w = 0; cap_h = 0; cap_alvo = alvo;
     abre_decoder();
     log_zerar();
     AVPacket *pkt = av_packet_alloc();
@@ -261,6 +271,7 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
         else { src = arq + ix[i].off; len = ix[i].size; }
         av_new_packet(pkt, len);
         memcpy(pkt->data, src, len);
+        pkt->pts = i;                  /* casa o quadro de saida com o frame pedido */
         if (avcodec_send_packet(ctx, pkt) == 0) enviados++;
         av_packet_unref(pkt);
         while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; captura_frame(fr); av_frame_unref(fr); }
