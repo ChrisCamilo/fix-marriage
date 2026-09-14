@@ -146,3 +146,24 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     **Calibrar sempre na mesma região onde se vai julgar**, e contra quadros
     genuínos, nunca contra intuição. O `campo` agora reporta as duas separadas.
 
+16. **A propagação não distingue listra de cena suave — linha idêntica sim.**
+    O `propagacao` conta linhas *parecidas* com a de cima, e cena desfocada com
+    grandes áreas uniformes acerta valores altos legitimamente.
+
+    Medido: o GOP 3368 tem 16 quadros com propagação de 0,93 a 0,98 e eles estão
+    **perfeitos** — mãos, calça, tapete, tênis, tudo nítido. Já o GOP 1683 tem
+    quadros na mesma faixa (0,941–0,950) e os dois terços de baixo são **listra
+    vertical**. A métrica não separa os dois casos.
+
+    O que separa é **linha exatamente idêntica à anterior**:
+
+    | | linhas idênticas |
+    |---|---|
+    | 137 quadros bons (GOP 2333 e trecho 3319–3426) | **0,0%**, todos |
+    | GOP 3368, os "suspeitos" | **0,0%** — estão bons |
+    | GOP 1683, frames 1683 e 1685 | **34,1%** — listra |
+
+    Separação binária, sem calibração: quadro genuíno tem **zero** linhas
+    idênticas. Propagação alta com zero linhas idênticas é cena suave; com
+    dezenas de por cento é propagação vertical de verdade.
+
