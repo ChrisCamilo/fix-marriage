@@ -345,3 +345,36 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     O desempate certo é o **gabarito da tarja**: 16,000 com desvio 0,000. Listra
     de verdade não o produz, e é isso que o `TARJA=1` do modo `serie` usa para
     aceitar esses quadros na remontagem sem afrouxar o critério do `patches.txt`.
+
+23. **Varredura em quadro uniforme é inválida pelo próprio critério — e depois
+    indecidível.** Duas falhas em série, e eu caí nas duas seguidas no IDR 0,
+    gastando 4,4 h de varredura de 2 bits.
+
+    **Primeira: o critério rejeita o acerto.** A segunda parte do `decodifica` é
+    `propagacao(...) < 0.995`, e quadro uniforme tem propagação **1,0000**
+    (armadilha 22). O quadro correto do IDR 0 é preto liso. Medido:
+
+    | varredura de 1 bit, NAL inteiro | soluções |
+    |---|---|
+    | com critério de imagem | **1** — e ela *piora* o quadro |
+    | só sintático (`VISUAL=0`) | **16.786** |
+
+    A busca estava estruturalmente impedida de aprovar a resposta certa, e a
+    única que ela aprovou foi justamente uma que estraga a tarja.
+
+    **Segunda: com o critério certo, nada decide.** Das 16.786, **15.537**
+    produzem quadro inteiro em 16 com tarja 16,000 e desvio 0,000 — e as
+    testadas saem **byte a byte idênticas ao original sem patch**. Não é que o
+    juiz esteja fraco: não existe diferença para julgar.
+
+    **A razão é o que dá força à tarja se voltando contra ela.** Ela vale como
+    gabarito porque são 227 mil pixels com valor prescrito **diferente do
+    conteúdo** (CRITERIOS seção 0). Num quadro preto o conteúdo *é* a cor da
+    tarja, e o teste passa a carregar zero informação.
+
+    **Regra:** antes de varrer, conferir se o quadro alvo tem conteúdo. Alvo de
+    campo uniforme — fade, corte para preto — não é reparável por busca, porque
+    nenhuma medida de imagem separa candidatos. Se precisar destravar a cadeia
+    para investigar o resto do GOP, dá para usar qualquer um deles **sem
+    escrever no `patches.txt`**: a imagem é idêntica, então o decode a jusante é
+    idêntico, mas afirmar qual bit estava corrompido seria invenção.
