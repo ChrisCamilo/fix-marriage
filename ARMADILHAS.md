@@ -202,3 +202,29 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     Onde houve reparo hoje, havia gabarito: o frame 2360 tinha vizinhos íntegros
     dos dois lados, o 3435 tinha o valor do fade previsto por aritmética. O IDR
     1683 não tem nenhum dos dois, e por isso resiste.
+
+18. **Blocagem acima de 0,05 não prova que o corte é real — listra também
+    bloca.** A armadilha 14 mandou conferir se o frame "produz imagem com
+    estrutura" antes de confiar no ponto de corte, e a medida escolhida foi a
+    blocagem. Ela separa quadro chapado de quadro com conteúdo, mas **não separa
+    conteúdo de propagação vertical**: listra tem borda de macrobloco tanto
+    quanto cena tem.
+
+    Medido no IDR 1712, classificado como "corte confiável" com blocagem
+    **1,040** — valor dentro da faixa dos IDRs genuínos (1,0 a 1,2):
+
+    | | linhas idênticas | primeira propagada |
+    |---|---|---|
+    | IDR 1712 original | **71,2%** | linha 181 de 949 |
+    | IDR 1683 (o listrado conhecido) | 34,3% | 581 |
+    | os 6 IDRs utilizáveis | 0,0% | — |
+
+    Ou seja: o 1712 decodifica 4% do slice, morre na linha 181 e o resto é
+    listra — e mesmo assim passou no filtro. A blocagem dele vem das bordas
+    verticais da própria listra.
+
+    **Consequência prática:** a triagem dos 121 IDRs quebrados em "84 com corte
+    confiável" foi feita com a métrica errada. O número real é desconhecido e
+    provavelmente bem menor. Refazer a triagem com **linhas idênticas**, que é o
+    detector que funciona (armadilha 16) — mas nunca como objetivo de
+    otimização (armadilha 17).
