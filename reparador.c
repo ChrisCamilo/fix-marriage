@@ -629,6 +629,66 @@ static void *worker_par2(void *p) {
     return NULL;
 }
 
+/* Varredura exaustiva de k bits numa faixa. Nasceu dos 17 IDRs que nao produzem
+ * imagem: todos morrem entre o byte 10 e o 12, ou seja o dano cabe em poucas
+ * dezenas de bits. Varrer o NAL inteiro atras de 1 bit, como ja se fez tres
+ * vezes nesse grupo, cobre 2 milhoes de posicoes irrelevantes e nenhuma
+ * combinacao. Aqui a faixa e minuscula e a profundidade e que cresce.
+ *
+ * As combinacoes sao pre-geradas em ordem lexicografica num vetor, e os workers
+ * puxam indice do contador atomico. A ordem do vetor E a ordem sequencial, entao
+ * o resultado nao depende de escalonamento. */
+static int   alvok, prof_k, ini_k, nbits_k;
+static int  *combos_k;
+static long  n_combos;
+static _Atomic long prox_combo;
+static int   achk[4096 * 4];
+static _Atomic int n_achk;
+
+static void *worker_varrek(void *p) {
+    (void)p;
+    int alvo = alvok, len = ix[alvo].size, anc = ancora_de(alvo);
+    uint8_t *copia = malloc(len);
+    cap_buf = malloc((size_t)1920 * 1088);
+    for (;;) {
+        long c = atomic_fetch_add(&prox_combo, 1);
+        if (c >= n_combos) break;
+        const int *comb = combos_k + c * prof_k;
+        memcpy(copia, arq + ix[alvo].off, len);
+        for (int q = 0; q < prof_k; q++)
+            copia[ini_k + comb[q] / 8] ^= (1 << (comb[q] % 8));
+        if (decodifica(anc, alvo, copia, len, NULL) == 0) {
+            int n = atomic_fetch_add(&n_achk, 1);
+            if (n < 4096)
+                for (int q = 0; q < prof_k; q++) achk[n * 4 + q] = comb[q];
+        }
+    }
+    free(copia); free(cap_buf); cap_buf = NULL;
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
+
+/* Gera C(nbits_k, prof_k) combinacoes em ordem lexicografica. */
+static void gera_combos(void) {
+    long total = 1;
+    for (int q = 0; q < prof_k; q++) total = total * (nbits_k - q) / (q + 1);
+    combos_k = malloc((size_t)total * prof_k * sizeof(int));
+    int idx[8];
+    for (int q = 0; q < prof_k; q++) idx[q] = q;
+    long w = 0;
+    for (;;) {
+        for (int q = 0; q < prof_k; q++) combos_k[w * prof_k + q] = idx[q];
+        w++;
+        int q = prof_k - 1;
+        while (q >= 0 && idx[q] == nbits_k - prof_k + q) q--;
+        if (q < 0) break;
+        idx[q]++;
+        for (int r = q + 1; r < prof_k; r++) idx[r] = idx[r - 1] + 1;
+    }
+    n_combos = w;
+}
+
+
 /* ---- linhas identicas: o detector de propagacao vertical ----
  * O `propagacao` conta linhas PARECIDAS com a de cima, e cena desfocada com
  * grandes areas uniformes acerta valores altos legitimamente -- o GOP 3368 tem
@@ -1528,6 +1588,45 @@ int main(int argc, char **argv) {
                        o1, pares[k].a % 8, o2, pares[k].b % 8);
         }
         if (g) { fclose(g); printf("    gravados em %s\n", argv[6]); }
+    }
+    else if (!strcmp(modo, "varrek")) {
+        alvok  = atoi(argv[5]);
+        prof_k = atoi(argv[6]);
+        int len = ix[alvok].size;
+        ini_k   = argc > 7 ? atoi(argv[7]) : 5;
+        int fim = argc > 8 ? atoi(argv[8]) : len;
+        if (ini_k < 5) ini_k = 5;
+        if (fim > len) fim = len;
+        if (prof_k < 1) prof_k = 1;
+        if (prof_k > 4) prof_k = 4;
+        nbits_k = (fim - ini_k) * 8;
+        gera_combos();
+        int nthr = quantas_threads();
+        printf("frame %d: %d bytes, faixa [%d,%d) = %d bits, %d a %d, %ld combinacoes, %d threads\n",
+               alvok, len, ini_k, fim, nbits_k, prof_k, prof_k, n_combos, nthr);
+        fflush(stdout);
+        atomic_store(&prox_combo, 0);
+        atomic_store(&n_achk, 0);
+        time_t t0 = time(NULL);
+        pthread_t *th = calloc(nthr, sizeof *th);
+        for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_varrek, NULL);
+        for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
+        free(th);
+        int n = atomic_load(&n_achk);
+        printf("[+] frame %d: %d combinacoes de %d bits resolvem [%.0fs]\n",
+               alvok, n, prof_k, difftime(time(NULL), t0));
+        FILE *g = argc > 9 ? fopen(argv[9], "w") : NULL;
+        for (int k = 0; k < n && k < 4096; k++) {
+            for (int q = 0; q < prof_k; q++) {
+                long o = ix[alvok].off + ini_k + achk[k * 4 + q] / 8;
+                int  b = achk[k * 4 + q] % 8;
+                if (g) fprintf(g, "%ld %d%s", o, b, q + 1 < prof_k ? " " : "\n");
+                else if (k < 30) printf("    off %ld bit %d%s", o, b,
+                                        q + 1 < prof_k ? "  +" : "\n");
+            }
+        }
+        if (g) { fclose(g); printf("    gravadas em %s\n", argv[9]); }
+        free(combos_k);
     }
     else if (!strcmp(modo, "cresce")) {
         int alvo = atoi(argv[5]);
