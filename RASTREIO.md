@@ -245,6 +245,27 @@ O GOP 2333 fica em **28 de 29**.
 | 3435 | 14 âncoras × NAL inteiro | 35.291 | 0 | derruba a decomposição "um bit a imagem, outro a tarja" |
 | 3443 | pares exaustivos | 2,1 M | — | interrompida por decisão de prioridade |
 
+## As 45 "soluções de 1 bit" do `idr_full.txt` estão obsoletas
+
+O `idr_full.txt`, de uma corrida antiga do modo `idr`, registra **45 IDRs com
+solução de 1 bit**. Testados os 45 bits contra o critério de hoje, um por um,
+aplicando cada um num `patches.txt` temporário:
+
+> **1 de 45 ainda faz o frame decodificar limpo** — e é o do IDR 1773, já
+> reprovado pela tarja junto com os outros 26.864.
+
+Os outros 44 não mudam nada: o frame decodifica com erro igual a sem o patch.
+Foram achados antes do juiz de imagem existir e antes dos 31 bits
+determinísticos entrarem no `patches.txt`.
+
+**Não aplicar aquela lista.** Seriam 44 bits errados num arquivo append-only.
+O `idr64.txt` tem a mesma origem e o mesmo problema — os dois servem só como
+referência histórica de determinismo da paralelização, que é para o que o
+`PARALELIZACAO.md` os cita.
+
+Consequência: **hoje não existe nenhum IDR com solução de 1 bit conhecida.**
+Só varrendo.
+
 ## IDRs
 
 | IDR | bytes | faixa | candidatos | soluções | veredito |
