@@ -291,3 +291,28 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     Isto explica por que gabarito e reparabilidade sempre aparecem juntos neste
     projeto: estar na borda da rajada é o que produz vizinho íntegro **e** poucos
     bits errados. Não são duas condições, são a mesma.
+
+21. **Linhas idênticas não detecta borrão de compensação de movimento.** A
+    armadilha 16 estabeleceu que linha idêntica separa listra de cena, e isso
+    vale para propagação **intra**, que copia a linha exata. Frame P ou B que
+    prediz de uma referência listrada produz linhas **quase** iguais, não
+    iguais, e o detector lê 0,0%.
+
+    Medido em frames dos GOPs 1802 e 2801, cujos IDRs são 43% e 49% listra:
+
+    | frame | listra | razão V/H | o que é |
+    |---|---|---|---|
+    | 2340, 2350, 3390 (genuínos) | 0,0% | **0,78 a 0,99** | cena |
+    | 2805, 2810 | 0,0% | **0,49 / 0,54** | borrão vertical |
+    | 1810, 1820, 1830 | 0,0% | **0,41 / 0,52 / 0,59** | borrão vertical |
+
+    Os frames de 0,0% do GOP 1802 parecem limpos por toda métrica de linha, e
+    em resolução cheia são a cabeça do noivo com o corpo esticado em colunas.
+
+    **O detector que funciona é a razão entre gradiente vertical e horizontal.**
+    Borrão vertical achata o gradiente vertical e deixa o horizontal intacto:
+    genuínos ficam em 0,78 ou acima, borrados abaixo de 0,6.
+
+    Isto quase me fez concluir que havia 28 frames limpos dentro de um GOP com
+    IDR quebrado, o que contradiria a armadilha 12. Não contradizia — o detector
+    é que era cego.
