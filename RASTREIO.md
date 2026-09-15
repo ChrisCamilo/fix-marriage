@@ -459,6 +459,46 @@ sinal. Saída esperada hoje:
 Os 4 falsos são os antigos dos frames 2362–2366, **insuficientes e não errados**
 — ver `INVESTIGACOES.md`.
 
+## Molde do cabeçalho de IDR — 43 bits anexados por prova
+
+O `molde_idr.py` lê os 12 campos do cabeçalho de slice nos 7 IDRs que
+decodificam e encontra **dez constantes**:
+
+```
+first_mb=0  slice_type=7  pps_id=0  frame_num=0  poc_lsb=0
+no_output_prior=0  long_term_ref=0  deblk_idc=0  alpha_div2=-1  beta_div2=-1
+```
+
+Livres só `idr_pic_id` e `slice_qp_delta`. Logo o cabeçalho inteiro se gera de
+dois números, e o gerador **reproduz bit a bit os 7 íntegros**, inclusive os
+comprimentos, que variam de 60 a 66 bits porque os dois livres são de tamanho
+variável. Conserto vira aritmética de bitstream; o decoder não entra.
+
+| | |
+|---|---|
+| IDRs com cabeçalho já correto | **100 de 128** |
+| danificados | 28 |
+| ambíguos, pulados por empate (armadilha 19) | 3 |
+| bits anexados | **43** |
+
+`patches.txt` foi de 1380 para 1423 linhas, e os 43 entraram também no
+`deterministicos.txt` — sem isso o `verify` acusa **47 falsos, exatamente
+4 + 43**, porque nenhum deles faz frame decodificar.
+
+Conferido antes de anexar: zero colisão, `verify` mantém 7 válidos e 4 falsos,
+os 121 IDRs quebrados continuam 121 e os 7 bons continuam decodificando.
+
+**O `idr_pic_id` não é campo provado.** Ele acompanha o ordinal do IDR com
+desvio que varia de 0 a 3 de forma **não monotônica** (0→1→0→2→3). A hipótese
+de 3 IDRs ausentes do arquivo não explica desvio que volta, e a varredura por
+NAL tipo 5 não achou IDR fora do `stss`. Fica em aberto. Dá para conviver: o
+decoder não usa o valor, só exige que difira entre IDRs consecutivos — o que
+importa dele é o comprimento, que desloca os campos seguintes.
+
+**O ganho não é imagem.** Nenhum dos 43 faz IDR decodificar, pelo mesmo motivo
+do experimento do `varrek`: o dano continua pelo corpo do slice. O ganho é que
+toda varredura futura nesses 25 parte de cabeçalho correto.
+
 ## Varredura de cabeçalho
 
 Não é força bruta: o `cabecalhos.py` deduz o valor certo por aritmética.
