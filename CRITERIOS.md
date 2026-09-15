@@ -72,6 +72,34 @@ dizendo o que foi visto.
 - **olhar em resolução cheia**. Métrica agregada esconde dano local: foi assim
   que o frame 3428 quase entrou com quebra de macrobloco visível.
 
+## Geometria da tarja — medida, não estimada
+
+Medida nos 16 frames que **nunca precisaram de reparo** (4 do GOP 2333, 12 do
+bloco final). A geometria é idêntica nos 16, sem uma linha de variação, e é
+simétrica — 130 + 820 + 130 = 1080:
+
+| faixa | o que é |
+|---|---|
+| 0 – 124 | tarja de topo, **exatamente 16** em todos |
+| 125 – 129 | borda: resíduo do deblocking, pixels de 8 a 27 |
+| **130 – 949** | **imagem** |
+| 950 – 961 | borda: resíduo do deblocking, pixels de 3 a 27 |
+| 962 – 1079 | tarja inferior, **exatamente 16** em todos |
+
+A borda existe porque o filtro de deblocking suavisa o degrau entre a última
+fileira de macrobloco da imagem e a primeira da tarja. Quem mede a fronteira
+procurando "primeira linha que não é 16" acha 126–128 no topo e 951–958
+embaixo — **está lendo resíduo, não conteúdo**.
+
+Consequências práticas:
+
+- Reconstruir tarja é seguro a partir da **950**, e o valor exato (`Y=16`,
+  `U=V=128`) só vale sem ressalva de **962** em diante.
+- A área de imagem usada abaixo (136 a 949) é conservadora em 6 linhas no topo.
+  O limite de baixo, 949, está exato.
+- Em quadro de fade o teste não funciona: o campo inteiro é quase uniforme e
+  não há contraste entre imagem e tarja para separar as duas.
+
 ## 2. Juiz da tarja — subordinado
 
 Vale onde o juiz da imagem não alcança: **IDR em GOP escuro, sem vizinho íntegro
