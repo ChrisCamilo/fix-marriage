@@ -350,6 +350,40 @@ Confirmado de passagem que `par705.txt` e `par3278.txt` estão **com 0 bytes**:
 aquelas duas corridas nunca terminaram. Onde este arquivo dizia "rodando" e "na
 fila", leia-se **não feita**.
 
+### Os 17 sem imagem: 3 bits no cabeçalho, 0 soluções — mas o teste estava mal posto
+
+Janela `[5,17)` (96 bits), exaustivo de **exatamente 3 bits**, 142.880
+combinações por IDR, **311 s** nos 17. **Zero soluções.**
+
+**Não concluir daí que o cabeçalho precisa de mais de 3 bits.** O critério
+exige decodificação perfeita de NALs de 14 KB a 252 KB; se o corpo também
+estiver danificado — provável, estando dentro da rajada (armadilha 20) —
+nenhum conserto de cabeçalho passa. O que ficou provado é só que ≤3 bits não
+deixam o NAL **inteiro** perfeito.
+
+Duas coisas de valor saíram da corrida:
+
+**1. O decoder nomeia o campo quebrado.** Com `LOG=1`:
+
+| IDR | mensagem | campo |
+|---|---|---|
+| 3290 | `QP 4294966444 out of range` | `slice_qp_delta` (= −852) |
+| 1452 | `deblocking_filter_idc 3 out of range` | `disable_deblocking_filter_idc` |
+| 2786 | `deblocking filter parameters -118 0 out of range` | `slice_alpha_c0_offset_div2` |
+
+São os **últimos** campos do cabeçalho de slice, ou seja os anteriores
+parseiam. Isso é diagnóstico exato, não busca.
+
+**2. Comparar bytes com um IDR bom não mede dano ali.** Os seis bons diferem
+muito entre si na mesma região (`01 fc 00 3d…` contra `00 80 00 04…`) porque
+`idr_pic_id`, `poc_lsb` e `slice_qp_delta` mudam a cada quadro. Contar bits
+diferentes mede variação legítima, não corrupção — é a armadilha 15 outra vez.
+
+**Próximo experimento:** trocar o aceite de "decodifica limpo" para "produz
+imagem" e rerodar k=1..3 na mesma janela. Separa *o cabeçalho é consertável com
+poucos bits?* de *o NAL inteiro está são?*, que são perguntas diferentes e a
+segunda quase certamente é não.
+
 ### INVÁLIDA: os 39 IDRs de corte precoce
 
 Varridos em `[5, corte+1024]` com corte menor que 1.000. **Em 37 dos 39 o corte
