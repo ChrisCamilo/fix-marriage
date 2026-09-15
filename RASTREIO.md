@@ -127,6 +127,33 @@ E não dá para saber quanto dos 26 é dano próprio e quanto é consequência d
 âncora quebrada — essa indistinguibilidade é a razão de ser da regra de ordem
 de cadeia (armadilha 13).
 
+### IDR 1143 varrido: 10 soluções, todas reprovadas
+
+NAL inteiro `[5,50635)`, 405.040 candidatos, **304 s**. **10 soluções**, todas
+agrupadas em rel 16.936–18.612, ou seja de 275 a 1.951 bytes antes do corte
+(18.887) — coerente com a armadilha 9.
+
+| | tarja média | tarja desvio |
+|---|---|---|
+| as 10 | 144 a 192 | 43 a 71 |
+| genuínos | 16,00 | ≤ 0,41 |
+
+Reprovadas pela tarja. E também pela imagem, que é o juiz que manda: as 10
+decodificam **mais longe** que o original (1ª linha propagada 557–621 contra
+485), e a melhor (`rel 17322 bit 1`) chega à 621. Inspecionada em resolução
+cheia, as 136 linhas que ela ganha são **faixa de macrobloco de cor pura
+seguida de listra arco-íris**. O original mostra cena real — noivo de colete,
+cortina, papel de parede — até a 485.
+
+É o padrão do 1683 e do 1712: "descer mais" não é decodificar mais.
+
+**Contraste que importa para calibrar expectativa:** o 1143 deu 10 soluções em
+405 mil candidatos (0,0025%); o 1773 deu 26.865 em 274 mil (9,8%). Quatro
+ordens de grandeza. O critério **não** é trivial em toda parte — ele trivializa
+quando a quebra está perto do fim do slice, porque aí quase qualquer
+perturbação ainda termina o quadro sem o decoder reclamar. Número alto de
+soluções é sintoma de quebra tardia, não de frame fácil.
+
 ### Os 6 da faixa de 25–50%
 
 Segunda fila, todos com corte confiável e metade do quadro real:
