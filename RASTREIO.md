@@ -59,6 +59,21 @@ Conferidos os 7 IDRs que decodificam: **só o 1683 está listrado**, os outros s
 não 7, e o GOP 1683 contribui **zero** quadros — os 4 que a classificação contava
 como bons são listra.
 
+### IDR 1683: três tentativas de otimização, três burlas
+
+Ele passa no critério e mostra metade da imagem — consome 49% do NAL e
+decodifica até a linha 581 de 949, com 277 linhas propagadas de 813.
+
+| tentativa | faixa | nota | veredito |
+|---|---|---|---|
+| `cresce` sem guardas | `[5,81752)` 654 mil | 277 → **153** | lixo colorido saturado, croma `U 56-171` |
+| `cresce` com guardas de croma e blocagem | idem | 277 → **227** | lixo pastel, croma `U 105-144`, dentro da guarda |
+
+**Descartado.** A região danificada não tem gabarito — sem vizinho temporal (o
+GOP e o anterior estão quebrados) e sem aritmética que fale de conteúdo. Todo
+objetivo vira proxy, e proxy contra 654 mil candidatos acha o patológico. Ver
+armadilha 17.
+
 ### Frame 2361: o zero era artefato, mas o reparo não saiu
 
 A revarredura com a cadeia limpa devolveu **1 solução** onde a anterior dera 0 —

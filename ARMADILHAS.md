@@ -187,7 +187,18 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     aqui burlou uma métrica **bem calibrada**, porque calibração serve para
     detectar, não para otimizar.
 
-    **Objetivo precisa de guardas que não se burlam juntas.** O `cresce` agora só
-    pontua o candidato se o croma ficar perto de 128 (o filme é desaturado) e a
-    blocagem ficar na faixa dos genuínos. Lixo satisfaz uma e viola as outras.
+    Tentei salvar com guardas — croma perto de 128 e blocagem na faixa dos
+    genuínos. **Foi burlado de novo**: o melhor candidato baixou 277 para 227 e a
+    região ficou com listras **pastel** (roxo, verde, rosa) em vez de saturadas,
+    croma `U 105-144`, dentro da guarda. Apertar mais só empurra a busca para um
+    lixo mais parecido com cena.
 
+    **A razão é estrutural, e vale além deste caso:** a região danificada do IDR
+    1683 não tem gabarito. Não há vizinho temporal — o GOP inteiro está quebrado
+    e o anterior também — e a aritmética não diz nada sobre conteúdo de
+    macrobloco. **Sem verdade conhecida, todo objetivo é proxy, e proxy contra
+    654 mil candidatos sempre encontra o caso patológico.**
+
+    Onde houve reparo hoje, havia gabarito: o frame 2360 tinha vizinhos íntegros
+    dos dois lados, o 3435 tinha o valor do fade previsto por aritmética. O IDR
+    1683 não tem nenhum dos dois, e por isso resiste.
