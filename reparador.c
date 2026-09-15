@@ -1714,13 +1714,20 @@ int main(int argc, char **argv) {
         int nthr = quantas_threads();
         int cap = 4096;
         Sol *sol = malloc((size_t)cap * sizeof(Sol));
-        int offs[4096], bits[4096], guardados = 0;
+        /* Sem teto: o 4096 fixo truncava pelo indice, que e a ordem do offset,
+         * e guardava justamente o comeco do NAL. No IDR 1773 as 26.865 solucoes
+         * viraram as 4.096 de rel 10537 a 21067, e o corte esta em 33489 -- a
+         * regiao onde o bit provavelmente esta ficou de fora do arquivo. */
+        int maxsol = (jfim - jini) * 8;
+        int *offs = malloc((size_t)maxsol * sizeof(int));
+        int *bits = malloc((size_t)maxsol * sizeof(int));
+        int guardados = 0;
         printf("frame %d: %d bytes, ancora %d, faixa [%d,%d), %d candidatos, %d threads%s",
                alvo, len, anc, jini, jfim, (jfim - jini) * 8, nthr, "\n");
         fflush(stdout);
         time_t t0 = time(NULL);
         int total = conta_solucoes_par(anc, alvo, jini, jfim, offs, bits,
-                                       4096, &guardados, nthr);
+                                       maxsol, &guardados, nthr);
         printf("[+] frame %d: %d solucoes de 1 bit [%.0fs]%s",
                alvo, total, difftime(time(NULL), t0), "\n");
         if (argc > 6) {
@@ -1734,7 +1741,7 @@ int main(int argc, char **argv) {
                 printf("    off %ld bit %d  (rel %d)\n",
                        ix[alvo].off + offs[i], bits[i], offs[i]);
         }
-        free(sol);
+        free(sol); free(offs); free(bits);
     }
     else if (!strcmp(modo, "testa")) {
         FILE *f = fopen(argv[5], "r");
