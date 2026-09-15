@@ -154,6 +154,51 @@ quando a quebra está perto do fim do slice, porque aí quase qualquer
 perturbação ainda termina o quadro sem o decoder reclamar. Número alto de
 soluções é sintoma de quebra tardia, não de frame fácil.
 
+### IDR 2801: 10 soluções, e o ranking por GOP que o elegeu
+
+Escolhido depois de medir **o que há atrás do IDR**, coisa que eu não tinha
+feito: o GOP dele tem **28 de 29 frames que decodificam**, contra 3 do GOP 1773
+que eu vinha chamando de melhor alvo do filme. Rankear IDR pela imagem do
+próprio IDR ignora o prêmio.
+
+| GOP | frames que decodificam | IDR, bytes |
+|---|---|---|
+| **2801** | **28 de 29** | 86.667 |
+| 1802 | 27 de 29 | 78.007 |
+| 1949 | 25 de 29 | 165.389 |
+| 1143 | 24 de 29 | 50.635 |
+| 2583 | 20 de 29 | 112.373 |
+| 3076 | 15 de 21 | 198.642 |
+| *1773* | *3 de 29* | *34.317* |
+
+Varredura do NAL inteiro: 693.296 candidatos, **471 s**, **10 soluções**.
+
+| cand | rel | listra | V/H | tarja |
+|---|---|---|---|---|
+| **original** | — | 48,5% | 0,264 | 204,11 |
+| 1,2,3,4,5,10 | — | **58 a 64%** | 0,08–0,18 | 145–166 |
+| 6, 7 | — | 49% | 0,15–0,22 | 139–155 |
+| 8 | 20720 | 36,7% | 0,471 | 197,93 |
+| 9 | 20827 | 35,2% | 0,471 | 200,37 |
+| genuínos | | 0,0% | 0,78–1,44 | 16,00 |
+
+**Seis dos dez são piores que não fazer nada.** Inspecionados em resolução
+cheia, os dois melhores decodificam um pouco mais da cabeça do noivo e enchem o
+resto de **campo magenta saturado**. O original mostra a mesma cabeça com o
+corpo esticado em tons naturais. Descer mais não é decodificar mais.
+
+**Todos reprovados.**
+
+### Nenhuma varredura de 1 bit em IDR jamais consertou um
+
+Contagem acumulada: **13 IDRs varridos, zero reparos** — 0, 734, 1143, 1524,
+1712, 1773, 1831, 2072, 2217, 2362, 2525, 2801 e 3126.
+
+Não é azar acumulado, é o que a armadilha 20 prevê: IDR quebrado está dentro da
+rajada, e dentro da rajada o dano é de muitos bits. **Varredura de 1 bit em IDR
+deixou de ser linha de ataque plausível** — só vale onde o corte é tardio, que
+é o caso dos frames comuns cercados de bons.
+
 ### Os 6 da faixa de 25–50%
 
 Segunda fila, todos com corte confiável e metade do quadro real:
