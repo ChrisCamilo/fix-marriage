@@ -316,3 +316,32 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     Isto quase me fez concluir que havia 28 frames limpos dentro de um GOP com
     IDR quebrado, o que contradiria a armadilha 12. Não contradizia — o detector
     é que era cego.
+
+22. **O critério rejeita quadro de fade por construção.** O `decodifica` aprova
+    com `log_erros == 0 && quadros == esperado` e, com `exigir_imagem`, também
+    `propagacao(...) < 0.995`. Essa terceira parte existe contra listra
+    vertical — e **campo uniforme tem propagação 1,0**, porque toda linha é
+    igual à anterior.
+
+    Um fade é campo uniforme por definição. Medido no GOP 0, os frames 1, 2, 4,
+    5, 7, 8, 9 e 12 **não emitem uma linha de erro no decoder** e mesmo assim
+    são reprovados: a imagem deles está certa, é lisa, e lisa demais para o
+    critério.
+
+    | frame | campo | tarja | log de erro | veredito do critério |
+    |---|---|---|---|---|
+    | 1 | 21,00 ± 0,00 | 16,000 / 0,000 | **nenhum** | reprovado |
+    | 2 | 18,00 ± 0,00 | 16,000 / 0,000 | **nenhum** | reprovado |
+    | 4 | 23,00 ± 0,00 | 16,000 / 0,000 | **nenhum** | reprovado |
+
+    **Consequências práticas, e a segunda é a que custou tempo:**
+
+    - Quadro de fade reprovado **não é dano** e não é alvo de varredura. Três
+      frames da cauda (3441, 3443, 3444) receberam varredura e julgamento de
+      candidatos quando já produziam o valor exato previsto pela reta do fade.
+    - Mas o reprovado **não polui a cadeia**: `log_erros` é zero. Quem bloqueia
+      o GOP é quem realmente erra — no GOP 0 é o próprio IDR.
+
+    O desempate certo é o **gabarito da tarja**: 16,000 com desvio 0,000. Listra
+    de verdade não o produz, e é isso que o `TARJA=1` do modo `serie` usa para
+    aceitar esses quadros na remontagem sem afrouxar o critério do `patches.txt`.
