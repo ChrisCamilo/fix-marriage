@@ -275,3 +275,37 @@ O GOP 1683 tem 25 quebrados mas **não é atacável**: o IDR dele é 34,3% listr
 então nenhum reparo ancorado nele sai limpo. O 3426 é **o único GOP com IDR bom
 e frames quebrados** — é onde o reparo é possível.
 
+## Panorama do filme — medido em 11 s, todo quadro emitido
+
+O modo `panorama` decodifica cada GOP numa passada e mede todo quadro que o
+decoder emite. Critério de aceite: **tarja em 16,000 com desvio 0,000**, que é
+gabarito conhecido a priori e não se burla, mais cena de verdade (listra < 5% e
+razão V/H ≥ 0,70) ou campo uniforme legítimo de fade.
+
+| | frames |
+|---|---|
+| o decoder emite | 2.623 de 3.445 |
+| com tarja perfeita | 160 |
+| **com imagem confiável** | **158** |
+| destes, que passam no critério rigoroso | 144 |
+| **destes, que NÃO passam** | **14** |
+
+Os 14 são exatamente as duas pontas do filme:
+
+| trecho | frames | o que é |
+|---|---|---|
+| abertura | 0, 1, 2, 4, 5, 7, 8, 9, 12 | fade-in a partir do preto |
+| encerramento | 3428, 3430, 3441, 3443, 3444 | fade-out para o preto |
+
+Em ordem de exibição, os dois fades são rampas monotônicas perfeitas — o
+encerramento vai 36, 34, 32, 29, 27, 25, 23, 21, 19, 16, com desvio de campo
+0,00 e tarja 16,0000 em todos. **Os frames 3441, 3443 e 3444, que foram alvo de
+varredura e tiveram candidatos reprovados, já produziam o valor certo.**
+
+**A hipótese de que havia muito mais filme assistível estava errada.** De 3.445
+frames, o critério rigoroso e o gabarito da tarja discordam em 14. O critério
+está bem calibrado; o ganho é modesto e real.
+
+Trechos contíguos em ordem de decodificação: **3319–3428 (110 frames)**,
+**2333–2361 (29)**, **0–12 (11)**, mais alguns isolados na cauda.
+
