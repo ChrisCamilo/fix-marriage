@@ -34,6 +34,73 @@ depois de medido.
    Exige a regra do menor índice descrita em `PARALELIZACAO.md`, porque com
    múltiplas soluções "a primeira que chegar" escolheria bit errado.
 
+### Pendente e estrutural: o modelo de cadeia não serve para todo GOP
+
+**Não implementar sem decidir explicitamente — muda o coração da ferramenta e
+todo resultado histórico do projeto foi medido com o modelo atual.**
+
+O `decodifica(ancora, alvo)` alimenta o decoder com os pacotes de `ancora` até
+`alvo` e exige `quadros == esperado`. No GOP 0 isso trava no frame 2, com o
+decoder dizendo `co located POCs unavailable`: aquele quadro precisa de
+contexto que só existe quando o GOP inteiro é decodificado.
+
+| | frames emitidos em 0–28 |
+|---|---|
+| `panorama` (GOP inteiro numa passada) | 0–9, 11, 12, 13, 16, 18, 20 |
+| cadeia `0..alvo` | **só 0 e 1** |
+
+**Consequência:** varredura em qualquer frame do GOP 0 depois do 1 devolve zero
+por construção, e esse zero não significa "sem solução". Três corridas minhas
+nos frames 10, 11 e 13 foram invalidadas assim.
+
+E separa dano de artefato: dos frames que o critério reprova no GOP 0, só
+**10, 14, 15, 17, 19 e 21–28** não são emitidos nem na passada completa. Os
+demais estão bons e falham pelo modelo.
+
+O conserto seria um critério que decodifica o GOP inteiro e confere se o quadro
+alvo saiu e está correto — que é o que o `panorama` já faz. Custa uma passada
+de GOP por candidato em vez de uma cadeia, o que para GOP de 29 frames é mais
+caro, não menos.
+
+### Estudo de velocidade da varredura — medido, não estimado
+
+Com o `panorama` dando o custo puro de decodificação (**4,45 ms por quadro,
+1 thread**), a decomposição fecha:
+
+| alvo | cadeia | ms/candidato | composição |
+|---|---|---|---|
+| IDR 0 | 1 | 5,25 | 4,45 decode + **0,80 montar o decoder** |
+| frame 3443 | 17 | 73,41 | 17 × 4,45 = 75,6 — **a cadeia é tudo** |
+
+**O que dá ganho, em ordem de tamanho:**
+
+1. **Escolher alvo de cadeia curta.** Medido: 2.284 cand/s num IDR contra
+   **163 cand/s** num frame de cadeia 17. **14x, e é de graça** — só depende de
+   qual alvo se escolhe.
+
+2. **Não redecodificar o prefixo da cadeia** (a melhoria 2 deste arquivo).
+   Valeria até 94% num alvo de cadeia 17. **Mas provavelmente não é
+   implementável:** a libavcodec não expõe snapshot nem clone do estado do
+   decoder, e o prefixo termina com o DPB carregado de quadros de referência que
+   não há como reinjetar. Antes de tentar, confirmar se existe API para isso —
+   se não existir, a melhoria 2 deve ser marcada como descartada em vez de
+   pendente.
+
+3. **Reusar o `AVCodecContext`** com `flush_buffers` em vez de
+   `free_context` + `alloc` + `open2` por candidato. Vale os **0,80 ms**, ou
+   seja **15% num IDR e ~1% num alvo de cadeia longa**. Exige revalidar
+   `THREADS=1` contra o default, porque o motivo de estar assim é determinismo.
+
+4. **Reduzir o número de candidatos em vez do custo de cada um.** É o que o
+   `molde_idr.py` faz: trocou busca por aritmética e fechou 130 de 131
+   cabeçalhos sem decodificar nada.
+
+**Um efeito colateral que ninguém esperaria:** consertar cabeçalho deixa a
+varredura **mais lenta**. O IDR 3290 rodava a 34.000 cand/s quando morria no
+byte 10; depois da correção de cabeçalho os candidatos passaram a decodificar
+de verdade e a taxa caiu para **1.747 cand/s**, 20x. Qualquer estimativa de
+tempo medida antes de uma correção de cabeçalho está otimista demais.
+
 ### Descartada
 
 5. ~~**Busca de 2 bits**~~ — implementada e testada: 0 soluções em todas as
