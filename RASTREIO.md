@@ -108,6 +108,25 @@ pares, **~6,8 h** à taxa medida de 1.301 cand/s. Alargar para ±2 KB já vira
 Medidas guardadas em `medidas1773.txt` no scratchpad (26.865 linhas, 20
 colunas) — dá para refiltrar por qualquer critério sem revarrer.
 
+### Censo do GOP 1773 — consertar o IDR não destrava 29 frames
+
+Decodificados os 29 frames (1773 a 1801) com a âncora no estado atual:
+
+| frames | estado |
+|---|---|
+| 1773 | imagem real, 97,6% íntegra |
+| 1774 | **cinza liso, todos os pixels em 128** — quadro de ocultação do decoder |
+| 1798 | tem conteúdo, mas as tarjas estão em 128 em vez de 16 |
+| os outros 26 | não produzem imagem nenhuma |
+
+Corrige a conta de payoff usada até aqui: "consertar um IDR rende ~29 frames"
+não vale para o 1773. O ganho **garantido** é 1 quadro; os 28 restantes ficam
+apenas *tentáveis*.
+
+E não dá para saber quanto dos 26 é dano próprio e quanto é consequência da
+âncora quebrada — essa indistinguibilidade é a razão de ser da regra de ordem
+de cadeia (armadilha 13).
+
 ### Os 6 da faixa de 25–50%
 
 Segunda fila, todos com corte confiável e metade do quadro real:
