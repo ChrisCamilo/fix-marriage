@@ -68,8 +68,14 @@ def main():
 
     pos = {t: k for k, t in enumerate(ordem)}
     saida = open(f_out, "wb")
-    reg = open("remontados.txt", "w", newline="\n")
-    reg.write("# frame sintetizado <- media ponderada dos vizinhos de exibicao\n")
+    # Anexa, nao sobrescreve: montar o filme em varios trechos fazia a
+    # ultima corrida apagar o registro das anteriores, e o arquivo existe
+    # justamente para ninguem confundir depois o que foi recuperado com o
+    # que foi inventado.
+    novo = not os.path.exists("remontados.txt")
+    reg = open("remontados.txt", "a", newline="\n")
+    if novo:
+        reg.write("# frame sintetizado <- media ponderada dos vizinhos de exibicao\n")
     n_syn = 0
     for t in ordem:
         if estado[t] == "ok":

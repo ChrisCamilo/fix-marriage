@@ -1,1 +1,3 @@
 # frame sintetizado <- media ponderada dos vizinhos de exibicao
+11 <- 12 escurecido em -6.8 (extrapolacao do fade; sem vizinho depois)
+10 <- 12 escurecido em -13.7 (extrapolacao do fade; sem vizinho depois)
