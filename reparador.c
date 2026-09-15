@@ -639,10 +639,16 @@ static void *worker_par2(void *p) {
  * puxam indice do contador atomico. A ordem do vetor E a ordem sequencial, entao
  * o resultado nao depende de escalonamento. */
 static int   alvok, prof_k, ini_k, nbits_k;
+/* Aceite alternativo: em vez de exigir decodificacao limpa do NAL inteiro,
+ * aceita a combinacao que faz o quadro PRODUZIR IMAGEM. Nos 17 IDRs que
+ * morrem no byte ~10, exigir NAL perfeito confunde duas perguntas: o
+ * cabecalho e consertavel, e o corpo esta sao. Esta flag separa as duas. */
+static int   aceita_imagem = 0;
 static int  *combos_k;
 static long  n_combos;
 static _Atomic long prox_combo;
 static int   achk[4096 * 4];
+static long  achk_c[4096];   /* indice da combinacao, para ordenar a saida */
 static _Atomic int n_achk;
 
 static void *worker_varrek(void *p) {
@@ -657,10 +663,14 @@ static void *worker_varrek(void *p) {
         memcpy(copia, arq + ix[alvo].off, len);
         for (int q = 0; q < prof_k; q++)
             copia[ini_k + comb[q] / 8] ^= (1 << (comb[q] % 8));
-        if (decodifica(anc, alvo, copia, len, NULL) == 0) {
+        int r = decodifica(anc, alvo, copia, len, NULL);
+        if (aceita_imagem ? (cap_w > 0) : (r == 0)) {
             int n = atomic_fetch_add(&n_achk, 1);
-            if (n < 4096)
+
+            if (n < 4096) {
+                achk_c[n] = c;
                 for (int q = 0; q < prof_k; q++) achk[n * 4 + q] = comb[q];
+            }
         }
     }
     free(copia); free(cap_buf); cap_buf = NULL;
@@ -1600,10 +1610,11 @@ int main(int argc, char **argv) {
         if (prof_k < 1) prof_k = 1;
         if (prof_k > 4) prof_k = 4;
         nbits_k = (fim - ini_k) * 8;
+        aceita_imagem = getenv("IMAGEM") ? atoi(getenv("IMAGEM")) : 0;
         gera_combos();
         int nthr = quantas_threads();
-        printf("frame %d: %d bytes, faixa [%d,%d) = %d bits, %d a %d, %ld combinacoes, %d threads\n",
-               alvok, len, ini_k, fim, nbits_k, prof_k, prof_k, n_combos, nthr);
+        printf("frame %d: %d bytes, faixa [%d,%d) = %d bits, %d a %d, %ld combinacoes, %d threads, aceite %s\n",
+               alvok, len, ini_k, fim, nbits_k, prof_k, prof_k, n_combos, nthr, aceita_imagem ? "produz imagem" : "decodifica limpo");
         fflush(stdout);
         atomic_store(&prox_combo, 0);
         atomic_store(&n_achk, 0);
@@ -1615,6 +1626,22 @@ int main(int argc, char **argv) {
         int n = atomic_load(&n_achk);
         printf("[+] frame %d: %d combinacoes de %d bits resolvem [%.0fs]\n",
                alvok, n, prof_k, difftime(time(NULL), t0));
+        /* Os workers gravam na ordem em que acham, que depende do escalonamento.
+         * A saida tem que sair na ordem da combinacao, senao 1 thread e 12 dao
+         * arquivos diferentes -- foi o que aconteceu na primeira versao. */
+        int lim = n < 4096 ? n : 4096;
+        for (int a = 1; a < lim; a++) {
+            long ca = achk_c[a]; int tmp[4];
+            for (int q = 0; q < prof_k; q++) tmp[q] = achk[a * 4 + q];
+            int b = a - 1;
+            while (b >= 0 && achk_c[b] > ca) {
+                achk_c[b + 1] = achk_c[b];
+                for (int q = 0; q < prof_k; q++) achk[(b + 1) * 4 + q] = achk[b * 4 + q];
+                b--;
+            }
+            achk_c[b + 1] = ca;
+            for (int q = 0; q < prof_k; q++) achk[(b + 1) * 4 + q] = tmp[q];
+        }
         FILE *g = argc > 9 ? fopen(argv[9], "w") : NULL;
         for (int k = 0; k < n && k < 4096; k++) {
             for (int q = 0; q < prof_k; q++) {
