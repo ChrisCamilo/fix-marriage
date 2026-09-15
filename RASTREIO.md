@@ -228,7 +228,8 @@ enquanto o IDR não fechar.
 | alvo | janela | candidatos | soluções |
 |---|---|---|---|
 | IDR 0, 1 bit | NAL inteiro | 18.376 | **1** — reprovada, ver abaixo |
-| IDR 0, **2 bits** | `[700,1000)` | 2,88 M | **0** (26 min, 1.836 cand/s) |
+| IDR 0, **2 bits** | `[700,1000)` | 2,88 M | **0** (26 min) |
+| IDR 0, **2 bits** | `[600,1100)` | 8,00 M | **0** (2h09, 1.032 pares/s) |
 | frame 10, 1 bit | NAL inteiro | 2.056 | **0** |
 | frame 11, 1 bit | NAL inteiro | 22.616 | **0** |
 | frame 13, 1 bit | NAL inteiro | 292.216 | **0** |
@@ -241,10 +242,16 @@ dá campo 16,00 e tarja **16,000 / desvio 0,000**; o candidato o faz decodificar
 limpo e leva a tarja para **18,265**, contaminando o frame 2 junto. Trocaria
 imagem correta por conformidade sintática.
 
-**Ressalva honesta sobre a janela:** `[700,1000)` foi escolhida porque o decoder
-consome ~886 bytes antes de falhar. A armadilha 9 diz que o bit errado costuma
-estar bem antes disso, então o zero prova ausência **naquela janela**, não no
-NAL. O que falta custa 73 min em `[600,1100)` e **25,5 h** no NAL inteiro.
+**Ressalva sobre a janela:** as duas foram escolhidas em volta do byte 886, onde
+o decoder para de consumir. A armadilha 9 diz que o bit errado costuma estar
+bem antes disso, então o zero prova ausência **naquelas janelas**, não no NAL.
+O que resta é o NAL inteiro em 2 bits: 168,8 M pares, **45 h** à taxa medida.
+
+**Estimativa de tempo errou 44%:** projetei 73 min para `[600,1100)` e levou
+2h09. A taxa de pares (1.032/s) é bem menor que a de candidatos de 1 bit
+(2.625/s) no mesmo NAL — cada par exige montar duas inversões e o custo fixo
+por decodificação pesa mais quando o NAL é pequeno. **Medir a taxa de pares
+antes de prometer prazo**, em vez de reaproveitar a de 1 bit.
 
 **Em 2 bits, só o frame 10 seria alcançável** (262 B, 2,1 M pares). O 11 são
 256 M pares e o 13 são 42,7 G — fora de alcance por ordens de grandeza.
