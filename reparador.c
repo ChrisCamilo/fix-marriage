@@ -688,6 +688,22 @@ static int croma_sao(void) {
         && ud <= gu_des * 1.15 && vd <= gv_des * 1.15;
 }
 
+/* Despejo de TODOS os candidatos, para filtrar depois sem refazer a corrida.
+ * Motivo concreto: o IDR 1683 custou tres corridas de 12 min so porque eu mudei
+ * o limiar da guarda entre elas, e as tres mediram a mesma coisa. Com o despejo
+ * e uma corrida e tres filtragens de segundos.
+ *
+ * Cada worker escreve so no proprio indice k, entao nao ha trava nem corrida --
+ * e a saida sai ordenada por construcao. Sao 8 bytes por candidato: 5 MB para os
+ * 654 mil do 1683, no scratchpad, descartavel quando o frame fechar. */
+typedef struct {
+    int nota;              /* linhas identicas; <0 = nao produziu imagem */
+    short prim;            /* primeira linha propagada */
+    unsigned char um, ud, vm, vd;   /* croma da regiao nova: media e desvio x10 */
+    unsigned char bloc;    /* blocagem x50, saturando em 255 */
+} Medida;
+static Medida *medidas = NULL;
+
 typedef struct { int alvo, ancora, ini; int nota, off, bit, idx; } WorkerC;
 
 static void *worker_cresce(void *p) {
@@ -704,10 +720,30 @@ static void *worker_cresce(void *p) {
         copia[off] ^= (1 << bit);
         decodifica(w->ancora, w->alvo, copia, len, NULL);
         int nota = 1 << 20;
-        if (cap_w > 0 && croma_sao()) {
-            double b = blocagem(cap_buf, cap_w, cap_h);
-            if (b > 0.4 && b < 2.0)              /* faixa dos genuinos */
-                nota = linhas_identicas(cap_buf, cap_w, cap_h);
+        int cru = cap_w > 0 ? linhas_identicas(cap_buf, cap_w, cap_h) : -1;
+        double b = cap_w > 0 ? blocagem(cap_buf, cap_w, cap_h) : 0;
+        if (cap_w > 0 && croma_sao() && b > 0.4 && b < 2.0) nota = cru;
+        if (medidas) {                     /* despejo, ANTES de qualquer guarda */
+            Medida *m = &medidas[k];
+            m->nota = cru; m->prim = -1;
+            if (cap_w > 0) {
+                double um, ud, vm, vd;
+                croma_stat(gy0, 950, &um, &ud, &vm, &vd);
+                m->um = (unsigned char)(um > 255 ? 255 : um);
+                m->vm = (unsigned char)(vm > 255 ? 255 : vm);
+                m->ud = (unsigned char)(ud * 10 > 255 ? 255 : ud * 10);
+                m->vd = (unsigned char)(vd * 10 > 255 ? 255 : vd * 10);
+                m->bloc = (unsigned char)(b * 50 > 255 ? 255 : b * 50);
+                short pr = 950;
+                for (int y = 137; y < 950 && y < cap_h; y++) {
+                    long dd = 0;
+                    for (int x = 0; x < cap_w; x += 8)
+                        dd += abs((int)cap_buf[(size_t)y*cap_w+x]
+                                - (int)cap_buf[(size_t)(y-1)*cap_w+x]);
+                    if (dd == 0) { pr = (short)y; break; }
+                }
+                m->prim = pr;
+            }
         }
         copia[off] ^= (1 << bit);
         if (nota < w->nota || (nota == w->nota && k < w->idx)) {
@@ -1513,6 +1549,12 @@ int main(int argc, char **argv) {
         fflush(stdout);
         free(cap_buf); cap_buf = NULL;
         n_cand = (fim - ini) * 8;
+        if (argc > 8) {
+            medidas = calloc((size_t)n_cand, sizeof *medidas);
+            if (medidas)
+                printf("  despejando %d medidas em %s (%.1f MB)\n",
+                       n_cand, argv[8], n_cand * sizeof(Medida) / 1e6);
+        }
         atomic_store(&prox_cand, 0);
         WorkerC *w = calloc(nthr, sizeof *w);
         pthread_t *th = calloc(nthr, sizeof *th);
@@ -1533,6 +1575,20 @@ int main(int argc, char **argv) {
         printf("[+] melhor: off %ld bit %d -> %d linhas identicas "
                "(era %d) [%.0fs]\n",
                ix[alvo].off + off, bit, nota, base, difftime(time(NULL), t0));
+        if (medidas) {
+            FILE *g = fopen(argv[8], "w");
+            fprintf(g, "# off bit nota primeira_propagada U_med U_des V_med V_des blocagem\n");
+            for (int k = 0; k < n_cand; k++) {
+                Medida *m = &medidas[k];
+                if (m->nota < 0) continue;          /* sem imagem, nao interessa */
+                fprintf(g, "%ld %d %d %d %d %.1f %d %.1f %.2f\n",
+                        ix[alvo].off + ini + k / 8, k % 8, m->nota, m->prim,
+                        m->um, m->ud / 10.0, m->vm, m->vd / 10.0, m->bloc / 50.0);
+            }
+            fclose(g);
+            printf("  despejo gravado em %s\n", argv[8]);
+            free(medidas); medidas = NULL;
+        }
     }
     else if (!strcmp(modo, "campo")) {
         campo_alvo = atoi(argv[5]);
