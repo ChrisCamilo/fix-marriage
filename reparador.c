@@ -619,6 +619,87 @@ static void *worker_par2(void *p) {
     return NULL;
 }
 
+/* ---- linhas identicas: o detector de propagacao vertical ----
+ * O `propagacao` conta linhas PARECIDAS com a de cima, e cena desfocada com
+ * grandes areas uniformes acerta valores altos legitimamente -- o GOP 3368 tem
+ * quadros perfeitos com propagacao 0,98. Linha EXATAMENTE identica separa de
+ * forma binaria: medido em 137 quadros bons, todos dao ZERO; o IDR 1683,
+ * listrado, da 34,3%. Ver armadilha 16. */
+static int linhas_identicas(const uint8_t *Y, int w, int h) {
+    int n = 0;
+    for (int y = 137; y < 950 && y < h; y++) {
+        long d = 0;
+        for (int x = 0; x < w; x += 4)
+            d += abs((int)Y[(size_t)y * w + x] - (int)Y[(size_t)(y - 1) * w + x]);
+        if (d == 0) n++;
+    }
+    return n;
+}
+
+/* ---- modo cresce: objetivo CONTINUO, para frame que passa no criterio ----
+ * Existe frame que decodifica sem erro e mesmo assim so mostra metade da
+ * imagem: a slice para no meio e o ffmpeg preenche repetindo a ultima linha,
+ * sem reclamar. O IDR 1683 e assim -- consome 49% do NAL e decodifica 49% da
+ * altura. Para ele o criterio binario e inutil, porque ja esta satisfeito: a
+ * varredura do frame 1684, que depende dele, devolveu 75.909 "solucoes".
+ *
+ * Aqui o alvo e outro: MINIMIZAR as linhas identicas. E nota continua, nao
+ * binaria, entao cada candidato diz quantas fileiras de macrobloco a mais
+ * foram decodificadas. Determinismo pela regra de sempre: vence a menor nota,
+ * empate pelo menor indice. */
+/* O criterio nao pode ser SO "menos linhas identicas": medido no IDR 1683, o
+ * melhor candidato por essa nota trocava propagacao limpa por lixo colorido --
+ * ruido nao tem linha identica, entao a nota cai e a imagem piora. E a armadilha
+ * 8 outra vez. Por isso a nota so conta se o quadro passar em duas guardas que
+ * o lixo nao consegue satisfazer junto:
+ *   - croma perto de 128, porque o filme e desaturado (medido U 101-135 nos
+ *     quadros bons; o lixo vai a 56-171);
+ *   - blocagem dentro da faixa dos genuinos. */
+static int croma_sao(void) {
+    if (!cap_u || !cap_v) return 1;
+    int cw = cap_w / 2, ch = cap_h / 2;
+    int umin = 255, umax = 0, vmin = 255, vmax = 0;
+    for (int y = 0; y < ch; y += 2)
+        for (int x = 0; x < cw; x += 4) {
+            int u = cap_u[(size_t)y * cw + x], v = cap_v[(size_t)y * cw + x];
+            if (u < umin) umin = u; if (u > umax) umax = u;
+            if (v < vmin) vmin = v; if (v > vmax) vmax = v;
+        }
+    return umin >= 90 && umax <= 165 && vmin >= 110 && vmax <= 175;
+}
+
+typedef struct { int alvo, ancora, ini; int nota, off, bit, idx; } WorkerC;
+
+static void *worker_cresce(void *p) {
+    WorkerC *w = p;
+    int len = ix[w->alvo].size;
+    uint8_t *copia = malloc(len);
+    memcpy(copia, arq + ix[w->alvo].off, len);
+    if (!cap_buf) cap_buf = malloc((size_t)1920 * 1088);
+    guardar_croma = 1;
+    for (;;) {
+        int k = atomic_fetch_add(&prox_cand, 1);
+        if (k >= n_cand) break;
+        int off = w->ini + k / 8, bit = k % 8;
+        copia[off] ^= (1 << bit);
+        decodifica(w->ancora, w->alvo, copia, len, NULL);
+        int nota = 1 << 20;
+        if (cap_w > 0 && croma_sao()) {
+            double b = blocagem(cap_buf, cap_w, cap_h);
+            if (b > 0.4 && b < 2.0)              /* faixa dos genuinos */
+                nota = linhas_identicas(cap_buf, cap_w, cap_h);
+        }
+        copia[off] ^= (1 << bit);
+        if (nota < w->nota || (nota == w->nota && k < w->idx)) {
+            w->nota = nota; w->off = off; w->bit = bit; w->idx = k;
+        }
+    }
+    free(copia);
+    if (cap_buf) { free(cap_buf); cap_buf = NULL; }
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
+
 /* ---- modo campo: mede o quadro resultante de cada candidato ----
  * Nasceu do trecho final do filme, que e um fade: dali para a frente o frame
  * certo e um campo UNIFORME de valor previsivel, e o valor sai da media dos
@@ -1381,6 +1462,44 @@ int main(int argc, char **argv) {
                        o1, pares[k].a % 8, o2, pares[k].b % 8);
         }
         if (g) { fclose(g); printf("    gravados em %s\n", argv[6]); }
+    }
+    else if (!strcmp(modo, "cresce")) {
+        int alvo = atoi(argv[5]);
+        int len = ix[alvo].size, anc = ancora_de(alvo);
+        int ini = argc > 6 ? atoi(argv[6]) : 5;
+        int fim = argc > 7 ? atoi(argv[7]) : len;
+        if (ini < 5) ini = 5;
+        if (fim > len) fim = len;
+        int nthr = quantas_threads();
+        cap_buf = malloc((size_t)1920 * 1088);
+        decodifica(anc, alvo, NULL, 0, NULL);
+        int base = cap_w > 0 ? linhas_identicas(cap_buf, cap_w, cap_h) : -1;
+        printf("frame %d: %d bytes, faixa [%d,%d), %d candidatos, %d threads\n",
+               alvo, len, ini, fim, (fim - ini) * 8, nthr);
+        printf("  linhas identicas hoje: %d de 813  (quadro bom = 0)\n", base);
+        fflush(stdout);
+        free(cap_buf); cap_buf = NULL;
+        n_cand = (fim - ini) * 8;
+        atomic_store(&prox_cand, 0);
+        WorkerC *w = calloc(nthr, sizeof *w);
+        pthread_t *th = calloc(nthr, sizeof *th);
+        time_t t0 = time(NULL);
+        for (int i = 0; i < nthr; i++) {
+            w[i].alvo = alvo; w[i].ancora = anc; w[i].ini = ini;
+            w[i].nota = 1 << 20; w[i].idx = n_cand + 1;
+            pthread_create(&th[i], NULL, worker_cresce, &w[i]);
+        }
+        int nota = 1 << 20, off = -1, bit = -1, idx = n_cand + 1;
+        for (int i = 0; i < nthr; i++) {
+            pthread_join(th[i], NULL);
+            if (w[i].nota < nota || (w[i].nota == nota && w[i].idx < idx)) {
+                nota = w[i].nota; off = w[i].off; bit = w[i].bit; idx = w[i].idx;
+            }
+        }
+        free(w); free(th);
+        printf("[+] melhor: off %ld bit %d -> %d linhas identicas "
+               "(era %d) [%.0fs]\n",
+               ix[alvo].off + off, bit, nota, base, difftime(time(NULL), t0));
     }
     else if (!strcmp(modo, "campo")) {
         campo_alvo = atoi(argv[5]);

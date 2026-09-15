@@ -167,3 +167,27 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     idênticas. Propagação alta com zero linhas idênticas é cena suave; com
     dezenas de por cento é propagação vertical de verdade.
 
+17. **Detector bom não vira objetivo bom.** "Linhas idênticas" separa listra de
+    cena suave de forma binária e perfeita — é o melhor detector de propagação
+    que este projeto tem (armadilha 16). Usado como **alvo de otimização**, foi
+    burlado na primeira corrida.
+
+    Medido no IDR 1683: o melhor candidato baixou a nota de 277 para 153 linhas
+    idênticas, e a imagem **piorou** — a propagação limpa virou lixo colorido em
+    magenta, vermelho e verde. Ruído não tem linha idêntica, então a nota cai
+    justamente porque o quadro ficou pior.
+
+    | | croma U | croma V |
+    |---|---|---|
+    | quadro bom | 101–135 | 126–155 |
+    | IDR 1683 antes | 111–134 | 127–154 |
+    | o "melhor" candidato | **56–171** | **114–187** |
+
+    É a armadilha 8 numa forma nova: ali a busca burlava proxy visual inventado;
+    aqui burlou uma métrica **bem calibrada**, porque calibração serve para
+    detectar, não para otimizar.
+
+    **Objetivo precisa de guardas que não se burlam juntas.** O `cresce` agora só
+    pontua o candidato se o croma ficar perto de 128 (o filme é desaturado) e a
+    blocagem ficar na faixa dos genuínos. Lixo satisfaz uma e viola as outras.
+
