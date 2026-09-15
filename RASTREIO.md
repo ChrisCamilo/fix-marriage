@@ -488,6 +488,55 @@ variável. Conserto vira aritmética de bitstream; o decoder não entra.
 Conferido antes de anexar: zero colisão, `verify` mantém 7 válidos e 4 falsos,
 os 121 IDRs quebrados continuam 121 e os 7 bons continuam decodificando.
 
+### Três IDRs perdidos do `stss` — o filme tem 131, não 128
+
+Os vãos anômalos entre IDRs não eram IDR ausente do arquivo: os frames existem
+e o `stsz` os conta. São **IDRs presentes com a marcação perdida no `stss`**,
+que o projeto vinha tratando como frame comum.
+
+Achados medindo a distância de Hamming ao molde. O teste separa sem ambiguidade
+— IDRs conhecidos dão **0**, frames comuns dão **9 a 16**:
+
+| vão | frame | distância | 2º melhor | tamanho | vizinhos | `idr_pic_id` |
+|---|---|---|---|---|---|---|
+| 2420→2470 (50) | **2441** | 3 | 9 | 128.101 B | 53–80 KB | 93 |
+| 2525→2583 (58) | **2554** | 5 | 9 | 114.400 B | 37–43 KB | 97 |
+| 2884→2942 (58) | **2913** | 3 | 9 | 229.128 B | 57–88 KB | 110 |
+
+Três confirmações independentes: a distância, o tamanho de quadro intra, e a
+cadência — 2554 e 2913 caem a **exatamente 29 frames** do IDR anterior, que é o
+espaçamento modal do filme (95 dos 130 vãos).
+
+E a quarta, que fecha: os três `idr_pic_id` **previstos pela sequência batem
+exatamente**. Com eles na contagem, `idr_pic_id == ordinal` passa a valer em
+**97 dos 100** cabeçalhos limpos — contra a função-degrau de 4 parâmetros que
+eu tinha antes.
+
+Os três decodificam com erro e produzem **cinza liso**: o cabeçalho conserta, o
+corpo não. Mesma situação dos 17.
+
+`index.txt` é derivado e sai do `stss`; marcar os três exige mexer no
+`ferramentas.py`, não no índice.
+
+### Auditoria: 9 dos 25 cabeçalhos anexados têm valor implausível
+
+Com o `idr_pic_id == ordinal` estabelecido, dá para conferir o que foi
+anexado. Critério: `idr_pic_id` igual ao ordinal **e** `qp_delta` negativo (os
+7 íntegros ficam entre −13 e −2).
+
+**16 dos 25 passam. Nove não:** 1239, 1379, 1553, 1595, 1654, 2246, 2275, 2499,
+2525.
+
+O pior é o **1595**: recebeu `idr_pic_id=16` quando a sequência diz 60, e
+`qp_delta=22`, ou seja QP 48 quando os íntegros ficam entre 13 e 24. A
+minimização de Hamming achou um mínimo degenerado. Conferido que o 1595 é IDR
+de verdade — byte NAL `0x65` no arquivo cru, 62.953 B contra 15–27 KB dos
+vizinhos — então o erro é do reparo, não da identificação.
+
+**Isto é corrigível.** Append-only não impede: anexar o mesmo bit de novo o
+inverte de volta. A correção é rerodar o molde com `idr_pic_id` fixado no
+ordinal e `qp_delta` restrito à faixa plausível, e anexar a diferença.
+
 ### O `idr_pic_id` incrementa de 1 — e a não-monotonicidade era artefato meu
 
 Primeiro concluí que a regra não estava entendida. Errado, e a causa do erro
