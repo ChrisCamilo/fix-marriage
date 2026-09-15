@@ -309,3 +309,22 @@ está bem calibrado; o ganho é modesto e real.
 Trechos contíguos em ordem de decodificação: **3319–3428 (110 frames)**,
 **2333–2361 (29)**, **0–12 (11)**, mais alguns isolados na cauda.
 
+## Vídeo assistível — 168 frames, 5,6 s
+
+Montado com `TARJA=1`, que faz o `serie` aceitar também o quadro cuja imagem
+está certa mas não passa no critério rigoroso.
+
+| trecho | frames | segundos | o que é |
+|---|---|---|---|
+| 0–12 | 13 (11 reais + 2 sintetizados) | 0,43 | fade-in de abertura |
+| 2333–2361 | **29 de 29** | 0,97 | o noivo diante do espelho |
+| 3319–3444 | **126 de 126** | 4,20 | bloco final, fade-out incluído |
+| **total** | **168** | **5,61** | |
+
+O bloco final passou de 120 para **126 de 126** — o `TARJA=1` recuperou 3428,
+3430, 3432, 3441, 3443 e 3444, que antes entravam como buraco. **Nenhum deles
+precisou de reparo**: já produziam o valor certo.
+
+Só 2 frames em 168 são sintetizados (os 10 e 11 da abertura), e estão
+registrados no `remontados.txt`.
+
