@@ -19,8 +19,12 @@ def main():
         if not l.startswith("#"): break
         if " alvo " in l:
             c = l.split()
-            cab = {"alvo": int(c[2]), "ancora": int(c[4]),
-                   "n": int(c[7]), "hash": c[9]}
+            # ler por NOME, nao por posicao: "faixa [5,81752)" e um token so e
+            # desloca tudo depois dele
+            def dep(chave):
+                return c[c.index(chave) + 1]
+            cab = {"alvo": int(dep("alvo")), "ancora": int(dep("ancora")),
+                   "n": int(dep("cadeia_patches")), "hash": dep("cadeia_hash")}
     if not cab:
         print("[!] despejo sem carimbo -- feito antes desta conferencia existir.")
         print("    Nao da para saber contra que estado foi medido. Refazer.")
