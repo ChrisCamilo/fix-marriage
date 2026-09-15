@@ -34,6 +34,7 @@ static long arq_len = 0;
 static _Thread_local int log_erros = 0;
 static _Thread_local long log_bytestream = -1;
 static _Thread_local int log_ocultados = -1;
+static _Thread_local int log_mbx = -1, log_mby = -1;
 
 static void meu_log(void *avcl, int nivel, const char *fmt, va_list vl) {
     if (nivel > AV_LOG_ERROR) return;
@@ -41,11 +42,20 @@ static void meu_log(void *avcl, int nivel, const char *fmt, va_list vl) {
     vsnprintf(buf, sizeof(buf), fmt, vl);
     long bs; int mb1, mb2, oc;
     if (sscanf(buf, "error while decoding MB %d %d, bytestream %ld",
-               &mb1, &mb2, &bs) == 3) log_bytestream = bs;
+               &mb1, &mb2, &bs) == 3) {
+        log_bytestream = bs;
+        /* O decoder informa a COORDENADA do macrobloco onde falhou, em unidades
+         * de 16 pixels. E medida na fonte, nao inferida do pixel de saida --
+         * imune ao lixo colorido que burlou a contagem de linhas propagadas tres
+         * vezes. Endereco linear = mb_y * 120 + mb_x, de 0 a 8159. */
+        log_mbx = mb1; log_mby = mb2;
+    }
     if (sscanf(buf, "concealing %d DC", &oc) == 1) log_ocultados = oc;
+    if (getenv("LOG")) fputs(buf, stderr);   /* ver o que o decoder diz, cru */
     log_erros++;
 }
-static void log_zerar(void) { log_erros = 0; log_bytestream = -1; log_ocultados = -1; }
+static void log_zerar(void) { log_erros = 0; log_bytestream = -1; log_ocultados = -1;
+                              log_mbx = -1; log_mby = -1; }
 
 /* ---- decodificador ----
  * `ctx` e por thread; `extradata` e compartilhado e so-leitura apos monta_avcc. */
@@ -1660,14 +1670,20 @@ int main(int argc, char **argv) {
         int folga = argc > 5 ? atoi(argv[5]) : 1024;
         cap_buf = malloc((size_t)1920 * 1088);
         long total = 0; int n = 0;
-        printf("idr tamanho corte fim_faixa candidatos\n");
+        printf("idr tamanho corte fim_faixa candidatos listra pct\n");
         for (int t = 0; t < n_ix; t++) {
             if (!ix[t].idr) continue;
             if (decodifica(t, t, NULL, 0, NULL) == 0) continue;   /* ja decodifica */
+            /* Quanto do quadro e listra, medido ANTES do acha_consumo, que
+             * redecodifica e sobrescreve o cap_buf. A blocagem nao separa
+             * listra de cena (armadilha 18) e foi por isso que o IDR 1712
+             * entrou na lista dos reparaveis sendo 71% propagacao. */
+            int listra = cap_w > 0 ? linhas_identicas(cap_buf, cap_w, cap_h) : -1;
             int c = acha_consumo(t);
             int fim = c + folga; if (fim > ix[t].size) fim = ix[t].size;
             long cand = (long)(fim - 5) * 8;
-            printf("%d %d %d %d %ld\n", t, ix[t].size, c, fim, cand);
+            printf("%d %d %d %d %ld %d %.1f\n", t, ix[t].size, c, fim, cand,
+                   listra, listra < 0 ? -1.0 : listra * 100.0 / 813.0);
             fflush(stdout);
             total += cand; n++;
         }
