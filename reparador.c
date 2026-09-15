@@ -126,7 +126,49 @@ static _Thread_local int cap_alvo = -1;
  * ocultacao (copia do frame anterior) de passar por reparo. */
 static _Thread_local int cap_qualquer = 0;
 
+/* Panorama: em vez de guardar um quadro, MEDE cada quadro emitido e imprime.
+ * Nasceu do GOP 0, onde 10 frames produzem a rampa de fade-in correta com
+ * tarja 16,000 e desvio 0,000, e so 2 passam no criterio rigoroso. O criterio
+ * e mais estrito que 'produz a imagem certa', e isso nunca foi medido no filme
+ * inteiro -- pode haver muito mais assistivel do que a contagem diz. */
+static int panorama = 0;
+
+static void mede_e_imprime(const AVFrame *fr) {
+    int w = fr->width, h = fr->height, ls = fr->linesize[0];
+    const uint8_t *Y = fr->data[0];
+    if (w <= 0 || h < 1080) return;
+    double si = 0, si2 = 0; long ni = 0;
+    for (int y = 130; y < 950; y += 3)
+        for (int x = 0; x < w; x += 11) {
+            double v = Y[(size_t)y * ls + x]; si += v; si2 += v * v; ni++;
+        }
+    double mi = si / ni, di = sqrt(si2 / ni - mi * mi);
+    double st = 0, st2 = 0; long nt = 0;
+    for (int y = 962; y < 1080; y++)
+        for (int x = 0; x < w; x += 8) {
+            double v = Y[(size_t)y * ls + x]; st += v; st2 += v * v; nt++;
+        }
+    double mt = st / nt, dt = sqrt(st2 / nt - mt * mt);
+    int listra = 0;
+    for (int y = 131; y < 950; y++) {
+        long d = 0;
+        for (int x = 0; x < w; x += 4)
+            d += labs((long)Y[(size_t)y * ls + x] - (long)Y[(size_t)(y - 1) * ls + x]);
+        if (d == 0) listra++;
+    }
+    double gv = 0, gh = 0; long ng = 0;
+    for (int y = 140; y < 940; y += 3)
+        for (int x = 4; x < w - 4; x += 13) {
+            gv += labs((long)Y[(size_t)y * ls + x] - (long)Y[(size_t)(y-1) * ls + x]);
+            gh += labs((long)Y[(size_t)y * ls + x] - (long)Y[(size_t)y * ls + x - 1]);
+            ng++;
+        }
+    printf("%d %.3f %.3f %.4f %.4f %.1f %.4f\n", (int)fr->pts, mi, di, mt, dt,
+           listra * 100.0 / 819.0, gh > 0 ? gv / gh : -1.0);
+}
+
 static void captura_frame(AVFrame *fr) {
+    if (panorama) { mede_e_imprime(fr); return; }
     if (!cap_buf || fr->width <= 0) return;
     if (cap_alvo >= 0 && fr->pts != cap_alvo) return;
     cap_w = fr->width; cap_h = fr->height;
@@ -1801,6 +1843,23 @@ int main(int argc, char **argv) {
                    campos[k].imed, campos[k].ides, campos[k].ibloc);
         }
         free(campos);
+    }
+    else if (!strcmp(modo, "panorama")) {
+        /* Decodifica cada GOP numa passada e mede TODO quadro emitido. Uma
+         * decodificacao por frame, contra as ~13 que medir um a um custaria. */
+        panorama = 1; cap_qualquer = 1;
+        cap_buf = malloc((size_t)1920 * 1088);
+        printf("frame campo_med campo_des tarja_med tarja_des listra vh\n");
+        fflush(stdout);
+        for (int t = 0; t < n_ix; t++) {
+            if (!ix[t].idr) continue;
+            int fim = t + 1;
+            while (fim < n_ix && !ix[fim].idr) fim++;
+            decodifica(t, fim - 1, NULL, 0, NULL);
+            fflush(stdout);
+        }
+        panorama = 0; cap_qualquer = 0;
+        free(cap_buf); cap_buf = NULL;
     }
     else if (!strcmp(modo, "cortes")) {
         /* Lista o ponto de corte de todo IDR que nao decodifica. E o que define
