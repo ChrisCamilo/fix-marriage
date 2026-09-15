@@ -176,7 +176,7 @@ Somados com o 1773: 1,82 M candidatos, **43 min**. É a lista que substitui as
 |---|---|---|---|---|---|---|---|
 | **2360** | 2333 | 32.501 | NAL inteiro | 259.968 | 64 min | **1** | **reparado** — `77496463 2`, os três juízes aprovam |
 | 2361 | 2333 | 30.449 | NAL inteiro | 243.552 | 62 min | 0 | **INVÁLIDA** — rodou com o 2360 quebrado na cadeia |
-| 2361 | 2333 | 30.449 | NAL inteiro | 243.552 | 75 min | **1** | reprovado — ver abaixo |
+| **2361** | 2333 | 30.449 | NAL inteiro | 243.552 | 75 min | **1** | **reparado** — `77528961 0` + `77528965 2`, ver abaixo |
 | 3428 | 3426 | 5.211 | NAL inteiro | 41.648 | 70 s | 25.537 | **reprovado** — o melhor tem quebra de macrobloco visível |
 | 3430 | 3426 | 7.223 | NAL inteiro | 57.744 | 148 s | 17.448 | reprovado — blocagem 2,199 contra 1,40 dos vizinhos |
 | 3432 | 3426 | 1.626 | NAL inteiro | 12.968 | 40 s | 6.266 | reprovado — retângulos de macrobloco no mapa de diferença |
@@ -186,6 +186,42 @@ Somados com o 1773: 1,82 M candidatos, **43 min**. É a lista que substitui as
 | **3442** | 3426 | 2.939 | NAL inteiro | 23.472 | 125 s | 959 | **reparado** — `114260576 3`, erra 6 linhas na borda |
 | 3443 | 3426 | 261 | NAL inteiro | 2.048 | 12 s | **0** | sem solução |
 | 3444 | 3426 | 266 | NAL inteiro | 2.088 | 12 s | 2 | reprovado — campo 19–21, não uniforme |
+
+### Revarredura do GOP 3426 com a cadeia de hoje
+
+Os 6 frames reprovados foram revarridos depois da correção dos cabeçalhos e da
+troca do índice para 132 IDRs. **Os números batem exatamente com os antigos** —
+a mudança de cadeia não afetou este GOP, o que é confirmação de que a correção
+não mexeu onde não devia.
+
+| frame | bytes | candidatos | soluções | tempo |
+|---|---|---|---|---|
+| 3428 | 5.211 | 41.648 | 25.537 | — |
+| 3430 | 7.223 | 57.744 | 17.448 | — |
+| 3432 | 1.626 | 12.968 | 6.266 | — |
+| 3441 | 940 | 7.480 | **1** | 42 s |
+| 3443 | 261 | 2.048 | **0** | 12 s |
+| 3444 | 266 | 2.088 | **2** | 12 s |
+| | | | | **320 s no total** |
+
+Os três candidatos de 3441 e 3444 foram inspecionados em resolução cheia, com
+amplificação de 12x em torno do preto (são quadros de fade, quase pretos):
+
+| | campo | desvio | esperado | tarja |
+|---|---|---|---|---|
+| 3442, referência boa | 23,01 | **0,11** | — | 16,00 |
+| 3441 `114258749 bit 1` | **17,47** | 1,03 | ~21 | **19,26** |
+| 3444 `114262699 bit 5` | 19,69 | 0,95 | < 23 | 16,00 |
+| 3444 `114262707 bit 5` | 19,34 | 0,75 | < 23 | 16,00 |
+
+Os frames bons da cauda têm desvio **0,00 a 0,11** — campo liso. Visualmente o
+candidato do 3441 mostra quatro ou cinco **bandas horizontais** onde deveria
+haver campo uniforme, e os dois do 3444 têm uma faixa mais clara embaixo com um
+**degrau vertical no meio da largura**, que é fronteira de macrobloco e não
+existe em fade genuíno.
+
+**Os três reprovados.** O 3443, com zero soluções em varredura completa do NAL,
+é prova de que precisa de 2 bits — e é o alvo mais forte do projeto hoje.
 
 ### Frame 1684: 75.909 soluções, e o GOP está bloqueado pelo próprio IDR
 
@@ -235,35 +271,24 @@ GOP e o anterior estão quebrados) e sem aritmética que fale de conteúdo. Todo
 objetivo vira proxy, e proxy contra 654 mil candidatos acha o patológico. Ver
 armadilha 17.
 
-### Frame 2361: o zero era artefato, mas o reparo não saiu
+### Frame 2361: reparado — a rejeição anterior está superada
 
 A revarredura com a cadeia limpa devolveu **1 solução** onde a anterior dera 0 —
-confirmação direta da armadilha 13. Mas ela não passa:
+confirmação direta da armadilha 13. O par `77528961 bit 0` + `77528965 bit 2`
+está aplicado, e **medido hoje o quadro passa em tudo**:
 
-| tentativa | cabeçalho | tarja média / desvio | gabarito |
-|---|---|---|---|
-| só `77528961 bit 2` | `frame_num=136` (**errado**, devia ser 8) | 16,246 / **5,350** | 1,308 |
-| `bit 0` + `bit 2` | `frame_num=8`, `poc_lsb=54` — **corretos** | 17,432 / **13,632** | 1,908 |
-| genuínos | | ~16,00 / ≤ 0,41 | piso 0,66 |
-
-Os **dois bits estão no mesmo byte**, `77528961`. Só o do `frame_num` não faz
-decodificar; só o outro faz decodificar mas deixa o `frame_num` provadamente
-errado; os dois juntos dão cabeçalho correto e **imagem pior**.
-
-Ampliando a tarja inferior em resolução cheia, os dois candidatos mostram um
-**borrão claro horizontal** logo abaixo da borda da imagem. Recalibrado o
-critério por região (armadilha 15), a rejeição se sustenta com folga:
-
-| | genuínos, pior caso | 2361 de 1 bit |
+| | 2361 hoje | genuínos |
 |---|---|---|
-| desvio na transição 950–956 | 1,36 | **45,36** (33x) |
-| pior pixel | 14 | **219** (15x) |
-| pixels fora de ±10 | 0,238% | **21,7%** (91x) |
+| decodificação | limpa | limpa |
+| tarja inferior (962–1079) | **16,000 / desvio 0,000** | 16,00 / ≤ 0,41 |
+| transição 950–956 | **0,441** | ≤ 1,36 |
 
-O **fundo da tarja do candidato é perfeito** — desvio 0,00, melhor que os
-genuínos. O defeito está inteiramente nas sete linhas da transição.
+Inspecionado em resolução cheia: o noivo diante do espelho, nítido, sem o
+borrão horizontal que motivou a rejeição. **O GOP 2333 está em 29 de 29.**
 
-O GOP 2333 fica em **28 de 29**.
+Esta entrada dizia o contrário e ficou desatualizada por algum tempo — o texto
+antigo descrevia um par de bits em `77528961` que não é o par aplicado. Lição:
+**registrar o offset exato do que entrou**, não a descrição do candidato.
 
 ### Busca de segundo bit
 

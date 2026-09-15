@@ -252,3 +252,26 @@ ser bits necessários de um reparo de vários bits. O append-only está certo aq
 O espelho disso é o patch novo do 3435, que aparece como falso sob `VISUAL=0`
 com `com=0 sem=0`: aquele frame sempre passou na sintaxe e só falhava na imagem.
 Os dois critérios medem coisas diferentes; nenhum sozinho decide.
+
+## Classificação por GOP — medida hoje, frame a frame
+
+Reclassificados os 7 GOPs cujo IDR decodifica, com o índice de 132 IDRs e os
+cabeçalhos corrigidos. `bom` = decodifica limpo pelo critério do `reparador.c`.
+
+| GOP | frames | bons | quebrados |
+|---|---|---|---|
+| 1683 | 29 | 4 | **25** |
+| **2333** | 29 | **29** | 0 |
+| **3319** | 29 | **29** | 0 |
+| **3348** | 20 | **20** | 0 |
+| **3368** | 29 | **29** | 0 |
+| **3397** | 29 | **29** | 0 |
+| 3426 | 19 | 13 | 6 — 3428, 3430, 3432, 3441, 3443, 3444 |
+
+**Cinco GOPs completos**, um a mais do que a contagem anterior: o frame 2361
+está reparado e o GOP 2333 fechou em 29 de 29.
+
+O GOP 1683 tem 25 quebrados mas **não é atacável**: o IDR dele é 34,3% listra,
+então nenhum reparo ancorado nele sai limpo. O 3426 é **o único GOP com IDR bom
+e frames quebrados** — é onde o reparo é possível.
+
