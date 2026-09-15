@@ -124,6 +124,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 | [`CRITERIOS.md`](CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
 | [`ARMADILHAS.md`](ARMADILHAS.md) | **13 maneiras de medir errado** que já produziram conclusão falsa aqui |
 | [`INVESTIGACOES.md`](INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
+| [`IDRS.md`](IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |
 | [`RASTREIO.md`](RASTREIO.md) | **toda varredura já feita**, por alvo — consultar antes de disparar qualquer corrida |
 | [`MELHORIAS.md`](MELHORIAS.md) | o que foi feito, o que falta e o que foi descartado no `reparador.c` |
 | [`PARALELIZACAO.md`](PARALELIZACAO.md) | por que `thread_count` fica em 1 e como a varredura paralela preserva determinismo |
