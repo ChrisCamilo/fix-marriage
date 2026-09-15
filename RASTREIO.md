@@ -488,12 +488,46 @@ variável. Conserto vira aritmética de bitstream; o decoder não entra.
 Conferido antes de anexar: zero colisão, `verify` mantém 7 válidos e 4 falsos,
 os 121 IDRs quebrados continuam 121 e os 7 bons continuam decodificando.
 
-**O `idr_pic_id` não é campo provado.** Ele acompanha o ordinal do IDR com
-desvio que varia de 0 a 3 de forma **não monotônica** (0→1→0→2→3). A hipótese
-de 3 IDRs ausentes do arquivo não explica desvio que volta, e a varredura por
-NAL tipo 5 não achou IDR fora do `stss`. Fica em aberto. Dá para conviver: o
-decoder não usa o valor, só exige que difira entre IDRs consecutivos — o que
-importa dele é o comprimento, que desloca os campos seguintes.
+### O `idr_pic_id` incrementa de 1 — e a não-monotonicidade era artefato meu
+
+Primeiro concluí que a regra não estava entendida. Errado, e a causa do erro
+vale mais que a conclusão: eu incluía **cabeçalhos danificados** no ajuste, e
+neles o `idr_pic_id` recuperado é lixo, porque a minimização de Hamming ajusta
+a bits corrompidos.
+
+Olhando a sequência crua, **117 dos 127 passos são exatamente +1**. As 16
+anomalias se decompõem:
+
+| origem | quantas |
+|---|---|
+| cai sobre IDR de cabeçalho danificado | 9 |
+| é o IDR seguinte a um danificado — a sequência voltando ao valor certo | 6 |
+| **sobra de verdade** | **4** |
+
+As quatro caem em IDRs de espaçamento anômalo (o filme tem 95 vãos de 29):
+
+| transição | vão | efeito |
+|---|---|---|
+| 2884 → 2942 | **58** = 2×29 | pula 1 |
+| 2525 → 2583 | **58** = 2×29 | pula 1 |
+| 1452 → 1495 | 43 | pula 1 |
+| 1595 → 1611 | 16 | **volta 1** |
+
+Os dois vãos de 58 têm assinatura física: espaçamento dobrado e exatamente um
+valor pulado. É um IDR que o encoder emitiu e não está no arquivo, perto dos
+frames 2913 e 2554. Não adianta procurar por NAL tipo 5: se existissem como
+amostra, o `stsz` os contaria.
+
+**A quarta continua em aberto** — desvio que diminui não se explica por IDR
+faltando, e o vão dela é curto.
+
+**Consequência para os 43 bits já anexados:** eles escolheram `idr_pic_id` por
+mínima distância, e em alguns dos 25 esse valor quebra a sequência. É
+inofensivo e dá para provar: a norma só exige `idr_pic_id` distinto quando
+**duas unidades de acesso consecutivas** são ambas IDR, e o menor vão entre
+IDRs neste filme é 2 frames. A restrição nunca se aplica aqui. O reparo teria
+sido mais fiel fixando o campo em ordinal + desvio, mas como o ganho funcional
+é nulo e o `patches.txt` é append-only, fica registrado em vez de corrigido.
 
 **O ganho não é imagem.** Nenhum dos 43 faz IDR decodificar, pelo mesmo motivo
 do experimento do `varrek`: o dano continua pelo corpo do slice. O ganho é que
