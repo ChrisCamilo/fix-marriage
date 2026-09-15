@@ -350,7 +350,7 @@ Confirmado de passagem que `par705.txt` e `par3278.txt` estão **com 0 bytes**:
 aquelas duas corridas nunca terminaram. Onde este arquivo dizia "rodando" e "na
 fila", leia-se **não feita**.
 
-### Os 17 sem imagem: 3 bits no cabeçalho, 0 soluções — mas o teste estava mal posto
+### Os 17 sem imagem: fechados para 1, 2 e 3 bits no cabeçalho
 
 Janela `[5,17)` (96 bits), exaustivo de **exatamente 3 bits**, 142.880
 combinações por IDR, **311 s** nos 17. **Zero soluções.**
@@ -379,10 +379,44 @@ muito entre si na mesma região (`01 fc 00 3d…` contra `00 80 00 04…`) porqu
 `idr_pic_id`, `poc_lsb` e `slice_qp_delta` mudam a cada quadro. Contar bits
 diferentes mede variação legítima, não corrupção — é a armadilha 15 outra vez.
 
-**Próximo experimento:** trocar o aceite de "decodifica limpo" para "produz
-imagem" e rerodar k=1..3 na mesma janela. Separa *o cabeçalho é consertável com
-poucos bits?* de *o NAL inteiro está são?*, que são perguntas diferentes e a
-segunda quase certamente é não.
+**Experimento feito, e fechou a questão.** Trocado o aceite para "produz
+imagem", k=1, 2 e 3 na janela `[5,17)` dos 17 IDRs: **zero soluções**, 315 s.
+
+O caminho até esse zero custou duas versões erradas do aceite, e as duas valem
+registro porque são fáceis de repetir:
+
+| aceite | o que aprovou | por que é falso |
+|---|---|---|
+| `cap_w > 0` | 71 candidatos de 1 bit, 2 a 8 por IDR | campo constante 128 — é o quadro de ocultação, **armadilha 1** |
+| campo constante por amostra esparsa | 3 candidatos de 2 bits | quadro de ocultação com meia dúzia de macroblocos passa: 98,9%, 100% e 99,5% de listra |
+| `linhas_identicas > 400` | **nada** | é o detector que o projeto já confia (armadilha 16) |
+
+**Conclusão: consertar o cabeçalho de slice desses 17 não recupera imagem
+nenhuma.** O dano não está confinado ao cabeçalho, continua pelo corpo do
+slice — coerente com eles estarem dentro da rajada (armadilha 20).
+
+### E o cabeçalho, dá para garantir mesmo sem imagem?
+
+Dá, mas **por prova, nunca por busca**. A varredura não distingue "cabeçalho
+correto" de "cabeçalho diferente que também parseia", então ela é o instrumento
+errado para essa pergunta. Foi assim que entraram os 31 bits determinísticos, e
+o ganho deles nunca foi decodificar: é toda varredura futura partir de um
+cabeçalho correto.
+
+Vale mesmo que o corpo seja irrecuperável, porque cabeçalho provado é verdade
+append-only que nunca precisa ser refeita — ao contrário da reconstrução de
+pixels, que se descarta a cada mudança a montante.
+
+| campo | provável? | por quê |
+|---|---|---|
+| `first_mb`, `slice_type`, `pps_id`, `frame_num` | **já feito** | fixos em todo IDR — os 31 bits |
+| `poc_lsb` | sim | vale 0 em IDR por definição |
+| `idr_pic_id` | provavelmente | parece incrementar de 1 entre os IDRs bons |
+| `deblocking_idc`, offsets alpha/beta | sim, se constantes | escolha de encoder; conferir nos 6 bons resolve |
+| `slice_qp_delta` | **não** | varia por quadro; só dá para limitar a faixa |
+
+Dos três campos que o decoder acusou, dois são prováveis e um não. O
+instrumento é o `cabecalhos.py` estendido, não o `varrek`.
 
 ### INVÁLIDA: os 39 IDRs de corte precoce
 
