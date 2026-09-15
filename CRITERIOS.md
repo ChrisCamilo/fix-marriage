@@ -7,6 +7,68 @@ O objetivo do projeto é assistir ao filme. Uma tarja com defeito de sete linhas
 é um risco fino piscando por 1/30 de segundo; um frame ausente é um segundo de
 nada. Entre os dois, a imagem ganha.
 
+## 0. Gabarito e proxy — por que a ordem é esta
+
+A hierarquia abaixo não é gosto. Ela sai de uma propriedade que separa os juízes
+em duas classes, e entender a propriedade evita reinventar critério ruim.
+
+Toda varredura aqui gera dezenas ou centenas de milhares de candidatos e precisa
+escolher. **Juiz** é o critério que escolhe. Ele é **burlável** quando, num
+conjunto grande, existem candidatos que pontuam bem sem estar certos — e a
+busca sempre encontra esses, porque é o que uma busca faz.
+
+A causa é sempre a mesma: o juiz mede algo *correlacionado* com estar certo, em
+vez de medir *estar certo*.
+
+**Um juiz é burlável na proporção de quão pouca informação ele confere:**
+
+| juiz | informação conferida | resultado |
+|---|---|---|
+| blocagem na faixa dos genuínos | **1 número** | burlado |
+| croma U e V dentro da faixa | **2 números** | burlado |
+| média e desvio calibrados no próprio quadro | **2 números** | burlado |
+| linhas idênticas usadas como alvo | **1 número** | burlado 3x |
+| **a tarja** | **~227 mil pixels** em valor prescrito | nunca cedeu |
+
+Não existe coincidência que produza 227 mil pixels certos. Por isso nenhum dos
+26.865 candidatos do IDR 1773 passou: não é limiar apertado, é que não há como
+acertar por acaso.
+
+**Gabarito** é conteúdo conhecido *independentemente da busca*. Existem três
+neste projeto, e onde houve reparo, havia um deles:
+
+| gabarito | de onde vem |
+|---|---|
+| a tarja | medida em 16 frames íntegros: `Y=16`, `U=V=128`, linhas 962–1079 |
+| vizinho temporal | o frame 2360 tinha quadros bons dos dois lados |
+| aritmética | o nível do fade do 3435, previsto por extrapolação da reta |
+
+Onde não há nenhum dos três — o IDR 1683 — **todo juiz vira proxy e todo proxy
+cai**. Não adianta procurar um melhor.
+
+### A tarja é gabarito completo, não só local
+
+Os macroblocos são decodificados de cima para baixo, e a tarja inferior é a
+**última** coisa do slice. Como o CABAC é serial, é impossível chegar ao último
+macrobloco correto atravessando trecho corrompido.
+
+**Tarja certa implica quadro inteiro certo.** Ela não prova só a região que
+mede; prova tudo que veio antes. É o verificador mais forte do projeto.
+
+### Duas ressalvas, e a segunda já custou caro
+
+1. **Inburlável não promete que existe solução.** Promete que o "não" e o "sim"
+   são confiáveis. No 1773 todos receberam não.
+
+2. **A propriedade é do uso, não da medida.** A tarja é gabarito legítimo, mas
+   ordenar os 26.865 candidatos por *distância até 16* e pegar "o melhor"
+   converte um teste binário inburlável de volta em proxy burlável — e o
+   vencedor matou 368 linhas de imagem boa, porque listra uniforme fica mais
+   perto de "plana" do que conteúdo vazado. É a armadilha 19.
+
+   **Gabarito responde sim ou não. Quando responde não para todos, a busca
+   acabou — não existe "o menos não".**
+
 ## 1. Juiz da imagem — decide
 
 Mede só a área que se assiste, **linhas 136 a 949**. Um candidato que passa aqui
