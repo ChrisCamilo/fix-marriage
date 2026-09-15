@@ -70,6 +70,44 @@ bit errado fica ~2600 bytes antes do corte, então `[30800,34317)` são 28.136
 candidatos e ~40 s — mas o NAL inteiro é barato o bastante para não valer o
 recorte.
 
+### IDR 1773 varrido: 26.865 soluções, nenhuma devolve a tarja
+
+NAL inteiro `[5,34317)`, 274.496 candidatos, **211 s**. Deu **26.865 soluções**
+— 9,8% de todas as inversões, o critério trivializado outra vez.
+
+Mas aqui existe gabarito, e ele decide sem conversa. Medidas de todas as 26.865
+com o modo `campo`, em 32 s:
+
+| tarja inferior | candidatos |
+|---|---|
+| média abaixo de 80 | **0** |
+| média 80–150 | 12 |
+| média 150–300 | 26.853 |
+| genuínos | 16,00 |
+
+O **menor desvio entre as 26.865 é 13,308**, contra ≤ 0,41 dos genuínos e 38,47
+do próprio original quebrado. A melhor média é 126,27 — e essa tem desvio
+74,78, ou seja, baixou a média espalhando mais. Nenhuma se aproxima de uma
+tarja plana.
+
+Restringindo à janela da armadilha 9 (rel ≥ 30389, ~2600 bytes antes do corte),
+sobram 4.618 soluções e o melhor desvio é **22,80**. Não melhora.
+
+**Conclusão: nenhuma inversão de 1 bit em lugar nenhum do NAL conserta o IDR
+1773.** Como a varredura cobriu o NAL inteiro, isto é definitivo para 1 bit —
+o dano precisa de 2 ou mais.
+
+Todos os 26.865 mantêm a tarja de topo em 16,006, o que confirma que o defeito
+é só na parte final do slice.
+
+**Dois bits na janela cirúrgica** é a continuação natural, e é a única do
+projeto hoje com gabarito não burlável: ±500 B do corte são 8.000 bits, 32 M
+pares, **~6,8 h** à taxa medida de 1.301 cand/s. Alargar para ±2 KB já vira
+3,5 dias.
+
+Medidas guardadas em `medidas1773.txt` no scratchpad (26.865 linhas, 20
+colunas) — dá para refiltrar por qualquer critério sem revarrer.
+
 ### Os 6 da faixa de 25–50%
 
 Segunda fila, todos com corte confiável e metade do quadro real:
