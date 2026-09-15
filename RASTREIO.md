@@ -134,6 +134,46 @@ O GOP 2333 fica em **28 de 29**.
 | 2525 | 63.244 | NAL inteiro, âncora `frame_num` | 505.912 | **0** | descartado — precisa de 3+ bits |
 | 705 | 232.555 | NAL inteiro, âncora `poc_lsb` | 1.860.400 | — | rodando |
 | 3278 | 244.901 | NAL inteiro, âncora `poc_lsb` | 1.959.168 | — | na fila |
+| 1712 | 185.831 | `[5,8336)` | 66.648 | **4** | reprovados — o quadro é listra, ver abaixo |
+
+### IDR 1712: 4 soluções, e a triagem dos 84 está errada
+
+Escolhido por ser o vizinho seguinte do GOP 1683 com corte confiável (7312,
+blocagem 1,040). Varredura em `[5,8336)`: 66.648 candidatos em **45 s**,
+**4 soluções** — `56851303 1`, `56851498 6`, `56851952 7`, `56852100 3`.
+
+As quatro são reprovadas pela tarja sem margem para discussão:
+
+| candidato | tarja média | tarja desvio | tarja min/max |
+|---|---|---|---|
+| `56851303 1` | 113,66 | 62,14 | 0 / 255 |
+| `56851498 6` | 107,16 | 77,98 | 0 / 255 |
+| `56851952 7` | 108,89 | 67,75 | 0 / 254 |
+| `56852100 3` | **120,05** | **48,44** | 9 / 251 |
+| genuínos | 16,00 | ≤ 0,41 | — |
+
+A tarja inferior não é tarja: é conteúdo de faixa cheia. O melhor dos quatro
+está 7x acima da média e 118x acima do desvio.
+
+**Mas o achado que importa é outro.** Inspecionando o quadro em resolução
+cheia, o original do 1712 **já não tem imagem**: tarja de topo correta e, a
+partir da linha 181, listra vertical até embaixo. O candidato troca a listra
+apagada por listra arco-íris saturada.
+
+| | linhas idênticas | primeira propagada |
+|---|---|---|
+| 1712 original | **71,2%** | 181 |
+| 1712 + `56852100 3` | 69,1% | 205 |
+| 1683, o listrado conhecido | 34,3% | 581 |
+
+O 1712 é **mais listrado que o 1683**, e ainda assim entrou na lista dos "84
+com corte confiável". A causa está na armadilha 18: a triagem usou blocagem, e
+listra bloca igual a cena. **O número 84 não vale** — refazer com linhas
+idênticas antes de gastar as 5,1 h estimadas.
+
+Confirmado de passagem que `par705.txt` e `par3278.txt` estão **com 0 bytes**:
+aquelas duas corridas nunca terminaram. Onde este arquivo dizia "rodando" e "na
+fila", leia-se **não feita**.
 
 ### INVÁLIDA: os 39 IDRs de corte precoce
 
