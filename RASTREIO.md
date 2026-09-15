@@ -488,35 +488,47 @@ variável. Conserto vira aritmética de bitstream; o decoder não entra.
 Conferido antes de anexar: zero colisão, `verify` mantém 7 válidos e 4 falsos,
 os 121 IDRs quebrados continuam 121 e os 7 bons continuam decodificando.
 
-### Três IDRs perdidos do `stss` — o filme tem 131, não 128
+### Censo dos IDRs: são 131, e o `stss` erra dos dois lados
 
-Os vãos anômalos entre IDRs não eram IDR ausente do arquivo: os frames existem
-e o `stsz` os conta. São **IDRs presentes com a marcação perdida no `stss`**,
-que o projeto vinha tratando como frame comum.
+Varridos os 3445 frames pelo prefixo fixo do cabeçalho de IDR (17 bits após o
+byte NAL) e depois pelo molde completo. O teste separa sem ambiguidade: IDR
+verdadeiro dá distância **0 a 3**, frame comum dá **8 a 14**.
 
-Achados medindo a distância de Hamming ao molde. O teste separa sem ambiguidade
-— IDRs conhecidos dão **0**, frames comuns dão **9 a 16**:
+| | |
+|---|---|
+| IDRs reais | **131** |
+| marcados no `stss` | 128 |
+| **marcados e que NÃO são IDR** | **2** — 1452 e 1595 |
+| **IDRs sem marcação no `stss`** | **5** — 1437, 1466, 2441, 2554, 2913 |
 
-| vão | frame | distância | 2º melhor | tamanho | vizinhos | `idr_pic_id` |
-|---|---|---|---|---|---|---|
-| 2420→2470 (50) | **2441** | 3 | 9 | 128.101 B | 53–80 KB | 93 |
-| 2525→2583 (58) | **2554** | 5 | 9 | 114.400 B | 37–43 KB | 97 |
-| 2884→2942 (58) | **2913** | 3 | 9 | 229.128 B | 57–88 KB | 110 |
+128 − 2 + 5 = 131, e os `idr_pic_id` cobrem 0 a 130: exatamente 131 valores.
 
-Três confirmações independentes: a distância, o tamanho de quadro intra, e a
-cadência — 2554 e 2913 caem a **exatamente 29 frames** do IDR anterior, que é o
-espaçamento modal do filme (95 dos 130 vãos).
+**`idr_pic_id == ordinal` vale em 126 dos 131.** As cinco exceções (1379, 2246,
+2275, 2499, 2525) são justamente frames onde eu escrevi valor degenerado — ou
+seja, a regra é exata e o que sobra de desvio é dano meu, não do arquivo.
 
-E a quarta, que fecha: os três `idr_pic_id` **previstos pela sequência batem
-exatamente**. Com eles na contagem, `idr_pic_id == ordinal` passa a valer em
-**97 dos 100** cabeçalhos limpos — contra a função-degrau de 4 parâmetros que
-eu tinha antes.
+O `stss` mora no `moov`, que é o átomo corrompido. Nada garantia que ele
+estivesse íntegro; o `ESTADO.md` só vouchsafe `stsz`, `stco`, `stsc` e `ctts`.
 
-Os três decodificam com erro e produzem **cinza liso**: o cabeçalho conserta, o
-corpo não. Mesma situação dos 17.
+Os cinco não marcados casam por quatro sinais independentes: distância 1–3,
+tamanho de quadro intra (67–229 KB contra 8–70 KB dos comuns ao redor),
+cadência de exatos 29 frames, e o `idr_pic_id` previsto pela sequência.
 
-`index.txt` é derivado e sai do `stss`; marcar os três exige mexer no
-`ferramentas.py`, não no índice.
+Os dois falsos falham pelos mesmos quatro: 1452 tem 14.766 B entre IDRs de
+67–190 KB e distância **9**; 1595 tem 62.953 B, está 13 frames depois do 1582 —
+que por sua vez está a 29 do 1611 — e não sobra vaga de `idr_pic_id` para ele.
+
+**Dano já causado, a corrigir:** o patch base assume o `stss` e forçou o byte
+NAL desses dois para `0x65`; depois eu anexei 6 bits em cada um forçando o
+prefixo canônico de IDR. São bits escritos em frames que não são IDR.
+
+### O que falta fazer
+
+1. Desfazer os bits indevidos em 1452 e 1595 (anexar os mesmos bits inverte).
+2. Corrigir os 5 com `idr_pic_id` degenerado: 1379, 2246, 2275, 2499, 2525.
+3. Anexar o cabeçalho dos 5 IDRs recém-identificados.
+4. Consertar o `ferramentas.py`, que deriva o byte NAL do `stss` e por isso
+   apaga a evidência — foi o que escondeu 2554 e 2913 da varredura por tipo 5.
 
 ### Auditoria: 9 dos 25 cabeçalhos anexados têm valor implausível
 

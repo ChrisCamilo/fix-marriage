@@ -15,11 +15,25 @@ o gabarito sao os dez campos constantes, e o que se procura e qual par
 (idr_pic_id, qp_delta) produz a string de bits mais proxima do que esta no
 arquivo. O decoder nem entra: e aritmetica de bitstream.
 
-Sobre o idr_pic_id: ele acompanha o ordinal do IDR com um desvio que varia de 0
-a 3 de forma NAO monotonica, entao a regra nao esta entendida e o campo nao e
-tratado como provado. Da para viver com isso: o decoder nao usa o valor, so
-exige que difira entre IDRs consecutivos. O que importa dele e o comprimento,
-que desloca os campos seguintes.
+Os dois livres nao sao livres de verdade, e a primeira versao disto errou por
+supor que fossem:
+
+  idr_pic_id == ORDINAL DO IDR. Vale em 97 dos 100 cabecalhos limpos, uma vez
+  que se contem os tres IDRs que perderam a marcacao no stss (2441, 2554,
+  2913). Sem eles a regra parece uma funcao degrau nao monotonica, que foi o
+  que me enganou.
+
+  slice_qp_delta fica entre -17 e -2 nos 97, sempre negativo. Aqui se aceita
+  [-20, 0].
+
+Sem esses dois limites a minimizacao de Hamming acha minimo degenerado: o IDR
+1595 recebeu idr_pic_id 16 onde a sequencia diz 60, e qp_delta 22, ou seja
+QP 48 onde os integros ficam entre 9 e 24. Nove dos 25 primeiros consertos
+sairam assim.
+
+O patches.txt e append-only, mas isso nao impede corrigir: anexar o mesmo bit
+de novo o inverte de volta. O alvo e o estado FINAL do arquivo, e o que se
+anexa e a diferenca entre ele e o estado atual.
 
   python molde_idr.py <orig.mp4> <index.txt> <patches.txt>
 
@@ -48,6 +62,10 @@ def cabecalho(idr_pic_id, qp_delta):
             + ue(0)             # disable_deblocking_filter_idc = 0
             + se(-1) + se(-1))  # slice_alpha_c0_offset_div2, slice_beta_offset_div2
 
+EXTRA = [2441, 2554, 2913]        # IDRs que perderam a marcacao no stss
+MAX_BITS = 6                      # acima disto nao e conserto, e reescrever o cabecalho
+QP_MIN, QP_MAX = -20, -1      # medido nos 97 limpos: -17 a -2; margem de 3 de cada lado
+
 def main():
     mp4, f_ix, f_pt = sys.argv[1], sys.argv[2], sys.argv[3]
     ix = {}
@@ -62,37 +80,54 @@ def main():
 
     def bits(t, n=14):
         off = ix[t][0]
-        f.seek(off + 4)                      # pula o prefixo AVCC de 4 bytes
+        f.seek(off + 4)
         d = bytearray(f.read(n))
         for k in range(n):
             for b in pt.get(off + 4 + k, []):
                 d[k] ^= (1 << b)
         return "".join(f"{x:08b}" for x in d)
 
-    grade = [(p, q) for p in range(256) for q in range(-26, 26)]
-    idrs = [t for t in sorted(ix) if ix[t][2]]
-    novos, danificados, ambiguos = [], 0, 0
+    idrs = sorted([t for t in ix if ix[t][2]] + EXTRA)
+    novos, ruins, ambiguos = [], 0, 0
 
-    for t in idrs:
+    for k, t in enumerate(idrs):
         real = bits(t)
-        cands = sorted((sum(1 for a, b in zip(cabecalho(p, q), real) if a != b), p, q)
-                       for p, q in grade)
-        d, p, q = cands[0]
+        # 1) O cabecalho ja parseia para os dez campos provados? Entao esta
+        #    correto, e nao se mexe -- mesmo que o idr_pic_id discorde do
+        #    ordinal. A regra do ordinal tem tres contraexemplos limpos
+        #    (1495, 1524, 1582) e nao derruba cabecalho consistente.
+        # 2) A excecao e qp_delta fora da faixa empirica: QP 48 num quadro
+        #    intra de um filme cujos outros 97 IDRs ficam entre QP 9 e 24 nao
+        #    e valor plausivel, e ali vale reconsertar.
+        livre = min((sum(1 for a, b in zip(cabecalho(pp, qq), real) if a != b), pp, qq)
+                    for pp in range(300) for qq in range(-26, 26))
+        if livre[0] == 0 and QP_MIN <= livre[2] <= QP_MAX:
+            continue
+        cands = sorted((sum(1 for a, b in zip(cabecalho(k, q), real) if a != b), q)
+                       for q in range(QP_MIN, QP_MAX + 1))
+        d, q = cands[0]
         if d == 0:
             continue
-        danificados += 1
+        ruins += 1
         if cands[1][0] == d:
             ambiguos += 1
-            print(f"  [!] IDR {t}: {d} bits, mas ha empate -- nao anexar")
+            print(f"  [!] IDR {t}: {d} bits, empate em qp_delta -- nao anexar")
             continue
-        alvo, off = cabecalho(p, q), ix[t][0]
-        for k, (a, b) in enumerate(zip(alvo, real)):
+        if d > MAX_BITS:
+            ambiguos += 1
+            print(f"  [!] IDR {t}: {d} bits de {len(cabecalho(k, q))} -- dano alem do"
+                  f" molde, seria inventar cabecalho, nao anexar")
+            continue
+        alvo, off = cabecalho(k, q), ix[t][0]
+        n = 0
+        for j, (a, b) in enumerate(zip(alvo, real)):
             if a != b:
-                novos.append((off + 4 + k // 8, 7 - (k % 8)))
-        print(f"  IDR {t}: {d} bits  idr_pic_id={p} qp_delta={q}")
+                novos.append((off + 4 + j // 8, 7 - (j % 8))); n += 1
+        marca = "  (stss perdido)" if t in EXTRA else ""
+        print(f"  IDR {t}: {n} bits  idr_pic_id={k} qp_delta={q}{marca}")
 
-    print(f"\n[+] {len(idrs)} IDRs, {len(idrs)-danificados} com cabecalho ja correto")
-    print(f"[+] {danificados} danificados, {ambiguos} ambiguos (pulados)")
+    print(f"\n[+] {len(idrs)} IDRs, {len(idrs)-ruins} com cabecalho ja correto")
+    print(f"[+] {ruins} a corrigir, {ambiguos} ambiguos (pulados)")
     print(f"[+] {len(novos)} bits a anexar")
     if novos:
         with open("novos_cabecalhos.txt", "w", newline="\n") as g:
