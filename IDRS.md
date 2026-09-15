@@ -187,7 +187,59 @@ bits sabidamente errados.
 O IDR 1683 decodifica mas é **34,3% listra** — conta como quadro, não como
 cena. Os utilizáveis de verdade são **6**.
 
-## 9. Ferramentas
+## 9. Frentes conferidas que não abriram nada
+
+Registradas porque fechar uma frente vale tanto quanto abrir, e sem isso alguém
+refaz.
+
+**O censo está completo.** A distância ao prefixo fixo do cabeçalho, medida nos
+3445 frames, tem um vão limpo: **131 quadros em 0, nenhum em 1 nem em 2**, e o
+grupo seguinte só aparece em 3. Os 21 desse degrau, testados contra o molde
+completo, ficam entre **7 e 12** — território de quadro comum. Não há IDR
+escondido.
+
+**Não existem SPS/PPS embutidos no fluxo.** Nenhuma amostra de tipo 7, e a
+única de tipo 8 é o frame 859 com **14.640 bytes** — um PPS de verdade tem ~4,
+e o byte dele está a 3 bits de `0x41`. É corrupção, não parâmetro. Confirma que
+o SPS e o PPS do `avcC` valem para o filme inteiro, e que nenhum IDR usa
+parâmetros próprios.
+
+**O byte NAL sozinho engana muito.** 157 amostras leem tipo 5 no arquivo cru,
+mas só 131 são IDR: as outras 26 são bytes corrompidos que caem em 5 por acaso.
+É a medida do ruído, e justifica o desempate por cabeçalho da seção 2.
+
+## 10. As variáveis que não podem ser medidas
+
+Quatro, e cada uma é imensurável por um motivo diferente. Distinguir os motivos
+importa: dois se resolveriam com mais dados, e dois não.
+
+**`slice_qp_delta` de um IDR danificado — não há invariante.** É o único campo
+do cabeçalho que o encoder escolhe pelo controle de taxa, a partir do conteúdo
+da cena, que é justamente o que se perdeu. Não há aritmética, vizinho, nem
+norma que o fixe. É o caso do 3290 (seção 5), e nenhuma quantidade de tempo de
+máquina resolve.
+
+**O conteúdo de um macrobloco destruído — não há gabarito.** Sem vizinho
+temporal e sem aritmética que fale de conteúdo, todo objetivo vira proxy, e
+proxy contra centenas de milhares de candidatos sempre acha o patológico. Foi o
+IDR 1683, três vezes seguidas.
+
+**Se o 1595 é IDR — a evidência se contradiz.** Diferente das duas anteriores:
+aqui não falta medida, as medidas discordam entre si (seção 3). Não existe
+terceira fonte no arquivo, e a norma permite os dois casos.
+
+**Se um IDR que decodifica limpo está byte a byte correto — não há
+verificação.** Os 7 bons passam no critério, mas um bit errado que não dispare
+erro no decoder é indetectável: a imagem pareceria certa e nada acusaria. A
+tarja cobre parte disso, com 227 mil pixels de valor conhecido, e o molde cobre
+o cabeçalho — mas o **corpo do slice** não tem conferência independente.
+
+Na prática não muda nada: quadro que decodifica com tarja perfeita serve para
+assistir e para ancorar. Mas **"decodifica limpo" é ausência de evidência de
+erro, não prova de integridade**, e a diferença importa no dia em que um reparo
+parecer bom e não for.
+
+## 11. Ferramentas
 
 | arquivo | papel |
 |---|---|
