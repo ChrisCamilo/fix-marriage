@@ -28,6 +28,15 @@ def indice(d):
 
 PREF=[0x01,0x41,0x65,0x21,0x61]
 
+# Os 17 bits que seguem o byte NAL num IDR sao fixos: first_mb ue(0),
+# slice_type ue(7), pps_id ue(0) e frame_num de 8 bits em zero. Serve para
+# desempatar o byte de cabecalho sem inventar. Ver molde_idr.py.
+FIXO_IDR = "10001000100000000"
+
+def cheira_a_idr(d, q, folga=2):
+    bs = "".join(f"{x:08b}" for x in d[q+5:q+8])[:17]
+    return sum(1 for a, b in zip(FIXO_IDR, bs) if a != b) <= folga
+
 def main():
     cmd=sys.argv[1]
     d=bytearray(open(sys.argv[2],"rb").read())
@@ -63,7 +72,24 @@ def main():
             h=d[q+4]
             if h not in PREF:                     # byte de cabecalho do NAL
                 c=sorted((bin(h^v).count("1"),PREF.index(v),v) for v in PREF)
-                y=h^c[0][2]
+                # Empate aqui NAO pode ser resolvido pela ordem do PREF: o byte
+                # 0x45 fica a 1 bit tanto de 0x41 (comum) quanto de 0x65 (IDR),
+                # e a ordem da lista dava 0x41 -- foi assim que os IDRs 2554 e
+                # 2913 viraram frame comum e sumiram do censo. Desempata pelo
+                # cabecalho de slice, que e evidencia e esta no arquivo.
+                empate=[v for dd,_,v in c if dd==c[0][0]]
+                escolha=c[0][2]
+                if len(empate) > 1 and 0x65 in empate:
+                    # O desempate e simetrico: o cabecalho de slice decide para
+                    # os dois lados. Sem isso o 1452, que empata entre 0x65 e
+                    # 0x21 e NAO tem cabecalho de IDR, era promovido a IDR so
+                    # por 0x65 vir antes na ordenacao.
+                    if cheira_a_idr(d, q):
+                        escolha=0x65
+                    else:
+                        naoidr=[v for v in empate if v != 0x65]
+                        if naoidr: escolha=naoidr[0]
+                y=h^escolha
                 for bit in range(8):
                     if y>>bit & 1: linhas.append((q+4, bit))
         with open(sys.argv[3],"w",newline="\n") as f:
