@@ -257,3 +257,37 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     candidato tem para onde melhorar a imagem, e nenhum conserta a tarja. Entre
     as 26.866 opções (26.865 candidatos mais não fazer nada), **não fazer nada
     é a melhor**.
+
+20. **O ponto de corte não prevê quantos bits estão errados.** É tentador tratar
+    o corte como amostra de densidade — se o primeiro erro aparece no byte
+    18.887 de 50.635, a densidade seria 1/18.887 e o NAL teria ~2,7 erros. O
+    raciocínio é limpo, e os dados o destroem:
+
+    | frame reparado | bytes | posição do bit errado | resto do NAL |
+    |---|---|---|---|
+    | 2360 | 32.501 | **rel 8** | 32.493 bytes íntegros |
+    | 3435 | 963 | rel 757 | íntegro |
+    | 3439 | 988 | rel 818 | íntegro |
+    | 3442 | 2.939 | rel 1.122 | íntegro |
+
+    Sob densidade uniforme, o 2360 teria ~4.000 erros. Teve **um**.
+
+    **O dano deste arquivo é em rajada, não espalhado.** Medido nos 17 IDRs com
+    prefixo fora do canônico: 35,3% têm ≥2 bits errados dentro de uma janela de
+    **24 bits**, contra 6,6% que a independência preveria — excesso de 5,3x. Um
+    deles tem 6 bits errados em 3 bytes, 25% de densidade local. E os 17 vão de
+    3,7% a 73,7% do arquivo e param aí; os últimos 26% não têm nenhum, que é
+    onde estão 5 dos 7 IDRs bons.
+
+    **Consequência para estimar esforço:** há dois regimes, não um número.
+    Na borda da rajada, 1 ou 2 bits — é onde estão os 5 reparos que deram certo.
+    Dentro dela, com densidade de 4% a 25%, um NAL de 100 KB tem milhares de
+    bits errados e nenhum método alcança.
+
+    O preditor do regime **não é o corte, é a vizinhança**: os 5 reparos bem
+    sucedidos estão em GOPs íntegros no resto, e o GOP 1773 — 26 de 29 frames
+    sem imagem — é assinatura de estar dentro da rajada.
+
+    Isto explica por que gabarito e reparabilidade sempre aparecem juntos neste
+    projeto: estar na borda da rajada é o que produz vizinho íntegro **e** poucos
+    bits errados. Não são duas condições, são a mesma.
