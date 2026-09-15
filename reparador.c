@@ -655,17 +655,37 @@ static int linhas_identicas(const uint8_t *Y, int w, int h) {
  *   - croma perto de 128, porque o filme e desaturado (medido U 101-135 nos
  *     quadros bons; o lixo vai a 56-171);
  *   - blocagem dentro da faixa dos genuinos. */
-static int croma_sao(void) {
-    if (!cap_u || !cap_v) return 1;
+/* Estatistica de croma numa faixa de linhas. Min/max NAO serve de guarda --
+ * listra pastel cabe dentro da faixa e passa; foi assim que o segundo candidato
+ * do IDR 1683 escapou. O DESVIO separa: cena real fica em 4 a 8, e o lixo pastel
+ * deu 10,1. */
+static void croma_stat(int y0, int y1, double *um, double *ud, double *vm, double *vd) {
     int cw = cap_w / 2, ch = cap_h / 2;
-    int umin = 255, umax = 0, vmin = 255, vmax = 0;
-    for (int y = 0; y < ch; y += 2)
-        for (int x = 0; x < cw; x += 4) {
+    if (y1 / 2 > ch) y1 = ch * 2;
+    double su = 0, sv = 0, qu = 0, qv = 0; long n = 0;
+    for (int y = y0 / 2; y < y1 / 2; y++)
+        for (int x = 0; x < cw; x += 2) {
             int u = cap_u[(size_t)y * cw + x], v = cap_v[(size_t)y * cw + x];
-            if (u < umin) umin = u; if (u > umax) umax = u;
-            if (v < vmin) vmin = v; if (v > vmax) vmax = v;
+            su += u; qu += (double)u * u; sv += v; qv += (double)v * v; n++;
         }
-    return umin >= 90 && umax <= 165 && vmin >= 110 && vmax <= 175;
+    *um = n ? su / n : 0; *vm = n ? sv / n : 0;
+    *ud = n ? sqrt(qu / n - *um * *um) : 0;
+    *vd = n ? sqrt(qv / n - *vm * *vm) : 0;
+}
+
+/* Guarda calibrada pela PROPRIA metade integra do quadro: a regiao danificada e
+ * a mesma cena continuando, entao o croma dela tem que ter media e desvio
+ * parecidos com os de cima. Referencia medida no 1683 integro: U media 125,8
+ * desvio 6,7; V media 136,3 desvio 7,8. */
+static double gu_med, gu_des, gv_med, gv_des;
+static int gy0 = 581;
+
+static int croma_sao(void) {
+    if (!cap_u || !cap_v || cap_w <= 0) return 0;
+    double um, ud, vm, vd;
+    croma_stat(gy0, 950, &um, &ud, &vm, &vd);
+    return fabs(um - gu_med) <= 4.0 && fabs(vm - gv_med) <= 4.0
+        && ud <= gu_des * 1.15 && vd <= gv_des * 1.15;
 }
 
 typedef struct { int alvo, ancora, ini; int nota, off, bit, idx; } WorkerC;
@@ -1472,8 +1492,21 @@ int main(int argc, char **argv) {
         if (fim > len) fim = len;
         int nthr = quantas_threads();
         cap_buf = malloc((size_t)1920 * 1088);
+        guardar_croma = 1;
         decodifica(anc, alvo, NULL, 0, NULL);
         int base = cap_w > 0 ? linhas_identicas(cap_buf, cap_w, cap_h) : -1;
+        /* calibra a guarda pela parte integra: ate a primeira linha propagada */
+        gy0 = 950;
+        for (int y = 137; y < 950 && y < cap_h; y++) {
+            long dd = 0;
+            for (int x = 0; x < cap_w; x += 4)
+                dd += abs((int)cap_buf[(size_t)y*cap_w+x] - (int)cap_buf[(size_t)(y-1)*cap_w+x]);
+            if (dd == 0) { gy0 = y; break; }
+        }
+        croma_stat(136, gy0, &gu_med, &gu_des, &gv_med, &gv_des);
+        printf("  parte integra ate a linha %d | croma U %.1f+-%.1f  V %.1f+-%.1f\n",
+               gy0, gu_med, gu_des, gv_med, gv_des);
+        printf("  guarda: media a menos de 4,0 e desvio ate 1,15x disso, na faixa [%d,950)\n", gy0);
         printf("frame %d: %d bytes, faixa [%d,%d), %d candidatos, %d threads\n",
                alvo, len, ini, fim, (fim - ini) * 8, nthr);
         printf("  linhas identicas hoje: %d de 813  (quadro bom = 0)\n", base);

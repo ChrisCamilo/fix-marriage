@@ -67,9 +67,16 @@ decodifica até a linha 581 de 949, com 277 linhas propagadas de 813.
 | tentativa | faixa | nota | veredito |
 |---|---|---|---|
 | `cresce` sem guardas | `[5,81752)` 654 mil | 277 → **153** | lixo colorido saturado, croma `U 56-171` |
-| `cresce` com guardas de croma e blocagem | idem | 277 → **227** | lixo pastel, croma `U 105-144`, dentro da guarda |
+| `cresce` com guarda de faixa de croma | idem | 277 → **227** | lixo pastel, croma `U 105-144`, dentro da guarda |
+| `cresce` com guarda de média e desvio, calibrada pela metade íntegra do próprio quadro | idem | 277 → **235** | lixo dessaturado, `U 122,8±7,0` contra `121,4±5,5` do íntegro |
 
-**Descartado.** A região danificada não tem gabarito — sem vizinho temporal (o
+**Descartado depois de três tentativas.** Cada guarda que se aperta, a busca
+acha lixo que a satisfaz: sem guarda, saturado; com faixa de valores, pastel;
+com média e desvio, dessaturado. **Estatística de imagem não determina imagem** —
+milhões de quadros diferentes têm a mesma média e o mesmo desvio, e com 654 mil
+candidatos sempre existe um que imita o que se escolheu medir.
+
+A região danificada não tem gabarito — sem vizinho temporal (o
 GOP e o anterior estão quebrados) e sem aritmética que fale de conteúdo. Todo
 objetivo vira proxy, e proxy contra 654 mil candidatos acha o patológico. Ver
 armadilha 17.
