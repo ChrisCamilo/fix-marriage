@@ -228,3 +228,32 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     provavelmente bem menor. Refazer a triagem com **linhas idênticas**, que é o
     detector que funciona (armadilha 16) — mas nunca como objetivo de
     otimização (armadilha 17).
+
+19. **Ordenar por estatística do gabarito, quando nada chega perto do gabarito,
+    é ordenar ruído.** A tarja é gabarito legítimo — média 16,00 é conteúdo
+    sabido a priori, não proxy inventado (é a diferença entre o IDR 1773 e o
+    1683). Mas isso vale para **aprovar ou reprovar**, não para **rankear**.
+
+    No IDR 1773, nenhuma das 26.865 soluções chega perto de 16. Peguei então "a
+    melhor", por menor desvio de tarja, e ela é catastrófica:
+
+    | | linhas idênticas | 1ª propagada | tarja média / desvio |
+    |---|---|---|---|
+    | original quebrado | **11 (1,4%)** | **933** | 190,7 / 38,5 |
+    | "melhor" por desvio | 285 (35,1%) | 565 | 220,3 / **13,3** |
+    | "melhor" por média | 97 (11,9%) | 821 | **126,3** / 74,8 |
+
+    Ela venceu porque **listra pastel uniforme é mais plana que conteúdo
+    vazado**. O desvio menor não é tarja reaparecendo, é destruição mais
+    homogênea — e custou 368 linhas de imagem boa.
+
+    **A regra:** um gabarito com valor conhecido responde sim ou não. Se a
+    resposta é não para todos, a busca acabou — não existe "o menos não".
+    Transformar a distância até o gabarito em ranking devolve o problema da
+    armadilha 17, agora disfarçado de medida legítima.
+
+    Corolário que fecha o 1773: a primeira linha propagada do original é 933 e a
+    última linha da imagem é 949. **O original já está no teto** — nenhum
+    candidato tem para onde melhorar a imagem, e nenhum conserta a tarja. Entre
+    as 26.866 opções (26.865 candidatos mais não fazer nada), **não fazer nada
+    é a melhor**.
