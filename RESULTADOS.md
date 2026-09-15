@@ -260,7 +260,7 @@ cabeçalhos corrigidos. `bom` = decodifica limpo pelo critério do `reparador.c`
 
 | GOP | frames | bons | quebrados |
 |---|---|---|---|
-| 1683 | 29 | 4 | **25** |
+| 1683 | 29 | **0** | **29** — ver abaixo |
 | **2333** | 29 | **29** | 0 |
 | **3319** | 29 | **29** | 0 |
 | **3348** | 20 | **20** | 0 |
@@ -271,9 +271,23 @@ cabeçalhos corrigidos. `bom` = decodifica limpo pelo critério do `reparador.c`
 **Cinco GOPs completos**, um a mais do que a contagem anterior: o frame 2361
 está reparado e o GOP 2333 fechou em 29 de 29.
 
-O GOP 1683 tem 25 quebrados mas **não é atacável**: o IDR dele é 34,3% listra,
-então nenhum reparo ancorado nele sai limpo. O 3426 é **o único GOP com IDR bom
-e frames quebrados** — é onde o reparo é possível.
+### O GOP 1683 está inteiramente danificado
+
+Medido pelo `panorama`: dos 26 frames que o decoder emite, **nenhum tem tarja
+correta**. Todos ficam entre 125 e 133 com desvio ~60, contra 16,000 / 0,000 dos
+genuínos, e a razão V/H fica entre 0,29 e 0,77 contra o piso 0,78.
+
+**Os "4 frames bons" que a classificação contava nunca foram bons.** Eles
+passam no critério sintático e têm tarja em 132,8. Inspecionados em resolução
+cheia, mostram ~30% de conteúdo no topo e o resto esticado em colunas, sem
+tarja preta nenhuma.
+
+Isto encerra o GOP 1683 como alvo: não é o IDR listrado bloqueando frames bons,
+é o GOP inteiro perdido.
+
+**Nenhum GOP está disponível para reparo hoje.** Cinco estão completos, o 3426
+só tem fade, e o 1683 está perdido. Abrir um novo exige consertar um IDR — linha
+que está em 13 varridos e zero reparos.
 
 ## Panorama do filme — medido em 11 s, todo quadro emitido
 
