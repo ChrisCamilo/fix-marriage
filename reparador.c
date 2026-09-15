@@ -644,6 +644,18 @@ static int   alvok, prof_k, ini_k, nbits_k;
  * morrem no byte ~10, exigir NAL perfeito confunde duas perguntas: o
  * cabecalho e consertavel, e o corpo esta sao. Esta flag separa as duas. */
 static int   aceita_imagem = 0;
+
+/* cap_w > 0 NAO significa que existe imagem: o decoder emite quadro de
+ * ocultacao cinza, campo constante 128, e isso e a armadilha 1. O aceite por
+ * imagem exige campo nao constante -- amostra esparsa basta, porque o quadro
+ * de ocultacao e uniforme byte a byte. */
+static int linhas_identicas(const uint8_t *Y, int w, int h);   /* definida adiante */
+static int sem_imagem(const uint8_t *Y, int w, int h) {
+    /* Amostra esparsa nao serve: o quadro de ocultacao com meia duzia de
+     * macroblocos decodificados passa por ela e ainda e cinza. Usa o detector
+     * de listra do projeto, que e o que separa imagem de propagacao. */
+    return linhas_identicas(Y, w, h) > 400;   /* metade das 813 linhas */
+}
 static int  *combos_k;
 static long  n_combos;
 static _Atomic long prox_combo;
@@ -664,7 +676,9 @@ static void *worker_varrek(void *p) {
         for (int q = 0; q < prof_k; q++)
             copia[ini_k + comb[q] / 8] ^= (1 << (comb[q] % 8));
         int r = decodifica(anc, alvo, copia, len, NULL);
-        if (aceita_imagem ? (cap_w > 0) : (r == 0)) {
+        int bom = aceita_imagem ? (cap_w > 0 && !sem_imagem(cap_buf, cap_w, cap_h))
+                                : (r == 0);
+        if (bom) {
             int n = atomic_fetch_add(&n_achk, 1);
 
             if (n < 4096) {
