@@ -342,3 +342,44 @@ precisou de reparo**: já produziam o valor certo.
 Só 2 frames em 168 são sintetizados (os 10 e 11 da abertura), e estão
 registrados no `remontados.txt`.
 
+## O mapa do dano — três ilhas, não manchas
+
+Procurei sobreviventes fora dos trechos conhecidos, testando a hipótese de que
+**NAL pequeno teria menos superfície para a rajada atingir**. Ela é falsa, e o
+resultado é definitivo:
+
+| tamanho do NAL | frames fora dos trechos | com tarja correta |
+|---|---|---|
+| até 3 KB | 8 | **0** |
+| 3–10 KB | 519 | **0** |
+| 10–50 KB | 2.082 | **0** |
+| acima de 50 KB | 668 | **0** |
+| **total** | **3.277** | **0** |
+
+A correlação que parecia existir era confusão: os NALs pequenos do filme são os
+quadros de fade, e os fades ficam dentro das regiões que já estavam boas.
+**Tamanho não protege.**
+
+E o que sobra é isto:
+
+| ilha | frames | posição no arquivo |
+|---|---|---|
+| abertura | 0–12 | 0,1% |
+| o espelho | 2333–2361 | 66,9% a 67,9% |
+| bloco final | 3319–3444 | 97,4% a 100% |
+| *buraco 1* | *13–2332* | *76,3 MB* |
+| *buraco 2* | *2362–3318* | *33,7 MB* |
+
+**168 frames de 3.445 — 4,9% do filme.** De 114 MB, cerca de 110 MB estão
+perdidos.
+
+Vale corrigir a linguagem que este projeto vinha usando: o dano não é "rajada"
+no sentido de mancha num arquivo são. **O arquivo está quase todo destruído, e
+há três ilhas que escaparam.** Os 5 reparos bem sucedidos da história do projeto
+estão todos nas bordas dessas ilhas, o que é coerente com a armadilha 20 — mas
+em escala oposta à que ela descrevia.
+
+**Consequência para o planejamento:** não existem sobreviventes escondidos. A
+busca por frames bons fora das três ilhas está encerrada com medida, não com
+estimativa.
+
