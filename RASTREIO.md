@@ -33,6 +33,32 @@ candidato mas nenhum passou nos juízes; `sem solução` não tem candidato nenh
 | 3443 | 3426 | 261 | NAL inteiro | 2.048 | 12 s | **0** | sem solução |
 | 3444 | 3426 | 266 | NAL inteiro | 2.088 | 12 s | 2 | reprovado — campo 19–21, não uniforme |
 
+### Frame 1684: 75.909 soluções, e o GOP está bloqueado pelo próprio IDR
+
+Varrido o NAL inteiro, 480.168 candidatos em 928 s: **75.909 soluções**, ou seja
+**16% de todas as inversões de 1 bit** fazem o frame passar no critério. Isso não
+é ambiguidade, é o critério ter virado trivial ali.
+
+A causa: **o IDR 1683 está listrado**. Ele decodifica e passa no critério, mas
+34,3% das linhas dele são idênticas à anterior — os dois terços de baixo são
+propagação vertical. Amostrando candidatos do 1684, todos herdam o defeito:
+
+| candidato | linhas idênticas |
+|---|---|
+| `55858726 bit 3` | 38,4% |
+| `55858750 bit 3` | 32,8% |
+| `55858770 bit 7` | 23,7% |
+| `55858791 bit 1` | 17,7% |
+| **o próprio IDR 1683** | **34,3%** |
+
+Nenhum reparo do 1684 pode sair limpo enquanto a referência dele for listrada.
+**O GOP 1683 não é atacável por baixo** — o IDR tem que cair primeiro.
+
+Conferidos os 7 IDRs que decodificam: **só o 1683 está listrado**, os outros seis
+(2333, 3319, 3348, 3368, 3397, 3426) dão 0,0%. Então são **6 IDRs utilizáveis**,
+não 7, e o GOP 1683 contribui **zero** quadros — os 4 que a classificação contava
+como bons são listra.
+
 ### Frame 2361: o zero era artefato, mas o reparo não saiu
 
 A revarredura com a cadeia limpa devolveu **1 solução** onde a anterior dera 0 —

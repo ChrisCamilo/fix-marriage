@@ -99,7 +99,11 @@ O casamento do quadro por `pts` e a exigência de imagem mudaram os números. N�
 | `quebrado` | 3257 | |
 
 **Depois dos seis reparos de 2026-09-14** — frames 2360, 2361, 3435, 3439 e 3442
-— **153 frames com imagem confiável** (5,11 s). O `verify` dá `7 válidos, 4
+— **149 frames com imagem confiável** (4,97 s).
+
+Os 4 quadros do GOP 1683 que a classificação conta como bons são **listra**: o
+IDR 1683 decodifica mas tem 34,3% das linhas idênticas à anterior. Ver armadilha
+16. São **6 IDRs utilizáveis** no filme, não 7. O `verify` dá `7 válidos, 4
 falsos, 31 determinísticos pulados`.
 
 O número bruto do modo `estado` é 193, mas **40 deles não valem**: estão em GOPs
