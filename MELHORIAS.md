@@ -34,33 +34,30 @@ depois de medido.
    Exige a regra do menor índice descrita em `PARALELIZACAO.md`, porque com
    múltiplas soluções "a primeira que chegar" escolheria bit errado.
 
-### Pendente e estrutural: o modelo de cadeia não serve para todo GOP
+### RETRATADA: "o modelo de cadeia não serve para todo GOP"
 
-**Não implementar sem decidir explicitamente — muda o coração da ferramenta e
-todo resultado histórico do projeto foi medido com o modelo atual.**
+**Esta seção afirmava um defeito que não existe. Fica registrada em vez de
+apagada, porque o erro é instrutivo.**
 
-O `decodifica(ancora, alvo)` alimenta o decoder com os pacotes de `ancora` até
-`alvo` e exige `quadros == esperado`. No GOP 0 isso trava no frame 2, com o
-decoder dizendo `co located POCs unavailable`: aquele quadro precisa de
-contexto que só existe quando o GOP inteiro é decodificado.
+Eu havia concluído que o `decodifica(ancora, alvo)` não conseguia validar o GOP
+0: o frame 2 morria com `co located POCs unavailable` e o `panorama`, que
+decodifica o GOP inteiro, o emitia sem problema. Propus reformar o critério.
 
-| | frames emitidos em 0–28 |
-|---|---|
-| `panorama` (GOP inteiro numa passada) | 0–9, 11, 12, 13, 16, 18, 20 |
-| cadeia `0..alvo` | **só 0 e 1** |
+**Estava errado.** Com o `patches.txt` puro o frame 2 decodifica **limpo** em
+`FOLGA=0`, e os frames 0 a 9 também. O modelo de cadeia funciona.
 
-**Consequência:** varredura em qualquer frame do GOP 0 depois do 1 devolve zero
-por construção, e esse zero não significa "sem solução". Três corridas minhas
-nos frames 10, 11 e 13 foram invalidadas assim.
+Quem quebrava a cadeia era **um bit que eu mesmo tinha adicionado** para
+"destravá-la" — um dos 15.537 do IDR 0 que produzem imagem byte a byte
+idêntica ao original. A imagem é idêntica; o **bitstream não é**, e o estado que
+ele deixa no decoder impede os quadros seguintes.
 
-E separa dano de artefato: dos frames que o critério reprova no GOP 0, só
-**10, 14, 15, 17, 19 e 21–28** não são emitidos nem na passada completa. Os
-demais estão bons e falham pelo modelo.
+Três varreduras nos frames 10, 11 e 13 foram invalidadas por isso, e eu
+atribuí o zero delas ao modelo em vez de ao meu próprio patch.
 
-O conserto seria um critério que decodifica o GOP inteiro e confere se o quadro
-alvo saiu e está correto — que é o que o `panorama` já faz. Custa uma passada
-de GOP por candidato em vez de uma cadeia, o que para GOP de 29 frames é mais
-caro, não menos.
+O `FOLGA=n` foi implementado antes da retratação e **fica no código**, em 0 por
+padrão: é inofensivo, custou pouco, e serve se algum dia aparecer um GOP que
+precise mesmo. Testado de 1 a 26 no GOP 0, não muda nada — o que confirma que
+não havia problema de lookahead.
 
 ### Estudo de velocidade da varredura — medido, não estimado
 

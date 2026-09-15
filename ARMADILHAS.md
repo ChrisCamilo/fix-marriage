@@ -378,3 +378,28 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     para investigar o resto do GOP, dá para usar qualquer um deles **sem
     escrever no `patches.txt`**: a imagem é idêntica, então o decode a jusante é
     idêntico, mas afirmar qual bit estava corrompido seria invenção.
+
+24. **Imagem idêntica não quer dizer bitstream equivalente.** Achei 15.537
+    inversões de 1 bit no IDR 0 que produzem quadro **byte a byte idêntico** ao
+    original — conferido por SHA-256 do plano Y. Concluí que usar qualquer uma
+    delas para destravar a cadeia era inofensivo, já que "o decode a jusante é
+    idêntico".
+
+    **Não é.** O bit muda o bitstream, e o estado que ele deixa no decoder
+    impede os quadros seguintes: com ele, o frame 2 do GOP 0 para de sair e o
+    decoder diz `co located POCs unavailable`. Sem ele, o frame 2 decodifica
+    limpo.
+
+    | | frames de 0–12 que decodificam limpo (`VISUAL=0`) |
+    |---|---|
+    | `patches.txt` puro | **0 a 9** |
+    | com o bit "inofensivo" no IDR 0 | **só 0 e 1** |
+
+    O dano custou três varreduras invalidadas, e pior: eu li o zero delas como
+    defeito do modelo de cadeia e cheguei a registrar uma reforma do critério
+    que não era necessária.
+
+    **A regra:** um quadro carrega mais estado do que os pixels dele — ordem de
+    exibição, marcação de referência, POC. Comparar imagens não prova
+    equivalência. **Antes de tocar num quadro de que outros dependem, conferir
+    os quadros seguintes**, não o próprio.
