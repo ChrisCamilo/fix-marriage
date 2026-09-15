@@ -1577,6 +1577,23 @@ int main(int argc, char **argv) {
                ix[alvo].off + off, bit, nota, base, difftime(time(NULL), t0));
         if (medidas) {
             FILE *g = fopen(argv[8], "w");
+            /* CARIMBO. As medidas valem so enquanto a CADEIA do alvo nao mudar:
+             * patch no proprio frame ou em qualquer um entre a ancora e ele
+             * invalida tudo. Patch em outra parte do filme nao. Sem isto, usar
+             * um despejo velho seria erro silencioso -- os numeros pareceriam
+             * bons medindo um estado que nao existe mais. */
+            long ini_b = ix[anc].off, fim_b = ix[alvo].off + ix[alvo].size;
+            uint64_t h = 1469598103934665603ULL; int n_cad = 0;
+            for (int k2 = 0; k2 < n_patch; k2++) {
+                if (patches[k2].off < ini_b || patches[k2].off >= fim_b) continue;
+                h ^= (uint64_t)patches[k2].off; h *= 1099511628211ULL;
+                h ^= (uint64_t)patches[k2].bit; h *= 1099511628211ULL;
+                n_cad++;
+            }
+            fprintf(g, "# alvo %d ancora %d faixa [%d,%d) cadeia_patches %d cadeia_hash %016llx\n",
+                    alvo, anc, ini, fim, n_cad, (unsigned long long)h);
+            fprintf(g, "# vale enquanto a cadeia nao mudar: refazer o hash dos patches em"
+                       " [%ld,%ld) e comparar\n", ini_b, fim_b);
             fprintf(g, "# off bit nota primeira_propagada U_med U_des V_med V_des blocagem\n");
             for (int k = 0; k < n_cand; k++) {
                 Medida *m = &medidas[k];
