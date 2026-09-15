@@ -215,6 +215,40 @@ Segunda fila, todos com corte confiável e metade do quadro real:
 Somados com o 1773: 1,82 M candidatos, **43 min**. É a lista que substitui as
 5,1 h dos 84.
 
+### GOP 0 — fechado em 1 e 2 bits
+
+O GOP 0 é o único do filme cujo IDR **decodifica a imagem certa e mesmo assim
+polui a cadeia**: ele erra no macrobloco (119,64), que fica na tarja inferior,
+e 94,8% dos macroblocos decodificam. A imagem sai perfeita porque a ocultação
+preenche o rodapé com preto, que é o valor certo.
+
+Mas esse erro conta contra qualquer alvo do GOP, então nada ali é reparável
+enquanto o IDR não fechar.
+
+| alvo | janela | candidatos | soluções |
+|---|---|---|---|
+| IDR 0, 1 bit | NAL inteiro | 18.376 | **1** — reprovada, ver abaixo |
+| IDR 0, **2 bits** | `[700,1000)` | 2,88 M | **0** (26 min, 1.836 cand/s) |
+| frame 10, 1 bit | NAL inteiro | 2.056 | **0** |
+| frame 11, 1 bit | NAL inteiro | 22.616 | **0** |
+| frame 13, 1 bit | NAL inteiro | 292.216 | **0** |
+
+Os três frames foram varridos **com o IDR 0 patcheado**, ou seja com a cadeia
+limpa — o zero deles é real, não artefato da armadilha 13.
+
+**A única solução de 1 bit do IDR 0 piora o quadro.** Sem patch nenhum ele já
+dá campo 16,00 e tarja **16,000 / desvio 0,000**; o candidato o faz decodificar
+limpo e leva a tarja para **18,265**, contaminando o frame 2 junto. Trocaria
+imagem correta por conformidade sintática.
+
+**Ressalva honesta sobre a janela:** `[700,1000)` foi escolhida porque o decoder
+consome ~886 bytes antes de falhar. A armadilha 9 diz que o bit errado costuma
+estar bem antes disso, então o zero prova ausência **naquela janela**, não no
+NAL. O que falta custa 73 min em `[600,1100)` e **25,5 h** no NAL inteiro.
+
+**Em 2 bits, só o frame 10 seria alcançável** (262 B, 2,1 M pares). O 11 são
+256 M pares e o 13 são 42,7 G — fora de alcance por ordens de grandeza.
+
 ## Frames comuns
 
 | frame | GOP | bytes | faixa | candidatos | tempo | soluções | veredito |
