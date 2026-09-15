@@ -16,6 +16,76 @@ refazer trabalho e, principalmente, para não tirar conclusão de corrida
 candidato mas nenhum passou nos juízes; `sem solução` não tem candidato nenhum;
 `INVÁLIDA` foi medida sob condição impossível e não conta.
 
+## Triagem dos 121 IDRs quebrados por listra
+
+Refeita com **linhas idênticas** em vez de blocagem, depois que o IDR 1712
+mostrou que a blocagem não separa listra de cena (armadilha 18). Uma
+decodificação por IDR, **11 s** no total — não é varredura.
+
+| estado do quadro | IDRs |
+|---|---|
+| não produz imagem nenhuma | 17 |
+| 100% listra | 20 |
+| 75–100% | 3 |
+| 50–75% | **74** |
+| 25–50% | 6 |
+| abaixo de 25% | **1** |
+
+**O filtro antigo aprovou 84 e apenas 1 sobrevive.** Dos 84 "com corte
+confiável" pela blocagem, 77 têm mais de 50% de listra e 83 têm mais de 25%.
+Nenhum tem 0%. As 5,1 h estimadas para varrer os 84 iriam quase inteiras para
+quadros que morrem no primeiro quarto do slice.
+
+Os 17 sem imagem saem com `-1` na coluna, e não devem ser lidos como "pouca
+listra": são os de corte no byte ~10, o perfil do IDR 2525, que varreu 505.912
+candidatos de NAL inteiro e deu zero.
+
+### IDR 1773 — o melhor alvo do filme inteiro
+
+Único com imagem praticamente íntegra, e a blocagem jamais o apontaria: 1,151,
+no meio do bolo junto com os de 70% de listra.
+
+| medida | 1773 | genuínos |
+|---|---|---|
+| bytes do NAL | 34.317 | — |
+| ponto de corte | **33.489 (97,6% do slice)** | — |
+| linhas idênticas | **11 de 813 (1,4%)** | 0 |
+| onde estão | **933 a 949** — a última fileira de macrobloco | — |
+| tarja de topo | **16,000 / desvio 0,000** | 16,00 / ≤ 0,41 |
+| tarja inferior | 190,66 / desvio 38,47 | 16,00 / ≤ 0,41 |
+
+Inspecionado em resolução cheia: a cena está nítida e completa até a linha 932.
+O defeito é que **a tarja inferior não existe** — o conteúdo da última fileira
+vaza para baixo e preenche onde deveria haver preto.
+
+Isso reúne as três coisas que faltaram no IDR 1683:
+
+1. **O dano é pequeno** — 17 linhas e a tarja, contra 368 linhas do 1683.
+2. **Existe gabarito que não se burla.** A tarja inferior tem valor conhecido a
+   priori (16,00, desvio ~0). Não é proxy de imagem, é conteúdo sabido.
+3. **É IDR**, então o conserto destrava o GOP inteiro.
+
+Varredura de NAL inteiro: 274.496 candidatos, **~6,5 min**. Pela armadilha 9 o
+bit errado fica ~2600 bytes antes do corte, então `[30800,34317)` são 28.136
+candidatos e ~40 s — mas o NAL inteiro é barato o bastante para não valer o
+recorte.
+
+### Os 6 da faixa de 25–50%
+
+Segunda fila, todos com corte confiável e metade do quadro real:
+
+| IDR | bytes | corte | candidatos | listra |
+|---|---|---|---|---|
+| 1143 | 50.635 | 18.887 | 159.248 | 42,7% |
+| 1802 | 78.007 | 19.346 | 162.920 | 43,2% |
+| 1949 | 165.389 | 60.787 | 494.448 | 44,5% |
+| 3076 | 198.642 | 23.031 | 192.400 | 44,5% |
+| 2583 | 112.373 | 25.675 | 213.552 | 48,1% |
+| 2801 | 86.667 | 22.280 | 186.392 | 49,0% |
+
+Somados com o 1773: 1,82 M candidatos, **43 min**. É a lista que substitui as
+5,1 h dos 84.
+
 ## Frames comuns
 
 | frame | GOP | bytes | faixa | candidatos | tempo | soluções | veredito |
