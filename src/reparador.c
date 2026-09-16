@@ -755,6 +755,7 @@ static int tarja_perfeita(const uint8_t *Y, int w, int h);
 static int piso_tarja = 0;      /* PISO_TARJA=1: sem tarja 16 nao ha pontuacao */
 static int piso_topo  = 0;      /* PISO_TOPO=1: tarja de CIMA uniforme */
 static int piso_base  = 0;      /* PISO_BASE=1: tarja de BAIXO uniforme, valor livre */
+static int consumo_t  = 0;      /* CONSUMO=n: quadro que fecha truncado em n bytes e atalho */
 
 /* Variante do piso da tarja de baixo que NAO fixa o valor em 16.
  * Existe para responder uma duvida de satisfazibilidade: o frame 13 decodifica
@@ -794,6 +795,7 @@ static void *worker_avanco(void *p) {
     (void)p;
     int alvo = alvok, len = ix[alvo].size, anc = ancora_de(alvo);
     uint8_t *copia = malloc(len);
+    uint8_t *corte = malloc(len);
     cap_buf = malloc((size_t)1920 * 1088);
     for (;;) {
         long c = atomic_fetch_add(&prox_combo, 1);
@@ -816,13 +818,39 @@ static void *worker_avanco(void *p) {
          * macrobloco 6600, tirava MENOS que o desastre completo. O piso que
          * separa e a tarja, que e conhecida a priori em todo quadro do filme.
          * Ver armadilha 33. */
-        placar[c] = (cap_w <= 0) ? -1
-                  : (piso_tarja && !tarja_perfeita(cap_buf, cap_w, cap_h)) ? -1
-                  : (piso_topo  && !topo_uniforme(cap_buf, cap_w, cap_h)) ? -1
-                  : (piso_base  && !base_uniforme(cap_buf, cap_w, cap_h)) ? -1
-                  : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        int mb = (cap_w <= 0) ? -1
+               : (piso_tarja && !tarja_perfeita(cap_buf, cap_w, cap_h)) ? -1
+               : (piso_topo  && !topo_uniforme(cap_buf, cap_w, cap_h)) ? -1
+               : (piso_base  && !base_uniforme(cap_buf, cap_w, cap_h)) ? -1
+               : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+
+        /* Juiz do consumo -- REFUTADO PELO PROPRIO CONTROLE. Nao usar.
+         *
+         * A ideia era: um slice sem cabac_zero_word tem que gastar quase todo o
+         * payload, entao quem fecha o quadro muito antes atravessou a cauda como
+         * skip. O frame 13 com o candidato 184311 bit 6 completava no byte
+         * 31.900 de 36.528, deixando 12,7% sem ler, e isso parecia prova.
+         *
+         * O controle obrigatorio derrubou: o frame 12, que e reparo VERIFICADO,
+         * completa truncado em **100 bytes** dos 1.135 de dados reais -- 91% sem
+         * ler. O ffmpeg termina a slice com muito menos dado do que ela tem,
+         * preenchendo o resto. "Completa cedo" nao diz nada sobre estar certo, e
+         * as proporcoes ate coincidem: 11,9% no quadro correto contra 12,7% no
+         * candidato que eu queria reprovar.
+         *
+         * O codigo fica, desligado por padrao, com a refutacao escrita junto
+         * para ninguem reinventa-lo. Ver armadilha 36. */
+        if (consumo_t > 0 && mb >= 8160) {
+            memcpy(corte, copia, consumo_t);
+            int n = consumo_t - 4;
+            corte[0] = n >> 24; corte[1] = n >> 16; corte[2] = n >> 8; corte[3] = n;
+            decodifica(anc, alvo, corte, consumo_t, NULL);
+            int mb2 = (cap_w <= 0) ? -1 : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+            if (mb2 >= 8160) mb = -1;        /* fechou sem o pedaco: atalho */
+        }
+        placar[c] = mb;
     }
-    free(copia); free(cap_buf); cap_buf = NULL;
+    free(copia); free(corte); free(cap_buf); cap_buf = NULL;
     if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
     return NULL;
 }
@@ -1442,6 +1470,7 @@ int main(int argc, char **argv) {
     if (getenv("PISO_TARJA")) piso_tarja = atoi(getenv("PISO_TARJA"));
     if (getenv("PISO_TOPO")) piso_topo = atoi(getenv("PISO_TOPO"));
     if (getenv("PISO_BASE")) piso_base = atoi(getenv("PISO_BASE"));
+    if (getenv("CONSUMO")) consumo_t = atoi(getenv("CONSUMO"));
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",

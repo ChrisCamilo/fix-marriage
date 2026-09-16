@@ -627,3 +627,30 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
 
     É a armadilha 30 numa terceira forma. Julgar ali exige medir o YUV por fora,
     e foi o que se fez.
+
+36. **"Completa cedo" não prova atalho — o juiz de consumo é refutado.** O frame
+    13 com o candidato `184311 bit 6` fecha o quadro no byte **31.900** de
+    **36.528**, e o payload dele não tem `cabac_zero_word` nenhum. Parecia prova
+    de que o candidato atravessava a cauda como skip em vez de decodificá-la, e
+    eu implementei o juiz inteiro em cima disso.
+
+    **O controle obrigatório derrubou na primeira medição:**
+
+    | quadro | completa no corte | dados reais | sem ler |
+    |---|---|---|---|
+    | frame 12 — **reparo verificado** | **100** | 1.135 | **91,2%** |
+    | frame 13 — candidato 7 | 31.900 | 36.528 | 12,7% |
+
+    O ffmpeg termina a slice com muito menos dado do que ela tem. O quadro que
+    eu sabia estar certo é 7× mais "atalho" que o candidato que eu queria
+    reprovar por atalho.
+
+    **A regra que eu violei é a do próprio projeto:** todo juiz novo tem que ser
+    rodado contra um caso comprovadamente bom antes de julgar qualquer coisa.
+    Gastei a implementação inteira antes do controle — se tivesse rodado o
+    controle primeiro, teria custado uma linha de comando.
+
+    E a consequência retroativa: **a falsificação do candidato 7 por consumo não
+    vale.** O que ainda pesa contra ele é outra coisa — a tarja em 14 onde devia
+    ser 16, e as fileiras 62 a 67 saindo como `i` × 120, padrão que nenhum quadro
+    verificado do filme mostra na tarja.
