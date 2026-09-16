@@ -1198,3 +1198,36 @@ O frame 15 tem `ref_idc = 3` e `slice_type = 6` (B). A regra do
 1 bit ali. Mas essa regra foi validada em 160 quadros com `ref_idc` **0 ou 2**, e
 **B de referência é perfeitamente legal** em H.264. O `molde_slice.py` já pula
 `ref_idc` fora de 0 e 2 exatamente por isso, e continua certo em pular.
+
+### Ataque aos quatro que param no macrobloco 1 — frame 19 é a raiz
+
+O erro `MB 1 0, bytestream 143806` aparece no log dos frames 19, 20, 21 **e**
+22 — mas `143806` de `143870` é o tamanho do frame **19**. É o erro dele
+vazando na cadeia dos outros. **Só 64 bytes de 143.870 são consumidos** antes de
+o quadro morrer no macrobloco 1.
+
+| | frame 19 |
+|---|---|
+| 1 bit, `[5,2000)`, 15.960 candidatos, 84 s | **2** candidatos, nos bytes **2 e 3** do payload, os dois chegando só ao mb 1 |
+| encadeando a partir de qualquer um dos dois | 5 candidatos fecham o quadro |
+| julgamento dos 5 | **todos reprovados** |
+
+Julgados pela textura, medindo o YUV por fora (o `campo` não serve aqui — ver
+armadilha 35):
+
+| | desvio da imagem | listra |
+|---|---|---|
+| os 5 candidatos | **3,54** | 6,5% |
+| quadro bom do filme (2341–2345) | **63,4** | 0,0% |
+
+Desvio 3,5 num quadro de 143 KB é ocultação chapada, não decodificação. Os cinco
+fecham o quadro sem produzir imagem.
+
+**Conclusão: os quatro não são atacáveis hoje.** O 19 precisa de mais que 2 bits
+na janela testada, e os outros três dependem dele. E mesmo que houvesse
+candidato, a cadeia envenenada tira todo juiz forte: sem rampa, com referência
+quebrada e com a tarja herdando lixo, sobra só a textura — que separa ocultação
+de imagem, mas não separa imagem certa de imagem errada.
+
+**O caminho de volta é o frame 13**, que é raiz de 14 e 15 e está com a janela
+localizada pelo traço.

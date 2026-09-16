@@ -603,3 +603,27 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
 
     A regra geral: toda métrica de progresso precisa de um piso que distinga
     "não errou" de "não chegou a tentar". Ausência de erro não é sucesso.
+
+34. **Arquivo de saída compartilhado num laço faz quadro inexistente parecer
+    existir.** Medi "quais quadros do GOP 0 produzem imagem" com um laço que
+    escrevia todos no **mesmo** `$SB/h.yuv`. Quando o quadro não saía, o arquivo
+    guardava o do quadro anterior, o teste de tamanho passava, e eu concluí que
+    os 16 produziam imagem — e **retratei uma medição anterior que estava
+    certa**.
+
+    Refeito com um arquivo por quadro em diretório limpo: só **13, 16, 18 e 20**
+    produzem imagem; os outros doze não. Confirmado de forma independente pelo
+    `avanco`, cuja base dá **−1** para 19, 21 e 22.
+
+    Custou duas retratações em cadeia, a segunda desfazendo a primeira. **Laço
+    que mede N coisas escreve em N arquivos, e apaga antes de escrever.**
+
+35. **`quadros == esperado` torna o `campo` insatisfazível em cadeia furada.**
+    O `decodifica` só devolve 0 quando o número de quadros emitidos bate com o
+    número de pacotes enviados. Na cadeia do frame 19 há quatro quadros que não
+    emitem (14, 15, 17 e o próprio 19), então a condição **não pode** valer, e o
+    modo `campo` descarta todos os candidatos em silêncio — devolve tabela
+    vazia, que parece "nenhum candidato bom".
+
+    É a armadilha 30 numa terceira forma. Julgar ali exige medir o YUV por fora,
+    e foi o que se fez.
