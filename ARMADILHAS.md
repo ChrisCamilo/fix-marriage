@@ -465,3 +465,29 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     vizinhos de exibição. Quadro genuíno num fade nunca repete; quadro em cena
     parada pode repetir, e aí vale olhar. Rodar isso sobre qualquer conjunto de
     "quadros bons" antes de contá-los.
+
+27. **Regra de formato também precisa ser validada contra quadro bom.** Depois
+    que o `00 00 01` ilegal rendeu 84 bits provados, fui atrás de outras
+    violações da norma de escape. Achei três, todas plausíveis:
+
+    | regra candidata | ocorrências | veredito |
+    |---|---|---|
+    | `00 00 03` seguido de byte > `03` | 435 em 376 frames | **acusa 3 quadros bons** |
+    | `00 00 02` no payload | 82 em 80 frames | **acusa o frame 2360** |
+    | `00 00 00` no payload | 11 em 11 frames | **acusa o frame 3444** |
+
+    As três seriam 528 bits num arquivo append-only, e as três estão erradas.
+
+    **O motivo:** o `cabac_zero_word`. Para CABAC o codificador pode anexar
+    palavras `0x0000` depois do RBSP, e escapadas elas produzem exatamente esses
+    padrões. O frame 3444 tem `00 00 00` a cinco bytes do fim; o 2360 tem
+    `00 00 02` logo no começo. A regra de escape vale para o RBSP **antes** do
+    escape, e o fluxo escapado não obedece ao padrão simples que procurei.
+
+    **O que salva é a mesma conferência de sempre**, e ela é barata: rodar a
+    regra sobre os quadros cuja tarja prova que decodificam certo. Se acusar um
+    deles, a regra está errada — e não se ajusta a referência, corrige-se a
+    regra. Aqui ela pegou três de quatro.
+
+    Sobrevive só o `00 00 01`, e por um motivo mais forte: start code dentro de
+    payload não tem leitura alternativa. Nenhum quadro íntegro do filme tem um.
