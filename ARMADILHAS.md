@@ -517,3 +517,29 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     **O invariante detecta e não conserta.** O último byte zerado é sintoma de
     dano que continua em outro lugar do NAL. Vale como sinal — um frame nessa
     lista tem corrupção provada —, não como reparo.
+
+29. **Anticorrelação entre campo e tarja denuncia dano global, não local.**
+    Varridos 2 bits na janela `[5,60)` do frame 11 — 96.580 pares, 6 min —,
+    **4.957 fazem o quadro decodificar limpo**. Nenhum presta, e o padrão diz
+    por quê:
+
+    | candidatos | campo | tarja |
+    |---|---|---|
+    | **3.597** | **43** (o que a rampa prevê) | **15,000** |
+    | 80 | 38, 44 ou 45 | **16,000** |
+    | **0** | 43 | 16,000 |
+
+    Os dois grupos diferem por **exatamente 1 nível em tudo**. Nenhum candidato
+    acerta campo e tarja ao mesmo tempo, e isso não é coincidência de busca:
+    é assinatura de **deslocamento global de nível** — um DC ou um QP que move o
+    quadro inteiro — em vez de dano local de macrobloco.
+
+    **A lição de método:** quando dois gabaritos independentes discordam de forma
+    sistemática ao longo de milhares de candidatos, o defeito não está no lugar
+    onde se procura. Aceitar o grupo de 3.597 porque "o campo bate" seria pegar
+    3.597 quadros com a tarja errada — e a tarja é gabarito conhecido a priori,
+    não negociável.
+
+    **Ter dois juízes independentes foi o que salvou.** Com só a rampa, 3.597
+    candidatos passariam; com só a tarja, 80 passariam. Exigindo os dois, zero —
+    que é a resposta certa.
