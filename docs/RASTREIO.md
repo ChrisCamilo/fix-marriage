@@ -1231,3 +1231,50 @@ de imagem, mas não separa imagem certa de imagem errada.
 
 **O caminho de volta é o frame 13**, que é raiz de 14 e 15 e está com a janela
 localizada pelo traço.
+
+### Frame 13 — a borda medida, e o dano fica em 2 bytes
+
+Modo novo `corta <alvo> <ini> <fim> <passo>`: trunca o NAL em k bytes e lê no log
+até onde o decodificador chegou, que é **quantos macroblocos cabem em k bytes**.
+
+Truncar patchando só o prefixo AVCC **não funciona** — o ffmpeg confere o tamanho
+contra o buffer e descarta o NAL inteiro; o único erro que sobra é de outro
+quadro da cadeia, o que parece resposta e não é. Tem que truncar por dentro,
+ajustando o prefixo e o tamanho do pacote juntos.
+
+| corte | macrobloco | fileira |
+|---|---|---|
+| 30.400 | 6471 | 53 |
+| 30.500 | 6483 | **54 começa** |
+| 31.000 | 6543 | 54 |
+| 31.400 | 6593 | 54 |
+| 31.470 | 6599 | 54 — **último da fileira** |
+| **31.478** | **6599** | 54 |
+| **31.480** | **6600** | 55 — e **nunca mais sai daí** |
+| 36.000 | 6600 | 55 |
+
+**A fileira 54 decodifica inteira e sem defeito**, macrobloco por macrobloco até
+o 6599. O travamento é no 6600, o primeiro da fileira 55, e byte adicional
+nenhum depois do 31.480 muda a situação.
+
+**O dano está entre os bytes 31.478 e 31.480.** A janela caiu de 572 bytes
+(a fileira, ~14h30 a 2 bits) para **2 bytes**. E a minha estimativa anterior
+estava errada: eu supus 4,77 bytes por macrobloco e a fileira 54 começando em
+30.908; o real é ~8 bytes por macrobloco e ela começa em **30.480**.
+
+### A varredura de 16 bytes em cima do travamento
+
+`[31472,31488)`, 8.128 pares, **36 s**:
+
+| piso | resultado |
+|---|---|
+| `PISO_TOPO` (tarja de cima) | 3.667 passam da base, **2.677 fecham o quadro sem erro** |
+| `PISO_TARJA` (tarja de baixo) | **0 de 8.128** |
+
+Os 2.677 fecham o quadro e nenhum entrega a tarja de baixo. **2 bits está
+fechado nesses 16 bytes.**
+
+**Lição de custo:** julgar os 3.667 gerando um processo por candidato levaria
+~2 h. Julgar **dentro** da varredura, trocando o piso, custa os mesmos 36 s. Em
+varredura com rendimento alto, o juiz tem que morar no critério, não numa
+passada depois.

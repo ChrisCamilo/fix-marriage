@@ -1814,6 +1814,37 @@ int main(int argc, char **argv) {
      *
      * A pontuacao e o endereco linear do macrobloco onde o ALVO parou,
      * mb_y * 120 + mb_x, de 0 a 8159. Sem erro pontua 8160. */
+    /* ---- modo corta ----
+     * Onde comeca cada fileira de macrobloco, medido em vez de estimado.
+     * Trunca o NAL em k bytes e le no log ate onde o decodificador chegou: isso
+     * e exatamente "quantos macroblocos cabem em k bytes".
+     *
+     * Tem que truncar POR DENTRO, ajustando o prefixo AVCC e o tamanho do
+     * pacote juntos. Patchar so o prefixo nao serve -- o ffmpeg confere o
+     * tamanho contra o buffer e descarta o NAL inteiro, e ai o unico erro que
+     * sobra e de outro quadro da cadeia, o que parece resposta e nao e. */
+    else if (!strcmp(modo, "corta")) {
+        int alvo = atoi(argv[5]);
+        int ini  = argc > 6 ? atoi(argv[6]) : 100;
+        int fim  = argc > 7 ? atoi(argv[7]) : ix[alvo].size;
+        int passo = argc > 8 ? atoi(argv[8]) : 500;
+        int len = ix[alvo].size, anc = ancora_de(alvo);
+        uint8_t *copia = malloc(len);
+        cap_buf = malloc((size_t)1920 * 1088);
+        printf("frame %d: %d bytes, cortando de %d a %d de %d em %d\n",
+               alvo, len, ini, fim, len, passo);
+        for (int k = ini; k <= fim; k += passo) {
+            if (k < 8) continue;
+            memcpy(copia, arq + ix[alvo].off, len);
+            int n = k - 4;                      /* payload que sobra */
+            copia[0] = n >> 24; copia[1] = n >> 16; copia[2] = n >> 8; copia[3] = n;
+            decodifica(anc, alvo, copia, k, NULL);
+            int mb = (cap_w <= 0) ? -1 : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+            printf("  corte %6d -> macrobloco %5d   fileira %3d\n",
+                   k, mb, mb < 0 ? -1 : mb / 120);
+        }
+        free(copia); free(cap_buf); cap_buf = NULL;
+    }
     else if (!strcmp(modo, "avanco")) {
         alvok  = atoi(argv[5]);
         prof_k = atoi(argv[6]);
