@@ -189,10 +189,42 @@ corpo esticado em tons naturais. Descer mais não é decodificar mais.
 
 **Todos reprovados.**
 
+### Cinco IDRs do meio do filme — 61 soluções, todas ocultação
+
+Escolhidos por ter imagem (listra < 60%), corte confiável e nunca terem sido
+varridos. Janela `[5, corte+1024]`.
+
+| IDR | janela | candidatos | soluções | tempo |
+|---|---|---|---|---|
+| 2641 | `[5,14881)` | 119.008 | 2 | 181 s |
+| 1833 | `[5,16317)` | 130.496 | 27 | 213 s |
+| 1802 | `[5,20370)` | 162.920 | 19 | 250 s |
+| 3076 | `[5,24055)` | 192.400 | 8 | 299 s |
+| 2583 | `[5,26699)` | 213.552 | 5 | 318 s |
+| | | **818.376** | **61** | **21 min** |
+
+**Nenhuma passa.** A melhor tarja de cada um: 19,26 nos IDRs 2641 e 2583, e de
+111 a 123 nos outros, contra 16,000 dos genuínos.
+
+E os dois de 19,26 se denunciam por um detalhe: **produzem saída idêntica** —
+99,6% de listra, gradiente vertical e horizontal **0,000**, campo 17,48 ± 1,03 —
+sendo IDRs diferentes, com bits diferentes, em partes distintas do filme. Saída
+idêntica a partir de entradas diferentes é **quadro de ocultação**, não
+decodificação. O mesmo `19,26 / 0,44` já tinha aparecido num candidato do frame
+3441.
+
+**Gradiente horizontal zero é o detector mais barato de ocultação que apareceu
+até agora:** quadro com cena tem entre 0,7 e 5,2.
+
+A taxa também confirmou o efeito colateral da correção de cabeçalhos: **657
+cand/s** onde a estimativa era 1.750, porque os candidatos agora decodificam
+fundo em vez de morrer cedo.
+
 ### Nenhuma varredura de 1 bit em IDR jamais consertou um
 
-Contagem acumulada: **13 IDRs varridos, zero reparos** — 0, 734, 1143, 1524,
-1712, 1773, 1831, 2072, 2217, 2362, 2525, 2801 e 3126.
+Contagem acumulada: **18 IDRs varridos, zero reparos** — 0, 734, 1143, 1524,
+1712, 1773, 1802, 1831, 1833, 2072, 2217, 2362, 2525, 2583, 2641, 2801,
+3076 e 3126.
 
 Não é azar acumulado, é o que a armadilha 20 prevê: IDR quebrado está dentro da
 rajada, e dentro da rajada o dano é de muitos bits. **Varredura de 1 bit em IDR
