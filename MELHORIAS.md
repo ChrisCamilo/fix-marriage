@@ -147,3 +147,86 @@ tempo medida antes de uma correção de cabeçalho está otimista demais.
    *melhor* (0,42) que o limpo (0,46–0,47). Ruído que melhora a nota significa
    que o contexto sujo empurra o decoder para a ocultação — que copia o frame
    anterior, que é justamente a referência contra a qual se mede.
+
+# Planos de ação vindos do CABAC.md
+
+Seis lacunas entre o que a norma permite explorar e o que o `reparador.c` faz
+hoje. A 1 já está implementada; as outras estão registradas e **não**
+implementadas.
+
+## 1. Busca por etapas, pontuando por macrobloco — FEITO, falta rodar
+
+Modo `avanco <alvo> <k> [ini] [fim] [saida]`. Pontua cada candidato pelo
+endereço linear do macrobloco onde o alvo parou (`mb_y * 120 + mb_x`, 8160 =
+não errou), em vez de sim-ou-não.
+
+Medido no frame 12, 1 bit, `[5,1145)`, 37 s:
+
+| etapa | base | combinações que avançam | melhor |
+|---|---|---|---|
+| inicial | mb 35 | 62 | 8160 |
+| com `150530 4` fixo | **mb 961** | **318** | 8160 |
+
+O `150530 4` decodifica a tarja inteira e morre no primeiro macrobloco da
+imagem. Ele não aparecia no critério binário.
+
+**Custo: 37 s por etapa.** Contra 45h28 da varredura exaustiva de 2 bits na
+mesma faixa. Falta: rodar as etapas encadeadas e julgar cada patamar pela rampa
+(campo 40) e pelo hash, para não subir num degenerado `all-skip`.
+
+## 2. A tarja é gabarito de SÍMBOLO, não só de pixel — não implementado
+
+A imagem começa na linha 130, então as fileiras de macrobloco **0 a 7 são só
+tarja**: 960 macroblocos chapados e idênticos à referência. Num slice P ou B
+isso obriga `mb_skip_flag = 1` e resíduo zero nos 960.
+
+É uma sequência de ~960 símbolos **conhecida a priori**, e hoje o projeto só usa
+a tarja como média de pixel na saída.
+
+Uso imediato e de graça: **porta dura de `macrobloco >= 960`**. Candidato que
+para antes disso errou dentro da tarja, e a tarja não tem o que errar. Descarta
+sem olhar imagem nenhuma.
+
+## 3. Traço de macrobloco contra o gêmeo — não implementado
+
+Os frames 8 e 12 emitem a mesma sequência de símbolos (90% dos bytes iguais,
+nenhum byte discordante com 4+ bits). Decodificar os dois com
+`ctx->debug = FF_DEBUG_MB_TYPE` e comparar macrobloco a macrobloco: o primeiro
+em que divergem limita o dano a uma janela de bytes.
+
+Custo: ~30 linhas e duas decodificações. Ressalva: os cabeçalhos diferem
+legitimamente (poc, referências), então parte da divergência é esperada e o
+juiz tem que ser o *tipo* do macrobloco, não o vetor.
+
+## 4. Prefixo válido: quadro parcial não vale zero — não implementado
+
+Se não há ressincronização, tudo antes do primeiro erro está certo. Um quadro
+que decodifica 7.000 dos 8.160 macroblocos está **86% recuperado**, e o
+`reparador` pontua ele igual a um quadro totalmente perdido.
+
+Para os 168 quadros quebrados do filme isso pode valer mais que qualquer
+varredura: em vez de exigir o quadro inteiro, aproveitar o prefixo correto e
+ocultar só a cauda. Entra no `remontar.py` como ocultação parcial, registrada.
+
+## 5. `codIOffset` inicial e o fim do cabeçalho — não implementado
+
+A norma proíbe o `codIOffset` inicial valer 510 ou 511. São os 9 bits logo
+depois do alinhamento de byte que fecha o cabeçalho do slice.
+
+Vale pouco como filtro (9 bits), mas vale muito como **medida do comprimento do
+cabeçalho**: varrer as posições de alinhamento possíveis e ver qual produz slice
+decodificável localiza o fim do cabeçalho sem precisar parsear a
+`ref_pic_list_modification`, que é onde o parser em python trava nos frames 7, 9
+e 11.
+
+## 6. O `patches.txt` não expressa mudança de comprimento — limitação estrutural
+
+O formato é `offset bit`, um XOR. Ele **não consegue representar inserção nem
+remoção de bit**. Todo campo de comprimento variável cujo conserto mude o número
+de bits — `slice_qp_delta`, `num_ref_idx_override`, entradas da tabela de pesos —
+está fora de alcance por construção, e as tentativas registradas no `RASTREIO.md`
+falharam por isso, não por o valor estar errado.
+
+Não é para mudar agora: o `patches.txt` é fonte de verdade e append-only. Mas
+fica registrado que **a ausência de solução nesses campos é da representação, e
+não do arquivo**.

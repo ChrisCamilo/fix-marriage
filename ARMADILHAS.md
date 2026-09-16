@@ -566,3 +566,23 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     É a armadilha 25 numa forma nova: lá eu varri três horas um IDR que estava
     intacto; aqui eu quase registrei "1 bit está fechado para o frame 12" sem ter
     testado um bit sequer.
+
+31. **Critério binário descarta a melhor pista.** A varredura de 1 bit do frame
+    12 devolveu 21 "soluções", todas cópia do frame 9. O candidato mais
+    informativo do arquivo inteiro — `150530 bit 4`, que decodifica os **960
+    macroblocos da tarja** e só morre no primeiro macrobloco da imagem — **não
+    estava entre elas**, porque ele ainda erra.
+
+    | candidato | macrobloco alcançado | critério binário |
+    |---|---|---|
+    | base, sem flip | 35 | reprovado |
+    | `150530 4` | **961** | reprovado |
+    | as 21 "soluções" | 8160 | aprovado, e todas são cópia |
+
+    Num slice CABAC tudo que vem antes do primeiro erro está correto, então
+    "até onde chegou" é progresso real e monotônico. Sim-ou-não joga isso fora e
+    ainda inverte a ordem: premia o degenerado que vira `all-skip` e descarta o
+    que decodificou 960 macroblocos de verdade.
+
+    **Onde não existe gabarito que feche o quadro, medir progresso é melhor que
+    medir sucesso.** Ver `CABAC.md` e o modo `avanco`.
