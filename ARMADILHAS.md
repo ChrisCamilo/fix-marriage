@@ -543,3 +543,26 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     **Ter dois juízes independentes foi o que salvou.** Com só a rampa, 3.597
     candidatos passariam; com só a tarja, 80 passariam. Exigindo os dois, zero —
     que é a resposta certa.
+
+30. **Varredura insatisfazível devolve zero, e zero parece resposta.** A
+    primeira varredura de 1 bit do frame 12 devolveu **0 soluções em 9.120
+    candidatos**. Não testou nada: o critério não podia ser satisfeito por
+    construção nenhuma, e por **duas** razões somadas.
+
+    | razão | por quê |
+    |---|---|
+    | `log_erros == 0` conta a **cadeia inteira** | o frame 11 emite duas linhas de erro em toda decodificação do GOP 0, então nenhum flip no 12 chegaria a zero |
+    | `propagacao < 0.995` | o frame 12 é campo liso do fade — propagação 1,0 sempre, é a armadilha 22 |
+
+    Com `VISUAL=0` e `ERROS_BASE=2` (os dois erros que o frame 11 já tem), a
+    mesma faixa devolve 21 candidatos. O zero anterior era um zero falso.
+
+    **O teste que separa os dois zeros custa 2 segundos:** rodar a varredura com
+    o critério afrouxado num pedaço pequeno da janela. Se com folga ele aceita
+    quase tudo (aqui: 257 de 280) e com o critério real aceita alguns, o
+    mecanismo funciona. Se aceita zero nos dois, o critério é insatisfazível e o
+    resultado não é resposta nenhuma.
+
+    É a armadilha 25 numa forma nova: lá eu varri três horas um IDR que estava
+    intacto; aqui eu quase registrei "1 bit está fechado para o frame 12" sem ter
+    testado um bit sequer.

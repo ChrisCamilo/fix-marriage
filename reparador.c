@@ -32,6 +32,7 @@ static long arq_len = 0;
  * proprio contexto e o libavcodec (com thread_count=1) chama o callback na
  * mesma thread que decodifica. */
 static _Thread_local int log_erros = 0;
+static int erros_base = 0;      /* erros que o caminho ja tem sem nenhum flip */
 static _Thread_local long log_bytestream = -1;
 static _Thread_local int log_ocultados = -1;
 static _Thread_local int log_mbx = -1, log_mby = -1;
@@ -370,7 +371,13 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     av_frame_free(&fr); av_packet_free(&pkt);
     if (quadros_out) *quadros_out = quadros;
     int esperado = ate - ancora + 1;
-    int ok = (log_erros == 0 && quadros == esperado);
+    /* Erros que o proprio caminho ja tem, antes de qualquer flip, nao podem
+     * reprovar o candidato -- senao a varredura fica insatisfazivel e o zero
+     * nao quer dizer nada. O frame 11 emite duas linhas de erro em TODA
+     * decodificacao do GOP 0, e com ERROS_BASE=0 a varredura do frame 12
+     * devolveu 0 solucoes sem ter testado nada de verdade.
+     * Medir a base antes de varrer, e passar aqui. */
+    int ok = (log_erros <= erros_base && quadros == esperado);
     /* Segunda parte do criterio: a imagem tem que existir. Sem isto passa
      * slice que termina cedo e vira listra -- armadilha 7 do ARMADILHAS.md. */
     if (ok && exigir_imagem)
@@ -749,7 +756,10 @@ static void *worker_varrek(void *p) {
         if (bom) {
             int n = atomic_fetch_add(&n_achk, 1);
 
-            if (n < 4096) {
+            /* Nao truncar em constante: o teto de 4096 do varre1 guardou as
+             * solucoes pela ordem em que as threads acharam, e as que sobraram
+             * nao eram as do lado certo do NAL. Aqui a alocacao e n_combos. */
+            if (n < achk_cap) {
                 achk_c[n] = c;
                 for (int q = 0; q < prof_k; q++) achk[n * 4 + q] = comb[q];
             }
@@ -1339,6 +1349,7 @@ int main(int argc, char **argv) {
                getenv("PPS") ? getenv("PPS") : "68eb7352");
     av_log_set_callback(meu_log);
     if (getenv("VISUAL")) exigir_imagem = atoi(getenv("VISUAL"));
+    if (getenv("ERROS_BASE")) erros_base = atoi(getenv("ERROS_BASE"));
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",
             exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");

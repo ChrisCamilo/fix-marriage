@@ -902,3 +902,26 @@ não é o ponto do dano: é onde a dessincronização finalmente estourou.
    o 2 leem 0, e ele é o bit 26 — um flip só. Testado com 1 bit (byte 3 → 0x0d)
    e com 2 bits (byte 3 → 0x1d, igual ao frame 8): **os dois dão preto**. Não é
    defeito de cabeçalho.
+
+### Varredura de 1 bit do frame 12 — fechada, 21 candidatos reprovados
+
+`VISUAL=0 ERROS_BASE=2`, faixa `[5,1145)` = os 9.120 bits de dados reais,
+36 s, 12 threads. **21 candidatos decodificam sem erro próprio.**
+
+Todos os 21 caem nos bytes 5 a 18 do NAL — o cabeçalho do slice — e **todos dão
+campo 38,00**, que é o valor do frame 9. A rampa manda 40 ou 41. Nenhum deles
+produz conteúdo: eles calam o erro transformando o slice em algo que o
+decodificador consegue ler como tudo-skip, e tudo-skip num B é exatamente a
+cópia da referência.
+
+| candidato | campo | veredito |
+|---|---|---|
+| `150526 2` | — | frame 12 nem decodifica |
+| `150530 0`, `150530 2`, `150530 5`, `150535 7` | 38,00 | hash idêntico ao do frame 9 — cópia declarada |
+| os outros 16 | 38,00 | hash próprio, valor errado — cópia com ruído |
+
+O frame 13 quebra em todos os 21 — mas quebra também na linha de base, sem flip
+nenhum, então esse juiz não separou nada aqui e não conta contra os candidatos.
+
+**1 bit está fechado para o frame 12.** O próximo passo é a varredura de 2 bits
+restrita aos 288 bytes onde os gêmeos 8 e 12 discordam.
