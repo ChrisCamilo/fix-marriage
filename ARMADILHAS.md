@@ -403,3 +403,36 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     exibição, marcação de referência, POC. Comparar imagens não prova
     equivalência. **Antes de tocar num quadro de que outros dependem, conferir
     os quadros seguintes**, não o próprio.
+
+25. **Conferir se o alvo está mesmo quebrado — antes de varrer.** Gastei quase
+    três horas procurando conserto para o IDR 0, que está **intacto**.
+
+    Ele decodifica limpo pelo critério sintático, produz campo 16,00 com desvio
+    0,00 e tarja 16,000 / 0,000. Três sinais me enganaram, e os três são
+    reconhecíveis:
+
+    | o que parecia | o que era |
+    |---|---|
+    | `error while decoding MB 119 64` | artefato do `acha_consumo`, que **trunca o NAL de propósito** para achar o ponto de consumo. Não é o decode natural. |
+    | estar na lista de IDRs quebrados | o juiz de imagem reprovando campo uniforme (armadilha 22) |
+    | 16.786 soluções de 1 bit | a partir do byte 500 **todo** bit "resolve", porque o original já resolvia |
+
+    O terceiro é o diagnóstico mais claro que existe de varredura inútil:
+    **se a densidade de soluções chega a 100% numa faixa, a varredura não está
+    medindo conserto**, está medindo "continua decodificando". Bits nos bytes
+    1.500, 2.200 e 2.290 — que o decoder nem consome — "resolviam" o frame.
+
+    **A conferência que evita tudo isso custa um segundo:**
+
+    ```bash
+    VISUAL=0 ./reparador.exe "$MP4" index.txt patches.txt dumpyuv <alvo> /tmp/x.yuv
+    ```
+
+    Se sair `decode limpo`, o alvo não tem defeito de bitstream — o que sobra é
+    o juiz de imagem, e aí a pergunta é se a imagem está mesmo errada, não qual
+    bit trocar.
+
+    Medido nos 125 IDRs ditos quebrados: **50 decodificam limpo sem o juiz de
+    imagem**, e desses **49 têm tarja errada** — ali o juiz está certo. Só o
+    IDR 0 é barrado indevidamente. O critério está bem calibrado; o erro foi meu
+    em não separar os dois casos antes de gastar CPU.
