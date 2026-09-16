@@ -359,6 +359,10 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
         const uint8_t *src; int len;
         if (i == alvo && alt) { src = alt; len = alt_len; }
         else { src = arq + ix[i].off; len = ix[i].size; }
+        /* O log guarda o ULTIMO erro visto. Zerando aqui, o que sobrar depois
+         * de mandar o alvo e o erro DO ALVO -- e -1 quer dizer que ele nao
+         * errou, mesmo que quadros anteriores da cadeia tenham errado. */
+        if (i == alvo) { log_mbx = -1; log_mby = -1; log_bytestream = -1; }
         av_new_packet(pkt, len);
         memcpy(pkt->data, src, len);
         pkt->pts = i;                  /* casa o quadro de saida com o frame pedido */
@@ -737,6 +741,28 @@ static int  *achk = NULL;
 static long *achk_c = NULL;
 static long  achk_cap = 0;
 static _Atomic int n_achk;
+
+static int *placar = NULL;      /* pontuacao por combinacao, modo avanco */
+
+static void *worker_avanco(void *p) {
+    (void)p;
+    int alvo = alvok, len = ix[alvo].size, anc = ancora_de(alvo);
+    uint8_t *copia = malloc(len);
+    cap_buf = malloc((size_t)1920 * 1088);
+    for (;;) {
+        long c = atomic_fetch_add(&prox_combo, 1);
+        if (c >= n_combos) break;
+        const int *comb = combos_k + c * prof_k;
+        memcpy(copia, arq + ix[alvo].off, len);
+        for (int q = 0; q < prof_k; q++)
+            copia[ini_k + comb[q] / 8] ^= (1 << (comb[q] % 8));
+        decodifica(anc, alvo, copia, len, NULL);
+        placar[c] = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+    }
+    free(copia); free(cap_buf); cap_buf = NULL;
+    if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+    return NULL;
+}
 
 static void *worker_varrek(void *p) {
     (void)p;
@@ -1730,6 +1756,68 @@ int main(int argc, char **argv) {
                        o1, pares[k].a % 8, o2, pares[k].b % 8);
         }
         if (g) { fclose(g); printf("    gravados em %s\n", argv[6]); }
+    }
+    /* ---- modo avanco ----
+     * O criterio binario "decodifica limpo" desperdica a informacao mais util
+     * que o decoder da: ATE ONDE ele chegou antes de falhar. Num slice CABAC
+     * nao existe ponto de ressincronizacao, entao tudo que vem ANTES do
+     * primeiro erro esta correto -- e empurrar o primeiro erro para a frente e
+     * progresso medivel, mesmo quando o quadro ainda nao fecha.
+     *
+     * A pontuacao e o endereco linear do macrobloco onde o ALVO parou,
+     * mb_y * 120 + mb_x, de 0 a 8159. Sem erro pontua 8160. */
+    else if (!strcmp(modo, "avanco")) {
+        alvok  = atoi(argv[5]);
+        prof_k = atoi(argv[6]);
+        int len = ix[alvok].size;
+        ini_k   = argc > 7 ? atoi(argv[7]) : 5;
+        int fim = argc > 8 ? atoi(argv[8]) : len;
+        if (ini_k < 5) ini_k = 5;
+        if (fim > len) fim = len;
+        if (prof_k < 1) prof_k = 1;
+        if (prof_k > 4) prof_k = 4;
+        nbits_k = (fim - ini_k) * 8;
+        gera_combos();
+        placar = malloc((size_t)n_combos * sizeof(int));
+        int nthr = quantas_threads();
+        printf("frame %d: faixa [%d,%d) = %d bits, %d a %d, %ld combinacoes, %d threads\n",
+               alvok, ini_k, fim, nbits_k, prof_k, prof_k, n_combos, nthr);
+        fflush(stdout);
+        atomic_store(&prox_combo, 0);
+        time_t t0 = time(NULL);
+        pthread_t *th = calloc(nthr, sizeof *th);
+        for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_avanco, NULL);
+        for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
+        free(th);
+        /* linha de base: sem flip nenhum */
+        cap_buf = malloc((size_t)1920 * 1088);
+        decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
+        int base = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        printf("[+] base sem flip: macrobloco %d [%.0fs]\n", base, difftime(time(NULL), t0));
+        int melhor = -1;
+        for (long c = 0; c < n_combos; c++) if (placar[c] > melhor) melhor = placar[c];
+        long quantos = 0;
+        for (long c = 0; c < n_combos; c++) if (placar[c] > base) quantos++;
+        printf("[+] melhor macrobloco alcancado: %d   (%ld combinacoes passam da base)\n",
+               melhor, quantos);
+        FILE *g = argc > 9 ? fopen(argv[9], "w") : NULL;
+        int mostradas = 0;
+        for (long c = 0; c < n_combos && mostradas < 40000; c++) {
+            if (placar[c] <= base) continue;
+            const int *comb = combos_k + c * prof_k;
+            for (int q = 0; q < prof_k; q++) {
+                long o = ix[alvok].off + ini_k + comb[q] / 8;
+                int  b = comb[q] % 8;
+                if (g) fprintf(g, "%ld %d%s", o, b, q + 1 < prof_k ? " " : "");
+                else if (mostradas < 25) printf("    off %ld bit %d%s", o, b,
+                                                q + 1 < prof_k ? "  +" : "");
+            }
+            if (g) fprintf(g, "   mb %d\n", placar[c]);
+            else if (mostradas < 25) printf("   -> mb %d\n", placar[c]);
+            mostradas++;
+        }
+        if (g) { fclose(g); printf("    gravadas em %s\n", argv[9]); }
+        free(combos_k); free(placar);
     }
     else if (!strcmp(modo, "varrek")) {
         alvok  = atoi(argv[5]);
