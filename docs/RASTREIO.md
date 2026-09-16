@@ -1146,3 +1146,55 @@ decodificado". O endereço do macrobloco diz onde o decodificador parou de
 avançar, e não que os 6.600 anteriores viraram pixel bom — aqui não viraram.
 Progresso no metro do `avanco` não é progresso na imagem, e só a tarja separa os
 dois.
+
+## GOP 0, frames 13 a 28 — o mapa de quebras
+
+Os 16 quadros restantes do GOP 0. **Todos produzem imagem** — a primeira medição
+minha dizia "não produziu quadro" para doze deles e estava errada: era o critério
+padrão do `dumpyuv` recusando gravar, não ausência de quadro.
+
+| para no macrobloco | quadros | bytes do primeiro |
+|---|---|---|
+| 6600 | **13, 14, 15** | 36.528 |
+| 3947 | 23, 24 | 129.546 |
+| 3456 | 18 | 13.919 |
+| 2156 | 16, 17 | 18.004 |
+| 1680 | 25, 26 | 156.376 |
+| 1155 | 27, 28 | 45.235 |
+| **1** | **19, 20, 21, 22** | 143.866 |
+
+**Os quadros se agrupam pelo ponto de parada**, e agrupamento assim não é
+coincidência: o segundo de cada par para exatamente onde o primeiro parou porque
+herda a referência quebrada dele. É a armadilha 13 visível no mapa — 14 e 15
+param onde o 13 para.
+
+Os quatro que param no macrobloco **1** são outra coisa: falham antes de
+qualquer conteúdo, o que tem cara de dano de cabeçalho e não de dessincronização
+tardia. Sonda de 1 bit em `[5,300)` com piso do topo: frames 19 e 21 têm 2
+candidatos que avançam, 20 e 22 nenhum.
+
+### Frame 17: `slice_type = 3` é ilegal no perfil High — e o ffmpeg não liga
+
+O frame 17 lê `slice_type = 3`, que é **SP**. Pelo Anexo A da norma, SI e SP só
+existem no perfil **Extended**; este arquivo é **High (100)**, medido no SPS.
+Então o valor é erro provado, não suspeita.
+
+Só que **não dá para arbitrar qual é o certo, nem verificar o conserto**:
+
+- `slice_type 3 -> 5` (P) é **1 bit**, mesmo comprimento; `3 -> 6` (B) são 2 bits.
+- A norma não escolhe entre P e B; nada no arquivo escolhe.
+- Aplicado o bit `297419 3`, o cabeçalho relido passa de `slice_type=3` para
+  `slice_type=5` — o patch funciona. **E a decodificação não muda em nada:** os
+  16 quadros param exatamente nos mesmos macroblocos. O h264 do ffmpeg trata SP
+  como P, então é cego para a diferença.
+
+**Não anexado.** Um patch que o único juiz disponível não consegue confirmar, e
+cujo valor certo é uma escolha entre dois, não tem como entrar.
+
+### Frame 15: o molde acusaria, e o molde estaria errado
+
+O frame 15 tem `ref_idc = 3` e `slice_type = 6` (B). A regra do
+`molde_slice.py` — `ref_idc != 0` implica `slice_type = 5` — diria que falta
+1 bit ali. Mas essa regra foi validada em 160 quadros com `ref_idc` **0 ou 2**, e
+**B de referência é perfeitamente legal** em H.264. O `molde_slice.py` já pula
+`ref_idc` fora de 0 e 2 exatamente por isso, e continua certo em pular.
