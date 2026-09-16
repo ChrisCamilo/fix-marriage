@@ -280,6 +280,42 @@ evitaria tudo.
 | 10, 11, 13 | **zero soluções de 1 bit** nos dois critérios — 2.056, 22.616 e 292.216 candidatos |
 | 14, 15, 17, 19, 21–28 | não produzem imagem nem na passada completa |
 
+### GOP 0, frames 10 a 12 — um conserto e duas vias fechadas
+
+O único reparo real do GOP saiu do **frame 10**, e por previsão em vez de busca:
+a rampa do fade fixa o valor **antes** de varrer, e um único candidato em 2.056
+o produz. Ver `CRITERIOS.md` seção 0.5.
+
+**Frame 11 — cabeçalho correto, corpo danificado.** Ele já produz o campo certo
+(**43**, e a progressão dos quadros P do GOP — 21, 25, 29, 34, 38, 43, passos de
+4 e 5 — confirma). O que está errado é a tarja, **15,000 nas duas pontas** onde
+deve ser 16,000, mais o erro `Reference 3 >= 3` num macrobloco.
+
+Três vias tentadas e as três fechadas:
+
+| via | resultado |
+|---|---|
+| 2 bits em `[5,60)`, 96.580 pares | 4.957 decodificam limpo, **nenhum** acerta campo e tarja |
+| `slice_qp_delta` para a faixa dos P (−13 a −17) | as 5 variantes produzem **nenhuma imagem** |
+| `num_ref_idx_override` com 2 a 5 referências | as 4 variantes produzem **nenhuma imagem** |
+
+As duas últimas falham pelo mesmo motivo estrutural: esses campos são de
+**comprimento variável**, então mudá-los desloca todo o resto do cabeçalho — a
+tabela de pesos, o `cabac_init`, o `qp_delta` — e nada mais parseia. **Só dá
+para consertar campo de cabeçalho por bit flip quando o comprimento não muda.**
+
+E o `Reference 3 >= 3` não é defeito de cabeçalho: os campos dele batem com os
+quadros P bons. É dado de macrobloco pedindo referência que a lista não tem.
+
+**Frame 12 — não avaliável enquanto o 11 estiver quebrado.** O `qp_delta` dele
+é **+1** onde os B ficam entre −8 e −11, e −8 está a 1 bit. Mas testá-lo com o
+frame 11 quebrado devolve a cópia do frame 9: é a armadilha 13, e eu cai nela
+outra vez. Fica como hipótese aberta, para quando o 11 ceder.
+
+Também fica registrado que a janela `[5,200)` que eu ia varrer no frame 12
+estava errada: aquele `MB 15 0, bytestream 2778` é do frame **11**
+(2828 − 2778 = 50), não do 12. O dano do 12 está no byte **1.820**.
+
 ## Frames comuns
 
 | frame | GOP | bytes | faixa | candidatos | tempo | soluções | veredito |
