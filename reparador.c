@@ -722,8 +722,13 @@ static int sem_imagem(const uint8_t *Y, int w, int h) {
 static int  *combos_k;
 static long  n_combos;
 static _Atomic long prox_combo;
-static int   achk[4096 * 4];
-static long  achk_c[4096];   /* indice da combinacao, para ordenar a saida */
+/* Sem teto fixo: o varre1 ja tinha esse bug e foi corrigido; aqui ficou. No
+ * frame 11 a janela [5,200) achou 22.243 solucoes e o arquivo saiu com 4.096,
+ * as primeiras por indice de combinacao -- ou seja, enviesadas para o comeco da
+ * janela, que e exatamente onde menos se quer truncar. */
+static int  *achk = NULL;
+static long *achk_c = NULL;
+static long  achk_cap = 0;
 static _Atomic int n_achk;
 
 static void *worker_varrek(void *p) {
@@ -1708,6 +1713,9 @@ int main(int argc, char **argv) {
         nbits_k = (fim - ini_k) * 8;
         aceita_imagem = getenv("IMAGEM") ? atoi(getenv("IMAGEM")) : 0;
         gera_combos();
+        achk_cap = n_combos;
+        achk = malloc((size_t)achk_cap * 4 * sizeof(int));
+        achk_c = malloc((size_t)achk_cap * sizeof(long));
         int nthr = quantas_threads();
         printf("frame %d: %d bytes, faixa [%d,%d) = %d bits, %d a %d, %ld combinacoes, %d threads, aceite %s\n",
                alvok, len, ini_k, fim, nbits_k, prof_k, prof_k, n_combos, nthr, aceita_imagem ? "produz imagem" : "decodifica limpo");
@@ -1725,7 +1733,7 @@ int main(int argc, char **argv) {
         /* Os workers gravam na ordem em que acham, que depende do escalonamento.
          * A saida tem que sair na ordem da combinacao, senao 1 thread e 12 dao
          * arquivos diferentes -- foi o que aconteceu na primeira versao. */
-        int lim = n < 4096 ? n : 4096;
+        int lim = n < achk_cap ? n : (int)achk_cap;
         for (int a = 1; a < lim; a++) {
             long ca = achk_c[a]; int tmp[4];
             for (int q = 0; q < prof_k; q++) tmp[q] = achk[a * 4 + q];
@@ -1739,7 +1747,7 @@ int main(int argc, char **argv) {
             for (int q = 0; q < prof_k; q++) achk[(b + 1) * 4 + q] = tmp[q];
         }
         FILE *g = argc > 9 ? fopen(argv[9], "w") : NULL;
-        for (int k = 0; k < n && k < 4096; k++) {
+        for (int k = 0; k < lim; k++) {
             for (int q = 0; q < prof_k; q++) {
                 long o = ix[alvok].off + ini_k + achk[k * 4 + q] / 8;
                 int  b = achk[k * 4 + q] % 8;
@@ -1749,7 +1757,7 @@ int main(int argc, char **argv) {
             }
         }
         if (g) { fclose(g); printf("    gravadas em %s\n", argv[9]); }
-        free(combos_k);
+        free(combos_k); free(achk); free(achk_c); achk = NULL; achk_c = NULL;
     }
     else if (!strcmp(modo, "cresce")) {
         int alvo = atoi(argv[5]);
