@@ -328,9 +328,44 @@ corrigi-lo para `(48, −8)` — mesmo comprimento, sem deslocamento — deixa a
 **idêntica**: o quadro falha no macrobloco 15 da primeira fileira, antes de a
 referência 1 ser usada. Testados também `(47, −7)` e `(32, 9)`, mesmo resultado.
 
-**Diagnóstico final do frame 11:** o cabeçalho tem uma anomalia real que não é a
-causa; o defeito que importa está no dado de macrobloco, no byte ~50, e não cede
-a 2 bits.
+### Frame 11 — por que nenhum par de bits pode funcionar
+
+A janela foi ampliada para `[5,200)`: **1,2 M pares, 69 min, 22.243 soluções**.
+Medidas 4.096 delas, o padrão de `[5,60)` se repete exato:
+
+| | candidatos | campo | tarja |
+|---|---|---|---|
+| maioria | 3.591 | **43** (certo) | **15** (errado) |
+| minoria | 224 | 38, 44 ou 45 | **16** (certo) |
+| **os dois** | **0** | | |
+
+E isto **não é estatística, é aritmética**. A predição ponderada do H.264 é
+`(referência × peso)/32 + offset`, uma função linear aplicada ao quadro inteiro.
+Com o peso `(40, −5)` que o frame 11 tem para a referência 0:
+
+```
+campo:  38 × 40/32 − 5 = 42,5   -> 43, o valor medido
+tarja:  16 × 40/32 − 5 = 15,0   -> 15, o valor medido
+```
+
+**Os dois saem da mesma fórmula.** Não são dois defeitos, é um. E para acertar
+campo 43 e tarja 16 ao mesmo tempo seria preciso `22w/32 = 27`, ou seja
+`w = 39,27` — **não inteiro**. Nenhuma combinação de bits satisfaz os dois
+enquanto os macroblocos da tarja estiverem sendo inter-preditos.
+
+**Nos quadros bons a tarja não passa por essa fórmula.** O peso do frame 9 daria
+`16 × 43/32 − 7 = 14,5` para a tarja, e a tarja dele mede **16,000** exata. Ou
+seja: no quadro correto os macroblocos da tarja são **intra** — preto codificado
+direto —, e no frame 11 estão decodificando como skip/inter.
+
+**Diagnóstico final:** o defeito não é valor errado em campo nenhum. É **tipo de
+macrobloco errado**, por dessincronização do CABAC — e isso explica de uma vez a
+tarja em 15, o `Reference 3 >= 3` e a anticorrelação. Consertar exige
+ressincronizar o decodificador aritmético, não corrigir um número.
+
+Sete vias fechadas neste frame: 2 bits em duas janelas, `slice_qp_delta`,
+`num_ref_idx_override`, `pred_weight_table`, comparação de bits com quadros bons,
+e a leitura de que 44 ou 45 seriam o campo certo.
 
 E o `Reference 3 >= 3` não é defeito de cabeçalho: os campos dele batem com os
 quadros P bons. É dado de macrobloco pedindo referência que a lista não tem.
