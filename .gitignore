@@ -9,3 +9,4 @@ reparador
 # Saidas derivadas: reconstruiveis rodando as ferramentas de novo.
 candidatos_header.txt
 novos_cabecalhos.txt
+novos_slices.txt
