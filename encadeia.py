@@ -10,8 +10,11 @@ Duas salvaguardas contra subir num degenerado:
   PORTA  candidato que para antes do macrobloco 960 errou dentro da tarja, e a
          tarja nao tem o que errar. Descarte, nao progresso.
   RAMPA  candidato que fecha o quadro (macrobloco 8160) so vence se o campo for
-         uniforme e igual a 40, que e o que a rampa do fade manda. Sem isso o
-         all-skip -- copia do frame 9, campo 38 -- venceria toda vez.
+         uniforme e valer 40 ou 41. O ajuste da rampa sobre os 12 pontos
+         confirmados da 40,545 no passo 11, com residuos ate 0,47 -- os dois
+         valores cabem, e exigir 40 exato descartaria a resposta se for 41.
+         Sem essa porta o all-skip -- copia do frame 9, campo 38 -- venceria
+         toda vez.
 
 E o feixe e de largura > 1 de proposito: guloso puro entra em otimo local.
 
@@ -22,7 +25,7 @@ import os, subprocess, sys, tempfile
 MP4 = "Caio & Lizandra - Making- Caio-Balu.mp4"
 SB  = os.environ.get("SB", ".")
 EXE = "./reparador.exe"
-PORTA, CAMPO_ALVO = 960, 40
+PORTA, CAMPO_ALVO = 960, (40, 41)   # a rampa da 40,545: os dois cabem
 ERROS_BASE = "2"          # os dois erros que o frame 11 emite em toda a cadeia
 
 
@@ -63,7 +66,7 @@ def julga(alvo, patch, cands, saida):
     bons, k = [], 0
     for d in dados:
         cmin, cmax = int(d[2]), int(d[3])
-        if cmin == cmax == CAMPO_ALVO: bons.append((int(d[0]), int(d[1]), cmin))
+        if cmin == cmax and cmin in CAMPO_ALVO: bons.append((int(d[0]), int(d[1]), cmin))
         k += 1
     return bons
 
@@ -91,7 +94,7 @@ def main():
                     for o, b, c in bons:
                         print(f"    {flips + [(o, b)]}  -> campo {c}")
                     return
-                print(f"      os {len(fecham)} que fecham dao campo != {CAMPO_ALVO} "
+                print(f"      os {len(fecham)} que fecham dao campo fora de {CAMPO_ALVO} "
                       f"(all-skip / copia), descartados", flush=True)
             for o, b, mb in avancam:
                 ch = tuple(sorted(flips + [(o, b)]))

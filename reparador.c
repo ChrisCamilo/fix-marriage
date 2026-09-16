@@ -1781,6 +1781,25 @@ int main(int argc, char **argv) {
         int fim = argc > 8 ? atoi(argv[8]) : len;
         if (ini_k < 5) ini_k = 5;
         if (fim > len) fim = len;
+        /* Enchimento nao e dado. Depois que a slice acaba vem cabac_zero_word,
+         * que pela norma e 00 00 -- aqui aparece como 00 00 03 repetido por
+         * causa do byte de prevencao de emulacao. Trocar bit dali para o
+         * decodificador andar mais nao conserta nada, fabrica dado: foi
+         * exatamente assim que o encadeamento de 8 etapas do frame 12 subiu num
+         * ramo falso, com dois dos oito bits nos bytes 1136 e 1140 de um payload
+         * que acaba no 1135. Medido e cortado sozinho, para valer em qualquer
+         * quadro; SEM_CLAMP=1 desliga. */
+        if (!getenv("SEM_CLAMP")) {
+            const uint8_t *p = arq + ix[alvok].off;
+            int f = len;
+            while (f >= 3 && p[f-3] == 0 && p[f-2] == 0 && p[f-1] == 3) f -= 3;
+            while (f > 0 && p[f-1] == 0) f--;
+            if (f < fim) {
+                printf("[+] enchimento cortado: dados acabam no byte %d de %d, "
+                       "faixa vai ate ai\n", f, len);
+                fim = f;
+            }
+        }
         if (prof_k < 1) prof_k = 1;
         if (prof_k > 4) prof_k = 4;
         nbits_k = (fim - ini_k) * 8;
