@@ -1278,3 +1278,36 @@ fechado nesses 16 bytes.**
 ~2 h. Julgar **dentro** da varredura, trocando o piso, custa os mesmos 36 s. Em
 varredura com rendimento alto, o juiz tem que morar no critério, não numa
 passada depois.
+
+### 3 bits nos 16 bytes do travamento — zero, e o zero é resposta
+
+`[31472,31488)`, **341.376 combinações**, 1.480 s, juiz dentro da varredura
+(`PISO_TARJA`): **0 sobreviventes**.
+
+**Controle de satisfazibilidade, e ele era necessário.** A tarja de cima do
+frame 13 decodifica em **15,000 com desvio zero**, e todo quadro verificado do
+filme tem 16. Se a tarja verdadeira dele for 15 — herdada do frame 11, cuja
+tarja só foi repintada depois da decodificação e continua 15 no DPB — então
+exigir 16 reprovaria até o conserto certo, e o zero não valeria nada.
+
+Entrou o `PISO_BASE`: tarja de baixo **uniforme, valor livre**. Nos mesmos 8.128
+pares de 2 bits:
+
+| piso | sobreviventes |
+|---|---|
+| `PISO_TARJA` (uniforme **e** igual a 16) | 0 de 8.128 |
+| `PISO_BASE` (uniforme, valor livre) | **0 de 8.128** |
+
+Nenhum candidato produz tarja de baixo uniforme **em valor nenhum**. A exigência
+do 16 não é o que reprova, então o zero é genuíno e não artefato de critério.
+
+Amostrados 12 dos que fecham o quadro: tarja de baixo entre 47,8 e 53,0 com
+desvio de 2,0 a 16,1. É lixo, não é tarja fora de tom.
+
+### Fica aberto: a tarja de cima do frame 13 é 15, e devia ser 16
+
+Não é o que trava a varredura, mas é anomalia por si só. O traço mostra as
+fileiras 0 a 7 do frame 13 como **`I` — intra**, e macrobloco intra não herda
+nada da referência: o valor vem do próprio frame 13. Então ou a tarja dele já
+está danificada antes da fileira 55, ou há algo na reconstrução intra que ainda
+não entendi. Os 161 quadros verificados do filme têm 16,000.

@@ -754,6 +754,23 @@ static int *placar = NULL;      /* pontuacao por combinacao, modo avanco */
 static int tarja_perfeita(const uint8_t *Y, int w, int h);
 static int piso_tarja = 0;      /* PISO_TARJA=1: sem tarja 16 nao ha pontuacao */
 static int piso_topo  = 0;      /* PISO_TOPO=1: tarja de CIMA uniforme */
+static int piso_base  = 0;      /* PISO_BASE=1: tarja de BAIXO uniforme, valor livre */
+
+/* Variante do piso da tarja de baixo que NAO fixa o valor em 16.
+ * Existe para responder uma duvida de satisfazibilidade: o frame 13 decodifica
+ * a tarja de cima em 15,000 com desvio zero, e todo quadro verificado do filme
+ * tem 16. Se a tarja verdadeira dele for 15 -- herdada do frame 11, cuja tarja
+ * so foi repintada depois da decodificacao e continua 15 no DPB -- entao exigir
+ * 16 reprovaria ate o conserto certo, e o zero da varredura nao valeria nada.
+ * Com o valor livre, sobra a uniformidade, que e o que se sabe a priori. */
+static int base_uniforme(const uint8_t *Y, int w, int h) {
+    if (w < 1920 || h < 1080) return 0;
+    int v = Y[(size_t)962 * w];
+    for (int y = 962; y < 1080; y++)
+        for (int x = 0; x < w; x += 8)
+            if (Y[(size_t)y * w + x] != v) return 0;
+    return 1;
+}
 
 /* A tarja de baixo (linhas 962-1079) e a fileira de macrobloco 60 em diante --
  * DEPOIS do ponto onde o frame 13 falha, na fileira 55. Exigi-la como piso de
@@ -802,6 +819,7 @@ static void *worker_avanco(void *p) {
         placar[c] = (cap_w <= 0) ? -1
                   : (piso_tarja && !tarja_perfeita(cap_buf, cap_w, cap_h)) ? -1
                   : (piso_topo  && !topo_uniforme(cap_buf, cap_w, cap_h)) ? -1
+                  : (piso_base  && !base_uniforme(cap_buf, cap_w, cap_h)) ? -1
                   : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
     }
     free(copia); free(cap_buf); cap_buf = NULL;
@@ -1423,6 +1441,7 @@ int main(int argc, char **argv) {
     if (getenv("ERROS_BASE")) erros_base = atoi(getenv("ERROS_BASE"));
     if (getenv("PISO_TARJA")) piso_tarja = atoi(getenv("PISO_TARJA"));
     if (getenv("PISO_TOPO")) piso_topo = atoi(getenv("PISO_TOPO"));
+    if (getenv("PISO_BASE")) piso_base = atoi(getenv("PISO_BASE"));
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",
