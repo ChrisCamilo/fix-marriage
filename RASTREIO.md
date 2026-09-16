@@ -1001,3 +1001,65 @@ diferentes e **nenhum** byte discordante com 4 bits ou mais):
 Os outros 139 são coincidência de tamanho, com o perfil normal de dois fluxos
 CABAC independentes. Então o plano do traço contra o gêmeo **não generaliza**:
 serve ao frame 12 e a mais nenhum quadro do filme.
+
+### Encadeamento do `avanco` no frame 12 — 8 etapas, sem solução, e uma correção minha
+
+| etapa | bits fixos | base | melhor alcançado |
+|---|---|---|---|
+| 1 | 0 | 35 | 1023 |
+| 2 | 1 | 1023 | 1286 |
+| 3 | 2 | 1286 | 1798 |
+| 4 | 3 | 1798 | 2965 |
+| 5 | 4 | 2965 | 3277 |
+| 6 | 5 | 3277 | 3622 |
+| 7 | 6 | 3622 | 3847 |
+| 8 | 7 | 3847 | **3973** |
+
+Oito bits acumulados para chegar ao macrobloco 3973 de 8160 — metade do quadro.
+Nenhuma etapa produziu candidato com o campo da rampa.
+
+**O ramo está falsificado, e a prova é a posição dos bits.** Em coordenada de
+payload, os oito caem nos bytes 4, 25, 117, 757, 1132, 1134, **1136** e
+**1140** — e os dados reais do frame 12 **acabam no byte 1135**. Os dois últimos
+estão dentro do `cabac_zero_word`, que pela norma é zero. Trocar bit de
+enchimento para o decodificador andar mais não é conserto, é fabricar dado.
+
+**A porta que faltava:** rejeitar qualquer flip em `payload >= 1135`. Teria
+matado este ramo na etapa 7.
+
+### Mas o prefixo decodificado não é lixo — e ele me contradiz
+
+Medindo o quadro parcial do ramo de 8 bits, fileira de macrobloco por fileira:
+
+| fileira | linhas | média | desvio | |
+|---|---|---|---|---|
+| 17 | 272–287 | **41,00** | **0,00** | antes do erro |
+| 20 | 320–335 | 41,00 | 0,02 | antes do erro |
+| 23 | 368–383 | **41,00** | **0,00** | antes do erro |
+| 26 | 416–431 | 41,00 | 0,02 | antes do erro |
+| 29 | 464–479 | **41,00** | **0,00** | antes do erro |
+| 35 | 560–575 | 38,00 | 0,00 | depois — ocultação, cópia do frame 9 |
+
+Campo uniforme e limpo, e **41**, não 38. Lixo de CABAC não produz desvio zero
+em fileira nenhuma.
+
+**Onde eu errei.** Registrei que a rampa "fixa o alvo do frame 12 em 40". Não
+fixa. Reajustando com os 12 pontos confirmados, inclusive o 43 do frame 11:
+
+```
+y = 2,2238x + 16,0839      passo 11 -> 40,545      residuos ate +-0,47
+```
+
+**40,545 é exatamente o meio.** E as duas continuações fecham a soma igual: os
+incrementos confirmados somam 22, faltam 5 para os 27 de 16 até 43, e tanto
+`i10=2, i11=3` (campo 40) quanto `i10=3, i11=2` (campo 41) dão 5. O que separa é
+só o espaçamento do `+3`, visto duas vezes em `i1` e `i6` — indício, não prova.
+
+**O alvo certo é 40 ou 41**, e o `encadeia.py` rodou com `CAMPO_ALVO = 40`
+exato. Se a resposta for 41, ele a teria descartado.
+
+### Efeito da correção da armadilha 32
+
+Com o `cap_w > 0` exigido, a etapa 1 vai de 35 para **24** candidatos — onze
+eram quadros que não existiam. Dos 21 que fecham de verdade: **20 dão campo 38**
+(cópia do frame 9) e **1 dá 43** (cópia do frame 11). Nenhum dá 40 nem 41.
