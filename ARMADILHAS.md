@@ -491,3 +491,29 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
 
     Sobrevive só o `00 00 01`, e por um motivo mais forte: start code dentro de
     payload não tem leitura alternativa. Nenhum quadro íntegro do filme tem um.
+
+    **O `00 00 02` foi depois provado legítimo por experimento**, não só por
+    correlação: ele está no arquivo cru do frame 2360, em posição diferente do
+    patch dele, e **trocá-lo por `03` quebra o quadro**, que hoje decodifica
+    perfeito. O codificador deste filme não escapa esse caso, e a norma que eu
+    citava era leitura minha, não conferência.
+
+
+28. **`cabac_zero_word` vem em pares — e o invariante detecta sem consertar.**
+    Depois do RBSP, o codificador pode anexar palavras `0x0000`. Medido nos 161
+    quadros de tarja comprovadamente correta: o número de bytes zerados no fim é
+    **par em 100% deles**, sem exceção — 145 têm zero, os demais têm de 78 a
+    1.320, sempre par.
+
+    No filme inteiro, **9 frames têm exatamente 1 zero final**: 560, 894, 945,
+    1119, 1444, 1586, 2023, 2769 e 3141. O último byte do NAL carrega o
+    `rbsp_stop_one_bit` e não pode ser zero.
+
+    A busca que isso abre é minúscula e bem fundada — se bit-rot zerou o byte, o
+    original está a pelo menos 1 bit, e são só **8 candidatos por frame**.
+    Testados os 72: **nenhum resolve**. O único que "aceita" os oito é o 1586,
+    que já decodificava limpo antes.
+
+    **O invariante detecta e não conserta.** O último byte zerado é sintoma de
+    dano que continua em outro lugar do NAL. Vale como sinal — um frame nessa
+    lista tem corrupção provada —, não como reparo.
