@@ -586,3 +586,20 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
 
     **Onde não existe gabarito que feche o quadro, medir progresso é melhor que
     medir sucesso.** Ver `CABAC.md` e o modo `avanco`.
+
+32. **Nota máxima para quadro que não existe.** O modo `avanco` pontuava pelo
+    macrobloco do último erro, e quando o decodificador **rejeita o pacote antes
+    de decodificar macrobloco nenhum** não sai linha `error while decoding MB`.
+    O `log_mbx` ficava em −1 e o candidato tirava **8160** — a nota de quadro
+    perfeito.
+
+    Medido nos três bits do `slice_type` do frame 12: `serie` diz `0 de 1`, o
+    quadro não sai, e o `avanco` dava 8160 nos três.
+
+    O juiz de imagem barrava esses candidatos depois, então nenhum resultado
+    saiu errado — mas a contagem de "fecham o quadro" estava inflada e a busca
+    gastava etapa com eles. Corrigido exigindo `cap_w > 0`: **sem quadro na
+    saída não há pontuação, e a nota vira −1.**
+
+    A regra geral: toda métrica de progresso precisa de um piso que distinga
+    "não errou" de "não chegou a tentar". Ausência de erro não é sucesso.

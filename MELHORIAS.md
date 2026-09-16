@@ -177,11 +177,19 @@ mesma faixa. Falta: rodar as etapas encadeadas e julgar cada patamar pela rampa
 ## 2. A tarja é gabarito de SÍMBOLO, não só de pixel — não implementado
 
 A imagem começa na linha 130, então as fileiras de macrobloco **0 a 7 são só
-tarja**: 960 macroblocos chapados e idênticos à referência. Num slice P ou B
-isso obriga `mb_skip_flag = 1` e resíduo zero nos 960.
+tarja**, 960 macroblocos cujo conteúdo é conhecido a priori.
 
-É uma sequência de ~960 símbolos **conhecida a priori**, e hoje o projeto só usa
-a tarja como média de pixel na saída.
+**Correção sobre a justificativa.** Escrevi antes que os 960 "têm que sair como
+skip com resíduo zero". Isso é forte demais: o comentário do `reparador.c` já
+registrava desvio de até 0,40 no fundo da tarja em 144 quadros genuínos, ou
+seja, parte dos macroblocos da tarja carrega resíduo e não é skip puro. Medido
+nos 161 quadros de tarja 16,000 do panorama, o desvio dá 0,000 em todos — então
+a tarja é chapada na esmagadora maioria, mas "todos skip" não está provado e não
+pode ser usado como regra.
+
+O que **está** provado e basta: quem para antes do macrobloco 960 parou dentro
+de uma região cujo conteúdo é conhecido, e portanto avançou menos que quem
+chega na imagem. A porta é filtro de **progresso**, não prova de sintaxe.
 
 Uso imediato e de graça: **porta dura de `macrobloco >= 960`**. Candidato que
 para antes disso errou dentro da tarja, e a tarja não tem o que errar. Descarta

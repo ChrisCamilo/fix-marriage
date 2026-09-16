@@ -987,3 +987,17 @@ Isso fixa o alvo do frame 12 em **40** — antes eu vinha escrevendo "40 ou 41".
 medido e não argumentado. A tarja em 16 custa campo 44; a rampa custa campo 43;
 os dois não coexistem com peso inteiro. Reforça o diagnóstico de tipo de
 macrobloco: num quadro são a tarja é intra e nem passa pela tabela de pesos.
+
+### Os gêmeos são um par único no filme inteiro
+
+Testados os **140 pares de NAL com tamanho idêntico** acima de 400 bytes em todo
+o arquivo, pelo mesmo critério que revelou o par 8 × 12 (menos de 50% dos bytes
+diferentes e **nenhum** byte discordante com 4 bits ou mais):
+
+| pares de mesmo tamanho | gêmeos |
+|---|---|
+| 140 | **1** — só o 8 × 12 |
+
+Os outros 139 são coincidência de tamanho, com o perfil normal de dois fluxos
+CABAC independentes. Então o plano do traço contra o gêmeo **não generaliza**:
+serve ao frame 12 e a mais nenhum quadro do filme.

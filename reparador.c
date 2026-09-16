@@ -757,7 +757,14 @@ static void *worker_avanco(void *p) {
         for (int q = 0; q < prof_k; q++)
             copia[ini_k + comb[q] / 8] ^= (1 << (comb[q] % 8));
         decodifica(anc, alvo, copia, len, NULL);
-        placar[c] = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        /* Sem quadro na saida nao ha pontuacao possivel. Se o decoder rejeita o
+         * pacote antes de decodificar macrobloco nenhum, nao sai linha "error
+         * while decoding MB", o log_mbx fica em -1 e o candidato tirava 8160 --
+         * a nota maxima para um quadro que nem existe. Medido: os tres flips no
+         * slice_type do frame 12 dao "0 de 1" no serie e tiravam 8160 aqui.
+         * Ver armadilha 32. */
+        placar[c] = (cap_w <= 0) ? -1
+                  : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
     }
     free(copia); free(cap_buf); cap_buf = NULL;
     if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
@@ -1792,18 +1799,27 @@ int main(int argc, char **argv) {
         /* linha de base: sem flip nenhum */
         cap_buf = malloc((size_t)1920 * 1088);
         decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
-        int base = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        int base = (cap_w <= 0) ? -1
+                 : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
         printf("[+] base sem flip: macrobloco %d [%.0fs]\n", base, difftime(time(NULL), t0));
         int melhor = -1;
         for (long c = 0; c < n_combos; c++) if (placar[c] > melhor) melhor = placar[c];
         long quantos = 0;
         for (long c = 0; c < n_combos; c++) if (placar[c] > base) quantos++;
-        printf("[+] melhor macrobloco alcancado: %d   (%ld combinacoes passam da base)\n",
-               melhor, quantos);
+        /* Porta da tarja. A imagem comeca na linha 130, entao as fileiras de
+         * macrobloco 0 a 7 sao SO tarja: 960 macroblocos chapados e iguais a
+         * referencia, que num slice P ou B tem que sair como skip com residuo
+         * zero. Candidato que para antes do 960 errou dentro da tarja, e tarja
+         * nao tem o que errar -- e descarte, nao e progresso. */
+        int porta = getenv("PORTA") ? atoi(getenv("PORTA")) : 0;
+        long passam = 0;
+        for (long c = 0; c < n_combos; c++) if (placar[c] > base && placar[c] >= porta) passam++;
+        printf("[+] melhor macrobloco alcancado: %d   (%ld passam da base, %ld tambem da porta %d)\n",
+               melhor, quantos, passam, porta);
         FILE *g = argc > 9 ? fopen(argv[9], "w") : NULL;
         int mostradas = 0;
         for (long c = 0; c < n_combos && mostradas < 40000; c++) {
-            if (placar[c] <= base) continue;
+            if (placar[c] <= base || placar[c] < porta) continue;
             const int *comb = combos_k + c * prof_k;
             for (int q = 0; q < prof_k; q++) {
                 long o = ix[alvok].off + ini_k + comb[q] / 8;
