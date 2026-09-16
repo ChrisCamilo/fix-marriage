@@ -247,53 +247,38 @@ Segunda fila, todos com corte confiável e metade do quadro real:
 Somados com o 1773: 1,82 M candidatos, **43 min**. É a lista que substitui as
 5,1 h dos 84.
 
-### GOP 0 — fechado em 1 e 2 bits
+### GOP 0 — o IDR está INTACTO, e as varreduens foram desperdício
 
-O GOP 0 é o único do filme cujo IDR **decodifica a imagem certa e mesmo assim
-polui a cadeia**: ele erra no macrobloco (119,64), que fica na tarja inferior,
-e 94,8% dos macroblocos decodificam. A imagem sai perfeita porque a ocultação
-preenche o rodapé com preto, que é o valor certo.
+**Retratação.** Esta seção dizia que o IDR 0 errava no macrobloco (119,64) e
+poluía a cadeia do GOP. **Ele não tem defeito nenhum:** decodifica limpo pelo
+critério sintático e produz campo 16,00 com tarja **16,000 / desvio 0,000**.
 
-Mas esse erro conta contra qualquer alvo do GOP, então nada ali é reparável
-enquanto o IDR não fechar.
+O `error while decoding MB 119 64` vinha do `acha_consumo`, que trunca o NAL de
+propósito para localizar o ponto de consumo — não é o decode natural. E a
+presença dele na lista de quebrados é o juiz de imagem reprovando campo
+uniforme (armadilha 22).
 
-| alvo | janela | candidatos | soluções |
-|---|---|---|---|
-| IDR 0, 1 bit | NAL inteiro | 18.376 | **1** — reprovada, ver abaixo |
-| IDR 0, **2 bits** | `[700,1000)` | 2,88 M | **0** (26 min) |
-| IDR 0, **2 bits** | `[600,1100)` | 8,00 M | **0** (2h09, 1.032 pares/s) |
-| frame 10, 1 bit | NAL inteiro | 2.056 | **0** |
-| frame 11, 1 bit | NAL inteiro | 22.616 | **0** |
-| frame 13, 1 bit | NAL inteiro | 292.216 | **0** |
+**O que se gastou nele, tudo sobre um quadro certo:**
 
-**Os três foram revarridos depois**, com o `patches.txt` puro — porque a
-primeira rodada usou um "bit destravador" no IDR 0 que na verdade envenenava a
-cadeia (armadilha 24). O resultado é o mesmo, **zero nos dois critérios**, mas
-agora vale: 2.056, 22.616 e 292.216 candidatos, nenhuma solução.
+| corrida | custo |
+|---|---|
+| 1 bit, NAL inteiro (duas vezes) | 15 s |
+| 2 bits, `[700,1000)` | 26 min |
+| 2 bits, `[600,1100)` | **2h09** |
+| três varreduras nos frames 10, 11 e 13, invalidadas por um patch meu | 40 min |
 
-E a revarredura corrigiu o mapa do GOP 0: com a cadeia limpa, **os frames 0 a 9
-decodificam limpo** sob `VISUAL=0`. O que os reprovava era só o juiz de imagem,
-pelo campo uniforme do fade (armadilha 22). O primeiro realmente quebrado é o
-**10**.
+As 16.786 "soluções de 1 bit" eram o original já decodificando: a partir do
+byte 500 **todo** bit resolve, inclusive nos bytes 1.500, 2.200 e 2.290, que o
+decoder nem consome. Ver armadilha 25 para a conferência de um segundo que
+evitaria tudo.
 
-**A única solução de 1 bit do IDR 0 piora o quadro.** Sem patch nenhum ele já
-dá campo 16,00 e tarja **16,000 / desvio 0,000**; o candidato o faz decodificar
-limpo e leva a tarja para **18,265**, contaminando o frame 2 junto. Trocaria
-imagem correta por conformidade sintática.
+**O que vale do GOP 0**, revarrido depois com o `patches.txt` puro:
 
-**Ressalva sobre a janela:** as duas foram escolhidas em volta do byte 886, onde
-o decoder para de consumir. A armadilha 9 diz que o bit errado costuma estar
-bem antes disso, então o zero prova ausência **naquelas janelas**, não no NAL.
-O que resta é o NAL inteiro em 2 bits: 168,8 M pares, **45 h** à taxa medida.
-
-**Estimativa de tempo errou 44%:** projetei 73 min para `[600,1100)` e levou
-2h09. A taxa de pares (1.032/s) é bem menor que a de candidatos de 1 bit
-(2.625/s) no mesmo NAL — cada par exige montar duas inversões e o custo fixo
-por decodificação pesa mais quando o NAL é pequeno. **Medir a taxa de pares
-antes de prometer prazo**, em vez de reaproveitar a de 1 bit.
-
-**Em 2 bits, só o frame 10 seria alcançável** (262 B, 2,1 M pares). O 11 são
-256 M pares e o 13 são 42,7 G — fora de alcance por ordens de grandeza.
+| frames | estado |
+|---|---|
+| 0–9 | decodificam limpo; reprovados só pelo juiz de imagem, e a imagem está certa |
+| 10, 11, 13 | **zero soluções de 1 bit** nos dois critérios — 2.056, 22.616 e 292.216 candidatos |
+| 14, 15, 17, 19, 21–28 | não produzem imagem nem na passada completa |
 
 ## Frames comuns
 
