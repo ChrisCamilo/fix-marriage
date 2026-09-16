@@ -852,3 +852,53 @@ porque o valor correto é conhecido — não é candidato a testar, é erro prov
 | 1654 | 160.866 | `alpha` | 0 | −1 |
 | 705 | 232.555 | `poc_lsb` | 8 | 0 |
 | 99 | 155.407 | `slice_type` | 8 | 7 |
+
+## Frame 12 — os frames 8 e 12 são gêmeos de bitstream
+
+Medido antes de varrer qualquer coisa, e muda o plano:
+
+| par | tamanho | bytes diferentes | bits | 1 bit | ≥4 bits | última diferença |
+|---|---|---|---|---|---|---|
+| **8 × 12** | 2935 / 2935 | **288 (9,8%)** | 329 | **250** | **0** | byte **1024** |
+| **6 × 10** | 258 / 258 | 71 (27,5%) | 91 | 57 | 1 | byte 255 |
+| 2 × 4 | 4474 / 3196 | 3180 (99,5%) | 13978 | 45 | 2602 | byte 3195 |
+| 4 × 8 | 3196 / 2935 | 1194 (40,7%) | 4758 | 38 | 747 | byte 1215 |
+| 2 × 8 | 4474 / 2935 | 2930 (99,8%) | 12745 | 31 | 2377 | byte 2934 |
+
+Dois fluxos CABAC independentes discordam em ~99% dos bytes e a discordância
+típica é de 4 bits ou mais — é o que os controles mostram. Os pares 8 × 12 e
+6 × 10 são de outra natureza: concordam em 90% dos bytes e, onde discordam,
+**nenhum byte sequer difere em 4 bits**.
+
+Isso não é corrupção nem duplicação de bloco no arquivo. É o codificador
+emitindo a **mesma sequência de símbolos** — mesmos tipos de macrobloco, mesmos
+vetores, mesmo padrão de resíduo, porque o campo do fade é liso — com um modelo
+de probabilidade ligeiramente diferente. Codificação aritmética é contínua nos
+parâmetros: modelo parecido, saída parecida, divergindo em um bit aqui e ali e
+voltando a casar na renormalização.
+
+### Carga útil real, medida
+
+| frame | NAL | dados | enchimento `00 00 03` | bits varreveis |
+|---|---|---|---|---|
+| 8 | 2935 | **1135** | 1800 | 9080 |
+| 12 | 2935 | **1135** | 1800 | 9080 |
+| 4 | 3196 | 1216 | 1980 | 9728 |
+
+O erro do frame 12 é `Reference 4 >= 2` em `MB 35 0, bytestream 1115` — 1820
+bytes consumidos. **Os dados reais acabam no byte 1135**, então quando o erro
+aparece o decodificador já está lendo o enchimento há 685 bytes. O ponto do erro
+não é o ponto do dano: é onde a dessincronização finalmente estourou.
+
+### Duas vias testadas e fechadas
+
+1. **Enxerto integral.** Preservar os 25 primeiros bits do 12 (cabeçalho NAL,
+   `first_mb`, `slice_type`, `pps_id`, `frame_num`, `poc_lsb`) e copiar os 328
+   bits restantes do frame 8. Resultado: campo 0,00 — preto — e o frame 13
+   quebra junto (`left block unavailable, MB 0 55`). Os gêmeos não são o mesmo
+   fluxo, são fluxos paralelos.
+
+2. **`num_ref_idx_active_override_flag`.** O frame 12 lê 1 onde o 8, o 6, o 4 e
+   o 2 leem 0, e ele é o bit 26 — um flip só. Testado com 1 bit (byte 3 → 0x0d)
+   e com 2 bits (byte 3 → 0x1d, igual ao frame 8): **os dois dão preto**. Não é
+   defeito de cabeçalho.
