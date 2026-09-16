@@ -925,3 +925,65 @@ nenhum, então esse juiz não separou nada aqui e não conta contra os candidato
 
 **1 bit está fechado para o frame 12.** O próximo passo é a varredura de 2 bits
 restrita aos 288 bytes onde os gêmeos 8 e 12 discordam.
+
+### Frame 11 — revarredura sem teto: a população inteira, 22.243 medidas
+
+A corrida anterior guardou 4.096 das 22.243 soluções, e as guardadas foram as que
+as threads acharam primeiro — amostra arbitrária, não as primeiras por posição.
+Com o teto removido do `worker_varrek` e do modo `campo`, a varredura foi refeita
+inteira: `[5,200)`, 1.216.020 pares, **4.356 s**, **22.243 soluções** — mesmo
+número, o que confirma que a busca sempre foi reprodutível; só a gravação é que
+truncava.
+
+As 22.243 foram medidas com `VISUAL=0` (com o filtro de imagem ligado só 68
+passam — é a armadilha 30 de novo, campo liso de fade tem propagação 1,0):
+
+| | candidatos | campo | tarja |
+|---|---|---|---|
+| maioria | **20.720** | **43** (certo) | 15 (errado) |
+| tarja certa | 170 | 38 | **16** (certo) |
+| tarja certa | 26 | 44 | **16** (certo) |
+| tarja certa | 13 | 45 | **16** (certo) |
+| tarja certa, campo sujo | 15 | não-uniforme | **16** |
+| **os dois certos** | **0** | | |
+
+**Agora é a população inteira, não uma amostra.** E os campos que aparecem com
+tarja 16 — 38, 44, 45 — são exatamente os que a aritmética prevê alcançáveis:
+
+Enumerando todo par `(w, o)` inteiro que faz a tarja sair 16 com denominador
+2^5, os campos possíveis entre 38 e 48 são `38 39 40 41 42 __ 44 45 46 __ 48`.
+**43 e 47 são os dois únicos buracos.** Não é que a busca não achou 43 com tarja
+16: é que esse ponto não existe.
+
+O mais barato deles está a um bit: `o = −5` → `o = −4` dá tarja 16 e campo 44,
+e `se(−4) = 0001001` contra `se(−5) = 0001011` têm o mesmo comprimento e
+diferem num bit — não desloca nada. São 26 dos 22.243.
+
+Com denominador 2^6 o ponto (43, 16) existe, em `(w=77, o=−3)` e `(w=79, o=−4)`.
+Mas `luma_log2_weight_denom` de 5 para 6 é 1 bit (`00110`→`00111`, mesmo
+comprimento) **e** o peso teria que ir de 40 para 77 ou 79, cujos `se()` têm
+comprimento diferente e deslocam o resto do cabeçalho. Fora do alcance de 2 bits.
+
+### A rampa decide entre 43 e 44
+
+Incrementos do fade-in na parte verificada, em ordem de exibição:
+
+```
+16  18  21  23  25  27  29  32  34  36  38
+  +2  +3  +2  +2  +2  +2  +3  +2  +2  +2
+  |___ 2,3,2,2,2 ___|  |___ 2,3,2,2,2 ___|
+```
+
+**Dois blocos completos e idênticos**, 11 níveis a cada 5 passos — que é a
+inclinação 2,2091 do ajuste por mínimos quadrados, quantizada. O terceiro bloco
+começa `+2, +3`, então **frame 12 = 40 e frame 11 = 43**.
+
+Campo 44 exigiria um `+4`, que não aparece na rampa inteira. Campo 41 seguido de
+44 exigiria dois `+3` seguidos, que também não aparece.
+
+Isso fixa o alvo do frame 12 em **40** — antes eu vinha escrevendo "40 ou 41".
+
+**Conclusão:** os 18.147 que faltavam não escondiam a solução, e agora está
+medido e não argumentado. A tarja em 16 custa campo 44; a rampa custa campo 43;
+os dois não coexistem com peso inteiro. Reforça o diagnóstico de tipo de
+macrobloco: num quadro são a tarja é intra e nem passa pela tabela de pesos.

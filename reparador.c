@@ -1882,7 +1882,7 @@ int main(int argc, char **argv) {
         campo_alvo = atoi(argv[5]);
         FILE *f = fopen(argv[6], "r");
         if (!f) { fprintf(stderr, "nao abriu %s%s", argv[6], "\n"); return 1; }
-        campos = calloc(200000, sizeof *campos);
+        campos = calloc(4000000, sizeof *campos);   /* sem teto: o de 200 mil truncaria como o do varrek */
         char linha[256];
         while (fgets(linha, sizeof linha, f)) {
             long o, o2; int b, b2;
