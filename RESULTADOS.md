@@ -383,3 +383,25 @@ em escala oposta à que ela descrevia.
 busca por frames bons fora das três ilhas está encerrada com medida, não com
 estimativa.
 
+
+## Bloco de abertura (GOP 0) — estado em 16/09/2026
+
+Os treze primeiros quadros do filme, que abrem no fade-in a partir do preto:
+
+| quadro | campo | tarja | como chegou aqui |
+|---|---|---|---|
+| 0–9 | 16 a 38 | 16,000 | intactos ou consertados pelos cabeçalhos |
+| **10** | 36,00 | 16,000 | **reparado** — 3 bits, campo previsto pela rampa antes da busca |
+| **11** | 43,00 | 16,000 | imagem própria; **tarja repintada** (ocultação registrada) |
+| **12** | **41,00** | **16,000** | **reparado** — 2 bits, `150530 4` + `150538 0` |
+| 13 | — | — | quebrado, primeiro quadro de conteúdo real |
+
+**13 de 13 quadros do bloco de abertura decodificam**, cada um com conteúdo
+próprio — nenhum hash repetido. Um só deles tem parte sintetizada, e é a tarja
+do frame 11, cujo valor verdadeiro é conhecido a priori.
+
+A rampa completa do fade-in, toda medida:
+
+```
+16  18  21  23  25  27  29  32  34  36  38  41  43
+```

@@ -1063,3 +1063,49 @@ exato. Se a resposta for 41, ele a teria descartado.
 Com o `cap_w > 0` exigido, a etapa 1 vai de 35 para **24** candidatos — onze
 eram quadros que não existiam. Dos 21 que fecham de verdade: **20 dão campo 38**
 (cópia do frame 9) e **1 dá 43** (cópia do frame 11). Nenhum dá 40 nem 41.
+
+### Frame 12 REPARADO — 2 bits, na segunda rodada do encadeamento
+
+`150530 bit 4` + `150538 bit 0`, payload bytes **5 e 13**, os dois bem dentro
+dos dados reais.
+
+Achado na **etapa 2**, ramo 2 — o ramo que partia justamente do `150530 4`, o
+candidato que decodifica os 960 macroblocos da tarja e morre no primeiro da
+imagem, e que o critério binário tinha descartado por ainda errar.
+
+| juiz | medida |
+|---|---|
+| decodificação | frame 12 não emite erro nenhum |
+| campo | **41,000**, desvio **0,000**, min = max = 41 |
+| tarja topo | **16,000**, desvio 0,000, min = max = 16 |
+| tarja base | **16,000**, desvio 0,000, min = max = 16 |
+| hash | próprio — nenhum quadro repetido no GOP |
+| armadilha 24 | GOP inteiro antes e depois: **13 de 29**, mesmos 16 quebrados |
+
+**A tarja é o juiz independente que fecha o caso.** O frame 12 bi-prediz do 9 e
+do 11, e a tarja do 11 no DPB está em 15 — mesmo assim a tarja do 12 sai
+16,000 com desvio zero. Isso não era objetivo da busca, que só pontuava
+macrobloco alcançado e depois exigia campo 40 ou 41. Sair certo de graça é o que
+separa conserto de coincidência.
+
+### A rampa: meu padrão de período 5 estava errado
+
+Com o frame 12 medido em 41, a sequência do fade-in fica:
+
+```
+16  18  21  23  25  27  29  32  34  36  38  41  43
+  +2  +3  +2  +2  +2  +2  +3  +2  +2  +2  +3  +2
+```
+
+Os `+3` caem em `i1`, `i6` e **`i10`** — espaçamentos 5 e **4**, não 5 e 5. Eu
+tinha lido dois blocos idênticos de `2,3,2,2,2` e concluído que o terceiro
+repetiria, fixando o campo em 40. **Era extrapolação de duas observações, e
+estava errada.**
+
+O ajuste linear sempre soube: 40,545 no passo 11, resíduos até 0,47, os dois
+valores dentro do erro do modelo. Se a rodada tivesse insistido em 40 exato,
+como a primeira, **este reparo teria sido descartado**.
+
+A lição já está na armadilha 19 em outra forma: gabarito responde sim ou não, e
+quando o modelo não separa dois valores, o alvo são os dois — não o que o padrão
+mais bonito sugere.
