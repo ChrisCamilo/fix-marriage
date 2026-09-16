@@ -31,6 +31,7 @@ static long arq_len = 0;
  * Por thread: o callback do av_log e global, mas cada worker decodifica no
  * proprio contexto e o libavcodec (com thread_count=1) chama o callback na
  * mesma thread que decodifica. */
+static int traco = 0;           /* TRACO=1: mapa de tipos de macrobloco */
 static _Thread_local int log_erros = 0;
 static int erros_base = 0;      /* erros que o caminho ja tem sem nenhum flip */
 static _Thread_local long log_bytestream = -1;
@@ -38,7 +39,13 @@ static _Thread_local int log_ocultados = -1;
 static _Thread_local int log_mbx = -1, log_mby = -1;
 
 static void meu_log(void *avcl, int nivel, const char *fmt, va_list vl) {
-    if (nivel > AV_LOG_ERROR) return;
+    /* TRACO=1 deixa passar o nivel de depuracao, que e onde o h264 do ffmpeg
+     * imprime o mapa de tipos de macrobloco -- uma linha por fileira, um
+     * caractere por macrobloco. E o unico jeito de ver ONDE o CABAC saiu do
+     * lugar em vez de so onde o erro apareceu. */
+    if (nivel > (traco ? AV_LOG_DEBUG : AV_LOG_ERROR)) return;
+    if (traco && nivel > AV_LOG_ERROR) { char b2[1024];
+        vsnprintf(b2, sizeof(b2), fmt, vl); fputs(b2, stderr); return; }
     char buf[1024];
     vsnprintf(buf, sizeof(buf), fmt, vl);
     long bs; int mb1, mb2, oc;
@@ -94,6 +101,7 @@ static void abre_decoder(void) {
      * decodificada, que e justamente o que queremos ver. Quem detecta slice
      * truncada e o criterio visual, nao o err_recognition. */
     ctx->err_recognition = getenv("EF_RECOG") ? atoi(getenv("EF_RECOG")) : 0;
+    if (traco) ctx->debug = FF_DEBUG_MB_TYPE;
     avcodec_open2(ctx, c, NULL);
 }
 
@@ -745,6 +753,25 @@ static _Atomic int n_achk;
 static int *placar = NULL;      /* pontuacao por combinacao, modo avanco */
 static int tarja_perfeita(const uint8_t *Y, int w, int h);
 static int piso_tarja = 0;      /* PISO_TARJA=1: sem tarja 16 nao ha pontuacao */
+static int piso_topo  = 0;      /* PISO_TOPO=1: tarja de CIMA uniforme */
+
+/* A tarja de baixo (linhas 962-1079) e a fileira de macrobloco 60 em diante --
+ * DEPOIS do ponto onde o frame 13 falha, na fileira 55. Exigi-la como piso de
+ * uma metrica de PROGRESSO e contradicao: reprova todo candidato que ainda nao
+ * terminou o quadro, e foi o que zerou os 292.216 do frame 13.
+ *
+ * A tarja de CIMA e a fileira 0 a 7, decodificada antes de qualquer defeito
+ * tardio. Serve de piso sem estragar a medida. Nao fixa o valor em 16 de
+ * proposito: o frame 13 sai com a de cima em 15,000 e desvio zero, herdando o
+ * frame 11, e uniformidade e o que se sabe a priori -- o valor, nao. */
+static int topo_uniforme(const uint8_t *Y, int w, int h) {
+    if (w < 1920 || h < 1080) return 0;
+    int v = Y[0];
+    for (int y = 0; y < 124; y++)
+        for (int x = 0; x < w; x += 8)
+            if (Y[(size_t)y * w + x] != v) return 0;
+    return 1;
+}
 
 static void *worker_avanco(void *p) {
     (void)p;
@@ -774,6 +801,7 @@ static void *worker_avanco(void *p) {
          * Ver armadilha 33. */
         placar[c] = (cap_w <= 0) ? -1
                   : (piso_tarja && !tarja_perfeita(cap_buf, cap_w, cap_h)) ? -1
+                  : (piso_topo  && !topo_uniforme(cap_buf, cap_w, cap_h)) ? -1
                   : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
     }
     free(copia); free(cap_buf); cap_buf = NULL;
@@ -1394,6 +1422,8 @@ int main(int argc, char **argv) {
     if (getenv("VISUAL")) exigir_imagem = atoi(getenv("VISUAL"));
     if (getenv("ERROS_BASE")) erros_base = atoi(getenv("ERROS_BASE"));
     if (getenv("PISO_TARJA")) piso_tarja = atoi(getenv("PISO_TARJA"));
+    if (getenv("PISO_TOPO")) piso_topo = atoi(getenv("PISO_TOPO"));
+    if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",
             exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");

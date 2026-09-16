@@ -132,3 +132,52 @@ Um detalhe que o projeto já mediu e que agora tem explicação: o
 1.135. Não é contradição — é o motor aritmético consumindo enchimento depois de
 perder o rumo. **O ponto do erro não é o ponto do dano**, e por isso a janela de
 varredura nunca deve ser escolhida a partir dele.
+
+## 4. A tarja não é separável do resto do slice
+
+Pergunta natural: já que o valor da tarja é conhecido, dá para achar o bit que
+conserta **só** ela e deixar o borrão para depois? Não dá, e por duas razões
+independentes.
+
+**Primeira, geral.** Cada símbolo muda `codIRange`, `codIOffset`, o contexto
+consultado e quantos bits a renormalização consome. Não existe recorte de bits
+que pertença só à tarja: mexer nela desloca tudo o que vem depois. É a mesma
+razão pela qual o `slice_qp_delta` não pode ser ajustado de leve.
+
+**Segunda, específica do frame 13.** A tarja de baixo é a fileira de macrobloco
+60 a 67, e o quadro quebra na fileira **55**. Ela está **depois** do ponto de
+ruptura, e sem ressincronização os bits dela nunca chegam a ser lidos em estado
+correto. Não há bit que arrume a fileira 60 deixando a 55 quebrada, porque a 60
+depende de todo símbolo anterior.
+
+### E a estrutura interna da tarja é a mesma em todo quadro?
+
+Quase, mas não o suficiente para virar molde. Medido em 42 quadros traçados dos
+GOPs 0 e 2333, olhando os 960 macroblocos da tarja de cima:
+
+| natureza | tipos na tarja | quadros |
+|---|---|---|
+| comum | só `d` (direto, quadro B) | 25 |
+| comum | só `S` (skip, quadro P) | 7 |
+| comum | `>` e `I` misturados | **4** |
+| comum | só `>` | 2 |
+| comum | `>` e `d` | 1 |
+| IDR | só `I` | 2 |
+| IDR | `>` e `I` | 1 |
+
+Na maioria esmagadora os 960 macroblocos são de **um tipo só**, e esse tipo é
+skip ou direto — o que se espera de uma região chapada e igual à referência. Mas
+**4 quadros comuns usam macrobloco intra na tarja**, então a regra "tarja nunca
+é intra fora de IDR" é falsa e não serve de invariante. Foi testada e refutada
+antes de virar regra.
+
+### O que sobra: repintura, e o frame 13 ainda não se qualifica
+
+A repintura da tarja (ver o `REPINTA` do `reparador.c`) é pós-decodificação e
+não depende do CABAC — é a única via realmente separável. Mas a regra do projeto
+é explícita: **só entra quadro cuja imagem foi verificada contra gabarito.**
+
+No frame 11 valia, porque o campo dele batia com a rampa do fade. No frame 13
+não vale: as fileiras 55 a 59 são ocultação **dentro da área visível** (linhas
+880 a 959), ou seja **5 das 52 fileiras de imagem, 9,6% do que se assiste**.
+Repintar a tarja ali seria emoldurar de forma correta um quadro ainda errado.
