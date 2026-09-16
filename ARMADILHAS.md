@@ -436,3 +436,32 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     imagem**, e desses **49 têm tarja errada** — ali o juiz está certo. Só o
     IDR 0 é barrado indevidamente. O critério está bem calibrado; o erro foi meu
     em não separar os dois casos antes de gastar CPU.
+
+26. **A tarja prova a fonte, não o quadro — cópia passa no gabarito.** Os 274
+    bits do `molde_slice.py` fizeram os frames 10 e 11 aparecerem com tarja
+    16,000 / desvio 0,000, e eu contei como dois quadros recuperados. **São
+    cópias.**
+
+    | grupo de quadros byte a byte idênticos | leitura |
+    |---|---|
+    | [0, 3443] | legítimo — o filme abre e fecha em preto puro |
+    | [5, 11, 12] | 11 e 12 reproduzem o 5 |
+    | [9, 10] | 10 reproduz o 9 |
+
+    O frame 12 já era contado como bom **antes** de qualquer mudança de hoje, e
+    também é cópia. Dos 162 quadros com tarja correta, **3 não têm conteúdo
+    próprio**.
+
+    Num fade cada quadro difere do anterior por ~2 níveis. Três quadros em
+    posições de exibição diferentes com a mesma imagem não é decodificação: é o
+    decoder reproduzindo a referência.
+
+    **A cópia herda a tarja boa**, então o gabarito prova que a *fonte* estava
+    correta, não que *este* quadro decodificou. É a armadilha 23 numa forma
+    nova: lá o conteúdo era igual à cor da tarja, aqui vem inteiro de um quadro
+    que já tinha a tarja certa.
+
+    **O detector é trivial e custa nada:** comparar o hash do plano Y com o dos
+    vizinhos de exibição. Quadro genuíno num fade nunca repete; quadro em cena
+    parada pode repetir, e aí vale olhar. Rodar isso sobre qualquer conjunto de
+    "quadros bons" antes de contá-los.
