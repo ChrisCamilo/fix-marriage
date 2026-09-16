@@ -266,8 +266,15 @@ enquanto o IDR não fechar.
 | frame 11, 1 bit | NAL inteiro | 22.616 | **0** |
 | frame 13, 1 bit | NAL inteiro | 292.216 | **0** |
 
-Os três frames foram varridos **com o IDR 0 patcheado**, ou seja com a cadeia
-limpa — o zero deles é real, não artefato da armadilha 13.
+**Os três foram revarridos depois**, com o `patches.txt` puro — porque a
+primeira rodada usou um "bit destravador" no IDR 0 que na verdade envenenava a
+cadeia (armadilha 24). O resultado é o mesmo, **zero nos dois critérios**, mas
+agora vale: 2.056, 22.616 e 292.216 candidatos, nenhuma solução.
+
+E a revarredura corrigiu o mapa do GOP 0: com a cadeia limpa, **os frames 0 a 9
+decodificam limpo** sob `VISUAL=0`. O que os reprovava era só o juiz de imagem,
+pelo campo uniforme do fade (armadilha 22). O primeiro realmente quebrado é o
+**10**.
 
 **A única solução de 1 bit do IDR 0 piora o quadro.** Sem patch nenhum ele já
 dá campo 16,00 e tarja **16,000 / desvio 0,000**; o candidato o faz decodificar
