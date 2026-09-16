@@ -1,3 +1,5 @@
 # frame sintetizado <- media ponderada dos vizinhos de exibicao
 11 <- 12 escurecido em -6.8 (extrapolacao do fade; sem vizinho depois)
 10 <- 12 escurecido em -13.7 (extrapolacao do fade; sem vizinho depois)
+# tarja repintada <- imagem propria, so a tarja veio errada (ocultacao parcial)
+11 tarja 15 -> 16 (imagem 43,00 = a rampa do fade previa 43,00; ver REPINTA no reparador.c)

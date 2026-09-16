@@ -1272,6 +1272,26 @@ static void grava_patch(const char *fn, long off, int bit) {
  * nao produz isso por acaso -- os candidatos reprovados deram de 138 a 221.
  * Serve para aceitar na remontagem quadros cuja IMAGEM esta certa mas que nao
  * passam no criterio rigoroso, que e o caso dos dois fades do filme. */
+/* Repintura da tarja, por LISTA EXPLICITA de frames.
+ *
+ * O frame 11 produz a imagem certa -- campo 43, o valor que a rampa do fade
+ * preve -- e tem as duas tarjas em 15,000 com desvio zero. A causa esta na
+ * predicao ponderada: os macroblocos da tarja decodificam como inter em vez de
+ * intra, e 16 * 40/32 - 5 da exatamente 15. Nao ha conserto de bitstream (sete
+ * vias fechadas), mas o valor certo da tarja e conhecido a priori.
+ *
+ * A lista e explicita de proposito. Um criterio generico do tipo "tarja
+ * uniforme mas fora de 16" pegaria 761 frames, dos quais 736 tem tarja 128 --
+ * o cinza de ocultacao. Repintar aqueles seria maquiar lixo. So entra quadro
+ * cuja IMAGEM foi verificada contra gabarito. */
+static int repinta_tarja(int t) {
+    const char *l = getenv("REPINTA");
+    if (!l) return 0;
+    char buf[256]; snprintf(buf, sizeof buf, ",%s,", l);
+    char alvo[16]; snprintf(alvo, sizeof alvo, ",%d,", t);
+    return strstr(buf, alvo) != NULL;
+}
+
 static int tarja_perfeita(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return 0;
     for (int y = 962; y < 1080; y++)
@@ -2046,7 +2066,26 @@ int main(int argc, char **argv) {
             int tem = (cap_w == 1920 && cap_h == 1080);
             /* TARJA=1 aceita tambem quadro de imagem certa que o criterio
              * rigoroso rejeita -- 14 frames dos dois fades estao assim. */
-            int ok = tem && (r == 0 ||
+            int pinta = tem && repinta_tarja(t);
+            if (pinta) {
+                for (int y = 0; y < 130; y++)
+                    memset(cap_buf + (size_t)y * cap_w, 16, cap_w);
+                for (int y = 950; y < cap_h; y++)
+                    memset(cap_buf + (size_t)y * cap_w, 16, cap_w);
+                if (cap_u && cap_v) {
+                    int cw = cap_w / 2;
+                    for (int y = 0; y < 65; y++) {
+                        memset(cap_u + (size_t)y * cw, 128, cw);
+                        memset(cap_v + (size_t)y * cw, 128, cw);
+                    }
+                    for (int y = 475; y < cap_h / 2; y++) {
+                        memset(cap_u + (size_t)y * cw, 128, cw);
+                        memset(cap_v + (size_t)y * cw, 128, cw);
+                    }
+                }
+                fprintf(stderr, "[!] frame %d: tarja REPINTADA (ocultacao)\n", t);
+            }
+            int ok = tem && (r == 0 || pinta ||
                      (aceita_tarja && tarja_perfeita(cap_buf, cap_w, cap_h)));
             if (ok) {
                 fwrite(cap_buf, 1, ny, g);
