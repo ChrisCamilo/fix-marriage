@@ -111,6 +111,21 @@ static _Thread_local int cap_w = 0, cap_h = 0;
  * antigas, nao para decidir reparo. */
 static int exigir_imagem = 1;
 
+/* Lookahead: quantos quadros ALEM do alvo alimentar o decoder.
+ *
+ * O modelo de cadeia -- alimentar de ancora ate alvo e exigir quadros ==
+ * pacotes -- supoe que todo quadro so depende do que veio antes dele em ordem
+ * de decodificacao. No GOP 0 isso e falso: o frame 2 morre com "co located POCs
+ * unavailable" na cadeia 0..2 e decodifica sem problema quando o GOP inteiro
+ * passa. Varredura em qualquer frame daquele GOP depois do 1 devolvia zero por
+ * construcao.
+ *
+ * Fica em 0 por padrao, que e o comportamento historico: todo resultado do
+ * projeto foi medido assim, e mudar o padrao invalidaria a comparacao. FOLGA=n
+ * estende o alcance, limitado ao fim do GOP -- estender alem dele traria os
+ * erros de outros frames quebrados para dentro do log e reprovaria tudo. */
+static int folga_lookahead = 0;
+
 static _Thread_local uint64_t cap_hash = 0;
 
 /* Indice do frame que se quer capturar. O `decodifica` marca cada pacote com
@@ -333,7 +348,13 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     AVPacket *pkt = av_packet_alloc();
     AVFrame *fr = av_frame_alloc();
     int enviados = 0, quadros = 0;
-    for (int i = ancora; i <= alvo; i++) {
+    /* Nao passa do fim do GOP: o proximo IDR reinicia as referencias, entao
+     * alimentar alem dele nao ajuda o alvo e so traz erro alheio. */
+    int ate = alvo + folga_lookahead;
+    if (ate >= n_ix) ate = n_ix - 1;
+    for (int i = alvo + 1; i <= ate; i++)
+        if (ix[i].idr) { ate = i - 1; break; }
+    for (int i = ancora; i <= ate; i++) {
         const uint8_t *src; int len;
         if (i == alvo && alt) { src = alt; len = alt_len; }
         else { src = arq + ix[i].off; len = ix[i].size; }
@@ -348,7 +369,7 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; captura_frame(fr); av_frame_unref(fr); }
     av_frame_free(&fr); av_packet_free(&pkt);
     if (quadros_out) *quadros_out = quadros;
-    int esperado = alvo - ancora + 1;
+    int esperado = ate - ancora + 1;
     int ok = (log_erros == 0 && quadros == esperado);
     /* Segunda parte do criterio: a imagem tem que existir. Sem isto passa
      * slice que termina cedo e vira listra -- armadilha 7 do ARMADILHAS.md. */
@@ -1288,6 +1309,7 @@ int main(int argc, char **argv) {
                getenv("PPS") ? getenv("PPS") : "68eb7352");
     av_log_set_callback(meu_log);
     if (getenv("VISUAL")) exigir_imagem = atoi(getenv("VISUAL"));
+    if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",
             exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");
     carrega_patches(f_pt);
