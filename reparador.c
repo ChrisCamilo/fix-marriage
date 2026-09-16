@@ -924,7 +924,8 @@ static void *worker_cresce(void *p) {
  *     a ocultacao deixa uma rampa esfumada, que e o borrao vertical.
  *   - o fundo da tarja e uniforme 16; a ocultacao poe ruido la.
  * Imprime as medidas e deixa a decisao para quem le. */
-typedef struct { long off; int bit; int pmin, pmax, l949, l952, l960, bmin, bmax;
+typedef struct { long off; int bit; long off2; int bit2;   /* off2 < 0 = candidato de 1 bit */
+                 int pmin, pmax, l949, l952, l960, bmin, bmax;
                  double bmed, bdes, tmed, dref;
                  double tmed2, tdes2; int tmaxdev; double tfora;
                  double imed, ides, ibloc; } Campo;
@@ -947,6 +948,10 @@ static void *worker_campo(void *p) {
         if (k >= n_campos) break;
         memcpy(copia, arq + ix[campo_alvo].off, len);
         copia[campos[k].off - ix[campo_alvo].off] ^= (1 << campos[k].bit);
+        /* Par: o varrek devolve combinacoes de 2 bits, e medir so o primeiro
+         * daria leitura de um candidato que nao existe. */
+        if (campos[k].off2 >= 0)
+            copia[campos[k].off2 - ix[campo_alvo].off] ^= (1 << campos[k].bit2);
         campos[k].pmin = -1;
         if (decodifica(anc, campo_alvo, copia, len, NULL) != 0 || cap_w <= 0) continue;
         int W = cap_w, H = cap_h;
@@ -1839,9 +1844,15 @@ int main(int argc, char **argv) {
         FILE *f = fopen(argv[6], "r");
         if (!f) { fprintf(stderr, "nao abriu %s%s", argv[6], "\n"); return 1; }
         campos = calloc(200000, sizeof *campos);
-        long o; int b;
-        while (fscanf(f, "%ld %d", &o, &b) == 2) {
-            campos[n_campos].off = o; campos[n_campos].bit = b; n_campos++;
+        char linha[256];
+        while (fgets(linha, sizeof linha, f)) {
+            long o, o2; int b, b2;
+            int n = sscanf(linha, "%ld %d %ld %d", &o, &b, &o2, &b2);
+            if (n != 2 && n != 4) continue;
+            campos[n_campos].off = o; campos[n_campos].bit = b;
+            campos[n_campos].off2 = (n == 4) ? o2 : -1;
+            campos[n_campos].bit2 = (n == 4) ? b2 : 0;
+            n_campos++;
         }
         fclose(f);
         if (argc > 7) {
