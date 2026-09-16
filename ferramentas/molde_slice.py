@@ -119,10 +119,10 @@ def main():
     print(f"[+] {grandes} pulados: mais de {MAX_BITS} bits, seria reescrever")
     print(f"[+] {len(novos)} bits a anexar")
     if novos:
-        with open("novos_slices.txt", "w", newline="\n") as g:
+        with open("saidas/novos_slices.txt", "w", newline="\n") as g:
             for o, b in novos:
                 g.write(f"{o} {b}\n")
-        print("[+] gravados em novos_slices.txt (NAO anexados)")
+        print("[+] gravados em saidas/novos_slices.txt (NAO anexados)")
 
 
 if __name__ == "__main__":

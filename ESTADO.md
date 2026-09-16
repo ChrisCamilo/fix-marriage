@@ -41,25 +41,46 @@ Ordem de exibição confirmada por duas fontes independentes (ctts × POC).
 >
 > Duas consequências práticas: **não sugerir "procurar outra cópia"** — já está
 > descartado; e tratar o original com o cuidado que isso exige, nunca
-> modificando e conferindo `sha256sum -c CHECKSUMS.txt` na dúvida. Não há
+> modificando e conferindo `sha256sum -c dados/CHECKSUMS.txt` na dúvida. Não há
 > segunda chance se ele for corrompido.
 
-Tudo mora na raiz do projeto — **não existe subdiretório `rep/`**. O nome do
-vídeo tem espaços e `&`, então precisa vir sempre entre aspas na linha de comando.
+O nome do vídeo tem espaços e `&`, então precisa vir sempre entre aspas na linha
+de comando.
 
-| arquivo | papel |
-|---|---|
-| `Caio & Lizandra - Making- Caio-Balu.mp4` | original intocado — **fonte de verdade, nunca modificar** |
-| `patches.txt` | lista `offset bit`, append-only — a outra fonte de verdade |
-| `index.txt` | índice `i offset size idr` das 3445 amostras |
-| `reparador.c` | reparador em C com libavcodec |
-| `ferramentas.py` | gera índice, patches base, e remonta o MP4 |
-| `CHECKSUMS.txt` | SHA-256 do original, para detectar novo bit-rot nele |
+**Todo comando se roda a partir da raiz do projeto.** Os caminhos relativos dos
+programas contam com isso.
+
+```
+raiz/                   o que todo comando cita, e o que nunca se move
+  Caio & ... .mp4       original intocado — fonte de verdade, nunca modificar
+  patches.txt           lista `offset bit`, append-only — a outra fonte de verdade
+  index.txt             índice `i offset size idr` das 3445 amostras
+  reparador.exe         binário compilado (fora do versionamento)
+  ESTADO.md AGENTS.md CLAUDE.md
+
+  src/                  programa em C
+    reparador.c         o reparador, com libavcodec
+  ferramentas/          programas em Python
+    ferramentas.py      gera índice, patches base, e remonta o MP4
+    molde_idr.py molde_slice.py escapes.py cabecalhos.py
+    encadeia.py         busca por etapas com o modo `avanco`
+    remontar.py conferir_dump.py
+  docs/                 os nove documentos que crescem
+  dados/                registros derivados, versionados
+    CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
+    deterministicos.txt remontados.txt
+  saidas/               produtos: novos_*.txt, vídeo remontado, ver_final.html
+  logs/                 saída de corrida — fora do versionamento
+```
+
+**Por que as duas fontes de verdade ficam na raiz:** elas são citadas em toda
+linha de comando e em todo documento, e o MP4 tem 114 MB. Movê-las não arruma
+nada e multiplica a chance de um comando errado tocar no original.
 
 O projeto é um repositório git **local e privado, sem remoto**. Isto é material
 pessoal de família: não publicar em lugar nenhum. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
-conferida com `sha256sum -c CHECKSUMS.txt`.
+conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 
 Os 1338 primeiros patches são determinísticos (prefixos de NAL e cabeçalhos), e
 isto foi reconferido: regerar com `base` reproduz exatamente os mesmos 1338, byte
@@ -88,14 +109,14 @@ O Python é o do Windows (3.14, em `C:\Python314`), invocado como `python` — n
 existe `python3` no UCRT64 a menos que instalado à parte.
 
 ```bash
-gcc -O2 -o reparador.exe reparador.c $(pkg-config --cflags --libs libavcodec libavutil)
+gcc -O2 -o reparador.exe src/reparador.c $(pkg-config --cflags --libs libavcodec libavutil)
 
-python ferramentas.py base  "$MP4" patches.txt   # só na 1a vez; hoje aborta (ver abaixo)
-python ferramentas.py index "$MP4" index.txt patches.txt
+python ferramentas/ferramentas.py base  "$MP4" patches.txt   # só na 1a vez; hoje aborta (ver abaixo)
+python ferramentas/ferramentas.py index "$MP4" index.txt patches.txt
 
 ./reparador.exe "$MP4" index.txt patches.txt repair 0 500 4096
 BASE_N=1338 ./reparador.exe "$MP4" index.txt patches.txt verify
-python ferramentas.py build "$MP4" patches.txt reparado.mp4
+python ferramentas/ferramentas.py build "$MP4" patches.txt saidas/reparado.mp4
 ```
 
 `patches.txt` é carregado inteiro na inicialização: o processo é retomável,
@@ -105,7 +126,7 @@ idempotente (pula frames já bons) e incremental por faixa.
 saída com `"w"` e truncava, então rodar a linha acima apagaria os reparos reais.
 Para regerar do zero, mova o arquivo atual para outro nome antes.
 
-**Por que UCRT64 e não MINGW64:** o `reparador.c` localiza o byte corrompido
+**Por que UCRT64 e não MINGW64:** o `src/reparador.c` localiza o byte corrompido
 lendo as mensagens de erro do decoder, e o ffmpeg emite o resto do bytestream
 com `%td`. A UCRT interpreta `%td`; a msvcrt antiga do MINGW64 não, e a
 heurística falharia **em silêncio**, caindo na busca binária — muito mais lenta,
@@ -120,15 +141,15 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 
 | arquivo | o que tem |
 |---|---|
-| [`RESULTADOS.md`](RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
-| [`CRITERIOS.md`](CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
-| [`ARMADILHAS.md`](ARMADILHAS.md) | **32 maneiras de medir errado** que já produziram conclusão falsa aqui |
-| [`CABAC.md`](CABAC.md) | **por que não existe ressincronização dentro do slice**, e o que dá para explorar |
-| [`INVESTIGACOES.md`](INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
-| [`IDRS.md`](IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |
-| [`RASTREIO.md`](RASTREIO.md) | **toda varredura já feita**, por alvo — consultar antes de disparar qualquer corrida |
-| [`MELHORIAS.md`](MELHORIAS.md) | o que foi feito, o que falta e o que foi descartado no `reparador.c` |
-| [`PARALELIZACAO.md`](PARALELIZACAO.md) | por que `thread_count` fica em 1 e como a varredura paralela preserva determinismo |
+| [`RESULTADOS.md`](docs/RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
+| [`CRITERIOS.md`](docs/CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
+| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **32 maneiras de medir errado** que já produziram conclusão falsa aqui |
+| [`CABAC.md`](docs/CABAC.md) | **por que não existe ressincronização dentro do slice**, e o que dá para explorar |
+| [`INVESTIGACOES.md`](docs/INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
+| [`IDRS.md`](docs/IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |
+| [`RASTREIO.md`](docs/RASTREIO.md) | **toda varredura já feita**, por alvo — consultar antes de disparar qualquer corrida |
+| [`MELHORIAS.md`](docs/MELHORIAS.md) | o que foi feito, o que falta e o que foi descartado no `reparador.c` |
+| [`PARALELIZACAO.md`](docs/PARALELIZACAO.md) | por que `thread_count` fica em 1 e como a varredura paralela preserva determinismo |
 
 **Se for medir qualquer coisa, leia o `ARMADILHAS.md` primeiro.** É o arquivo
 que mais economiza tempo: quase toda métrica óbvia deste problema já foi tentada

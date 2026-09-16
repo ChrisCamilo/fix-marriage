@@ -84,10 +84,10 @@ def main():
     for t, z in impares:
         print(f"      frame {t}: {z} zero(s) no fim")
     if novos:
-        with open("novos_escapes.txt", "w", newline="\n") as g:
+        with open("saidas/novos_escapes.txt", "w", newline="\n") as g:
             for o, b in novos:
                 g.write(f"{o} {b}\n")
-        print("[+] gravados em novos_escapes.txt (NAO anexados)")
+        print("[+] gravados em saidas/novos_escapes.txt (NAO anexados)")
 
 
 if __name__ == "__main__":

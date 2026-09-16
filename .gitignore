@@ -7,7 +7,12 @@
 reparador
 
 # Saidas derivadas: reconstruiveis rodando as ferramentas de novo.
-candidatos_header.txt
-novos_cabecalhos.txt
-novos_slices.txt
-novos_escapes.txt
+saidas/candidatos_header.txt
+saidas/novos_cabecalhos.txt
+saidas/novos_slices.txt
+saidas/novos_escapes.txt
+
+# Saida de corrida. O que vale de uma varredura vai para o docs/RASTREIO.md
+# medido; o log cru e volumoso e reconstruivel rodando de novo.
+logs/*
+!logs/.gitignore

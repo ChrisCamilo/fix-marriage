@@ -2,7 +2,7 @@
 
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
-comandos e o mapa dos outros documentos. E leia o `ARMADILHAS.md` antes de medir
+comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
 qualquer coisa — são treze maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
@@ -34,7 +34,7 @@ Antes de qualquer operação de git que possa descartar trabalho, confira o
 O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
 com zero linhas de log**. Nada mais conta.
 
-A `ARMADILHAS.md` lista seis maneiras de medir errado que já produziram
+A `docs/ARMADILHAS.md` lista seis maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As duas que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
@@ -48,14 +48,14 @@ Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
 hoje `7 válidos, 4 falsos, 74 determinísticos pulados` — os 4 falsos são
-insuficientes, não errados, e estão explicados no `INVESTIGACOES.md`. **Qualquer
+insuficientes, não errados, e estão explicados no `docs/INVESTIGACOES.md`. **Qualquer
 falso além desses 4 é problema.** Rodar `verify` **sem** `BASE_N` acusa ~1328 falsos por construção,
-o que é esperado e não é bug — veja a `RESULTADOS.md`.
+o que é esperado e não é bug — veja a `docs/RESULTADOS.md`.
 
 ## 4. Manter a documentação viva
 
 Ele é a memória do projeto entre sessões. Depois de qualquer corrida que mude
-resultado, **atualizar o `RESULTADOS.md`** com números medidos, não estimados:
+resultado, **atualizar o `docs/RESULTADOS.md`** com números medidos, não estimados:
 
 - frames perfeitos / 3445, e a que tempo isso corresponde
 - trechos contínuos e quanto dá para assistir de fato
@@ -67,7 +67,7 @@ os dois num número só foi uma confusão real que aconteceu aqui.
 
 Quando um parâmetro for resolvido, escrever no `ESTADO.md` que está resolvido,
 para ninguém reinvestigar. Quando uma hipótese for descartada, registrar que foi
-testada e o resultado — o `INVESTIGACOES.md` existe para isso.
+testada e o resultado — o `docs/INVESTIGACOES.md` existe para isso.
 
 ## 5. Ordem de ataque
 
@@ -111,7 +111,7 @@ vez de escrever laço sequencial novo. Já aconteceu de eu paralelizar um modo e
 logo depois, escrever outro com laços sequenciais próprios ao lado.
 
 **Onde não paralelizar:** o `thread_count` do libavcodec fica em 1. Detalhes e
-justificativa na seção 1 do `PARALELIZACAO.md`.
+justificativa na seção 1 do `docs/PARALELIZACAO.md`.
 
 O determinismo vem do desenho, não de sorte de escalonamento:
 

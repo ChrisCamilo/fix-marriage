@@ -180,10 +180,10 @@ def main():
 
     print()
     print("[+] candidatos de 1 bit em frame quebrado: %d" % len(cands))
-    with open("candidatos_header.txt", "w", newline="\n") as gf:
+    with open("saidas/candidatos_header.txt", "w", newline="\n") as gf:
         for c in cands:
             gf.write(" ".join(map(str, c)) + "\n")
-    print("[+] gravados em candidatos_header.txt "
+    print("[+] gravados em saidas/candidatos_header.txt "
           "(NAO sao patches: nenhum foi testado no decoder)")
 
 main()

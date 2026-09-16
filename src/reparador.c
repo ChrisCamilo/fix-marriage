@@ -743,6 +743,8 @@ static long  achk_cap = 0;
 static _Atomic int n_achk;
 
 static int *placar = NULL;      /* pontuacao por combinacao, modo avanco */
+static int tarja_perfeita(const uint8_t *Y, int w, int h);
+static int piso_tarja = 0;      /* PISO_TARJA=1: sem tarja 16 nao ha pontuacao */
 
 static void *worker_avanco(void *p) {
     (void)p;
@@ -762,8 +764,16 @@ static void *worker_avanco(void *p) {
          * while decoding MB", o log_mbx fica em -1 e o candidato tirava 8160 --
          * a nota maxima para um quadro que nem existe. Medido: os tres flips no
          * slice_type do frame 12 dao "0 de 1" no serie e tiravam 8160 aqui.
-         * Ver armadilha 32. */
+         * Ver armadilha 32.
+         *
+         * E "quadro existe" nao basta. No frame 13, 51,6% dos flips de 1 bit
+         * tiravam 8160 porque o decodificador desiste em silencio e devolve
+         * ocultacao -- quadro liso, sem uma linha de erro. A base, que erra no
+         * macrobloco 6600, tirava MENOS que o desastre completo. O piso que
+         * separa e a tarja, que e conhecida a priori em todo quadro do filme.
+         * Ver armadilha 33. */
         placar[c] = (cap_w <= 0) ? -1
+                  : (piso_tarja && !tarja_perfeita(cap_buf, cap_w, cap_h)) ? -1
                   : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
     }
     free(copia); free(cap_buf); cap_buf = NULL;
@@ -1383,6 +1393,7 @@ int main(int argc, char **argv) {
     av_log_set_callback(meu_log);
     if (getenv("VISUAL")) exigir_imagem = atoi(getenv("VISUAL"));
     if (getenv("ERROS_BASE")) erros_base = atoi(getenv("ERROS_BASE"));
+    if (getenv("PISO_TARJA")) piso_tarja = atoi(getenv("PISO_TARJA"));
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",
             exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");
@@ -1425,7 +1436,7 @@ int main(int argc, char **argv) {
         int base_n = getenv("BASE_N") ? atoi(getenv("BASE_N")) : 0;
         static long det_off[4096]; static int det_bit[4096]; int n_det = 0;
         {
-            FILE *fd = fopen(getenv("DET") ? getenv("DET") : "deterministicos.txt", "r");
+            FILE *fd = fopen(getenv("DET") ? getenv("DET") : "dados/deterministicos.txt", "r");
             if (fd) {
                 long o; int b;
                 while (n_det < 4096 && fscanf(fd, "%ld %d", &o, &b) == 2) {
@@ -1820,6 +1831,23 @@ int main(int argc, char **argv) {
         decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
         int base = (cap_w <= 0) ? -1
                  : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        /* Histograma das notas. Sem ele a corrida do frame 13 devolveu "150.794
+         * passam da base" e eu so descobri que eram todas 8160 -- e todas lixo
+         * -- depois de abrir os candidatos um a um. Ver armadilha 33. */
+        {
+            long fx[9] = {0};
+            for (long c = 0; c < n_combos; c++) {
+                int v = placar[c];
+                int k;
+                if (v < 0)          k = 0;
+                else if (v >= 8160) k = 8;
+                else { k = 1 + v / 1166; if (k > 7) k = 7; }
+                fx[k]++;
+            }
+            printf("[+] histograma: reprovadas %ld", fx[0]);
+            for (int k = 1; k <= 7; k++) printf(" | mb %d-%d: %ld", (k-1)*1166, k*1166-1, fx[k]);
+            printf(" | sem erro: %ld\n", fx[8]);
+        }
         printf("[+] base sem flip: macrobloco %d [%.0fs]\n", base, difftime(time(NULL), t0));
         int melhor = -1;
         for (long c = 0; c < n_combos; c++) if (placar[c] > melhor) melhor = placar[c];

@@ -72,8 +72,8 @@ def main():
     # ultima corrida apagar o registro das anteriores, e o arquivo existe
     # justamente para ninguem confundir depois o que foi recuperado com o
     # que foi inventado.
-    novo = not os.path.exists("remontados.txt")
-    reg = open("remontados.txt", "a", newline="\n")
+    novo = not os.path.exists("dados/remontados.txt")
+    reg = open("dados/remontados.txt", "a", newline="\n")
     if novo:
         reg.write("# frame sintetizado <- media ponderada dos vizinhos de exibicao\n")
     n_syn = 0
