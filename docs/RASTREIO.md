@@ -1109,3 +1109,40 @@ como a primeira, **este reparo teria sido descartado**.
 A lição já está na armadilha 19 em outra forma: gabarito responde sim ou não, e
 quando o modelo não separa dois valores, o alvo são os dois — não o que o padrão
 mais bonito sugere.
+
+### Frame 13 — 1 bit fechado, com o piso da tarja
+
+`VISUAL=0 PISO_TARJA=1 PORTA=960`, faixa `[5,36532)` = os 292.216 bits do
+payload inteiro (o frame 13 não tem enchimento), 1.280 s.
+
+```
+histograma: reprovadas 292216 | ... | sem erro: 0
+base sem flip: macrobloco 6600
+melhor macrobloco alcancado: -1   (0 passam da base)
+```
+
+**Zero em 292.216.** E desta vez o zero é resposta, não artefato — o piso é
+satisfazível, conferido no frame 12 já reparado, onde 9.032 candidatos passam
+por ele.
+
+A primeira corrida, sem o piso, tinha devolvido **150.794 candidatos "passam da
+base"**, 51,6% de tudo. Eram todos lixo: ver armadilha 33.
+
+### O que o frame 13 realmente é
+
+| quadro | campo | tarja | listra | V/H |
+|---|---|---|---|---|
+| 13 | 49,710 / 2,538 | **49,1773 / 1,4509** | 6,5% | 0,8633 |
+| 16 | 49,572 / 2,380 | **49,1773 / 1,4509** | 6,5% | 0,8556 |
+| 18 | 49,525 / 2,360 | **49,1773 / 1,4509** | 6,5% | 0,8650 |
+
+A tarja em **49,18** em vez de 16 é a assinatura de quadro inteiro deslocado em
+brilho — a mesma dos 329 candidatos de cabeçalho, que mexiam na tabela de pesos.
+E os frames 13, 16 e 18 têm a tarja **idêntica até a quarta casa**: são o mesmo
+conteúdo de ocultação, não três quadros.
+
+**Correção de leitura minha:** eu li o `MB 0 55` como "80,9% do quadro já
+decodificado". O endereço do macrobloco diz onde o decodificador parou de
+avançar, e não que os 6.600 anteriores viraram pixel bom — aqui não viraram.
+Progresso no metro do `avanco` não é progresso na imagem, e só a tarja separa os
+dois.
