@@ -60,8 +60,29 @@ def main():
             frames += 1
             print(f"  frame {t}: {achou} escape(s) a corrigir")
 
+    # Segundo invariante: paridade dos zeros finais (cabac_zero_word).
+    # Detecta e nao conserta -- ver o cabecalho deste arquivo.
+    impares = []
+    for t in sorted(ix):
+        off, sz = ix[t]
+        f.seek(off)
+        d = bytearray(f.read(sz))
+        for k in range(sz):
+            for b in pt.get(off + k, []):
+                d[k] ^= (1 << b)
+        p = bytes(d[4:])
+        z = 0
+        while z < len(p) and p[len(p) - 1 - z] == 0:
+            z += 1
+        if z % 2:
+            impares.append((t, z))
+
     print(f"\n[+] {frames} frames com start code ilegal no payload")
     print(f"[+] {len(novos)} bits a anexar")
+    print(f"[+] {len(impares)} frames com numero IMPAR de zeros finais: o"
+          f" cabac_zero_word vem em par, entao ali ha corrupcao PROVADA")
+    for t, z in impares:
+        print(f"      frame {t}: {z} zero(s) no fim")
     if novos:
         with open("novos_escapes.txt", "w", newline="\n") as g:
             for o, b in novos:

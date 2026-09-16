@@ -69,6 +69,35 @@ mede; prova tudo que veio antes. É o verificador mais forte do projeto.
    **Gabarito responde sim ou não. Quando responde não para todos, a busca
    acabou — não existe "o menos não".**
 
+## 0.5 A rampa do fade é gabarito aritmético
+
+Os dois fades do filme têm a **mesma inclinação**, medida nos quadros íntegros:
+
+| | inclinação | medida em |
+|---|---|---|
+| fade-out, GOP 3426 | **−2,222** níveis por quadro | 36 → 16 em 9 passos, todos intactos |
+| fade-in, GOP 0 | **+2,250** níveis por quadro | 16 → 43 em 12 passos |
+
+O modelo linear acerta **todos** os quadros medidos do fade-in com erro máximo
+de 0,5 — e falha exatamente nos dois que são cópia:
+
+| poc | frame | medido | previsto |
+|---|---|---|---|
+| 16 | 7 | 34,00 | 34,00 |
+| **18** | **10** | 34,00 | **36,25** |
+| 20 | 9 | 38,00 | 38,50 |
+| **22** | **12** | 38,00 | **40,75** |
+| 24 | 11 | 43,00 | 43,00 |
+
+**Isto corrige a leitura da armadilha 23 para quadro de fade.** Lá está escrito
+que alvo de campo uniforme não é julgável porque nenhuma medida de imagem separa
+candidatos. Vale para quadro isolado — mas **dentro de um fade a rampa fixa o
+valor**, e passa a ser gabarito aritmético como o do frame 3435, que se
+consertou exatamente assim.
+
+Então quadro de fade **é julgável**, desde que os vizinhos de exibição estejam
+íntegros e a rampa possa ser ajustada.
+
 ## 1. Juiz da imagem — decide
 
 Mede só a área que se assiste, **linhas 136 a 949**. Um candidato que passa aqui
