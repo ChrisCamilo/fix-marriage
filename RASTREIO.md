@@ -299,10 +299,38 @@ Três vias tentadas e as três fechadas:
 | `slice_qp_delta` para a faixa dos P (−13 a −17) | as 5 variantes produzem **nenhuma imagem** |
 | `num_ref_idx_override` com 2 a 5 referências | as 4 variantes produzem **nenhuma imagem** |
 
-As duas últimas falham pelo mesmo motivo estrutural: esses campos são de
+| comparar bits com quadros bons | **sem sinal** — ver abaixo |
+| `pred_weight_table`, referência 1 | anômala, mas corrigi-la **não muda nada** |
+
+As duas do meio falham pelo mesmo motivo estrutural: esses campos são de
 **comprimento variável**, então mudá-los desloca todo o resto do cabeçalho — a
 tabela de pesos, o `cabac_init`, o `qp_delta` — e nada mais parseia. **Só dá
 para consertar campo de cabeçalho por bit flip quando o comprimento não muda.**
+
+**Comparar bits entre quadros não funciona, e o controle prova.** Dois quadros
+**bons** do mesmo GOP diferem em **43%** dos bits entre si — saída de CABAC é
+praticamente aleatória. O frame 11 contra o 9 dá 42%, indistinguível da linha de
+base. A comparação só serve um nível acima: **decodificar os campos e comparar
+valores**, que é o que os moldes fazem.
+
+**A tabela de pesos do frame 11 é anômala e mesmo assim não é o defeito.** Ela
+existe para que qualquer referência produza o nível certo, e nos quadros bons as
+três convergem:
+
+| frame | alvo | ref 0 | ref 1 | ref 2 |
+|---|---|---|---|---|
+| 7 | 34 | 33,4 | 34,0 | 33,0 |
+| 9 | 38 | 38,7 | 38,2 | 38,4 |
+| **11** | **43** | 42,5 | **82,3** | 42,0 |
+
+O peso `(84, −7)` da referência 1 produz 82 onde deveria produzir 43. Mas
+corrigi-lo para `(48, −8)` — mesmo comprimento, sem deslocamento — deixa a saída
+**idêntica**: o quadro falha no macrobloco 15 da primeira fileira, antes de a
+referência 1 ser usada. Testados também `(47, −7)` e `(32, 9)`, mesmo resultado.
+
+**Diagnóstico final do frame 11:** o cabeçalho tem uma anomalia real que não é a
+causa; o defeito que importa está no dado de macrobloco, no byte ~50, e não cede
+a 2 bits.
 
 E o `Reference 3 >= 3` não é defeito de cabeçalho: os campos dele batem com os
 quadros P bons. É dado de macrobloco pedindo referência que a lista não tem.
