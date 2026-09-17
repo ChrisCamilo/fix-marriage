@@ -143,7 +143,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 |---|---|
 | [`RESULTADOS.md`](docs/RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
 | [`CRITERIOS.md`](docs/CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
-| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **32 maneiras de medir errado** que já produziram conclusão falsa aqui |
+| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **43 maneiras de medir errado** que já produziram conclusão falsa aqui |
 | [`CABAC.md`](docs/CABAC.md) | **por que não existe ressincronização dentro do slice**, e o que dá para explorar |
 | [`INVESTIGACOES.md`](docs/INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
 | [`IDRS.md`](docs/IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |
@@ -154,3 +154,32 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 **Se for medir qualquer coisa, leia o `ARMADILHAS.md` primeiro.** É o arquivo
 que mais economiza tempo: quase toda métrica óbvia deste problema já foi tentada
 e já enganou alguém.
+
+## 5. Cadeia aberta no IDR 3047
+
+Alvo mais extremo fora das três ilhas: decodifica 6,7% do payload, o resto é
+borrão. Não tem tarja, então quem julga é a estrutura do borrão — é o único
+tipo de alvo com juiz utilizável fora das ilhas.
+
+| etapa | bit | fronteira do borrão | respingo | desvio U / V da faixa liberada |
+|---|---|---|---|---|
+| base | — | 264 | 2 | 2,79 / 2,21 (borrão puro) |
+| 1 | `103419946 b5` | 296 | 7 | 4,19 / 9,56 — **fora** |
+| 2 | `103420786 b6` | **316** | **2** | **7,54 / 6,59 — dentro** |
+
+Alvo dos quadros intactos: U 5,99–8,52, V 3,40–7,42. A etapa 2 é a primeira
+vez na sessão que a faixa liberada entra nessa faixa nos dois planos — 30 dos
+734 sobreviventes conseguem.
+
+**Nada disso está no `patches.txt` e não deve entrar.** Ponto de partida de
+busca não é conserto: o quadro segue borrado da linha 316 para baixo. A cadeia
+está em [`dados/candidatos_idr3047.txt`](dados/candidatos_idr3047.txt) com a
+condição de promoção escrita.
+
+Como retomar:
+
+```bash
+cat patches.txt dados/candidatos_idr3047.txt | grep -E '^[0-9]+ [0-9]+$' > $SB/cad.txt
+VISUAL=1 PISO_TRINCA=1 PISO_CROMA=1 BASE=-1 ./reparador.exe "$MP4" index.txt $SB/cad.txt avanco 3047 1 4450 20000 $SB/e3.txt
+VISUAL=1 ./reparador.exe "$MP4" index.txt $SB/cad.txt trinca 3047 <lista>   # mede os sobreviventes
+```

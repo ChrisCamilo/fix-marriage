@@ -1506,3 +1506,26 @@ custa 8 s, porque a cadeia de um IDR é ele mesmo — 650 candidatos/s contra os
 Os dois bits **não são reparo** e não foram anexados: o quadro segue borrado dos
 macroblocos 2.400 em diante, e a razão de consumo segue muito abaixo dos 100%
 que um IDR bom mostra.
+
+### IDR 3047 — a cadeia, e três reescritas do juiz na mesma sessão
+
+| corrida | janela | combinações | juiz | sobreviventes |
+|---|---|---|---|---|
+| etapa 1 | `[4450,8000)` | 28.400 | v1 (trinca original) | **1** |
+| etapa 2 | `[4450,20000)` | 124.400 | v1 | 119 — **82 delas dessincronização silenciosa** |
+| etapa 2 | `[4450,20000)` | 124.400 | v2 (densidade) | 920 |
+| **etapa 1** | `[4450,8000)` | 28.400 | **v3 (tolerância + respingo)** | **7** |
+| **etapa 2** | `[4450,20000)` | 124.400 | **v3** | **734**, 30 com croma de intacto |
+
+Cada linha custou 20 a 95 s com 12 threads. O caro não foi rodar: foi descobrir
+que as três primeiras mediam a coisa errada.
+
+**O que cada reescrita corrigiu** está em `CRITERIOS.md`; o porquê de cada uma
+ter enganado está nas armadilhas 40 a 43. O resumo é que o juiz v1 acertou o
+candidato por coincidência — dois dos seus três critérios não mediam nada, e o
+terceiro, a blocagem, fazia o trabalho sozinho.
+
+**O resultado da cadeia:** fronteira do borrão em 264 sem nada, 296 com o bit da
+etapa 1, **316** com o da etapa 2. Cinquenta e duas linhas de imagem a mais, com
+a faixa liberada entrando na faixa de croma dos quadros intactos. Não é reparo —
+764 linhas seguem borradas.

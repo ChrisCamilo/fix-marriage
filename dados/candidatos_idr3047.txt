@@ -1,0 +1,105 @@
+# candidatos_idr3047.txt -- NAO SAO PATCHES. O quadro segue com ~66% de borrao;
+# nenhum destes bits e reparo. Ler a condicao de promocao no fim.
+#
+# ============================================================================
+# O IDR 3047 e o alvo mais extremo fora das tres ilhas: decodifica 4.609 dos
+# 68.616 bytes do payload (6,7%) e o resto do quadro e borrao -- predicao intra
+# vertical sem residuo, que copia a linha de cima byte a byte.
+#
+# E o unico tipo de alvo com juiz utilizavel fora das ilhas, porque nao tem
+# tarja: quem julga e a estrutura do borrao, nao o valor 16.
+# ============================================================================
+#
+# ETAPA 1 -- 103419946 bit 5   (byte 4501 do payload)
+#
+# Unico sobrevivente de 28.400 candidatos de 1 bit na faixa [4450,8000),
+# julgado por PISO_TRINCA=1 + PISO_CROMA=1.
+#
+#   macrobloco alcancado ...... base -> 2160
+#   fronteira do borrao ....... linha 264 -> linha 296   (criterio 1: LIBERA)
+#   blocagem na faixa liberada . 1,375  (criterio 2a, limite 1,45)
+#   respingo de croma .......... 7      (criterio 2b, limite 8; intactos vao ate 6)
+#   cobertura do borrao ........ 0,995  (criterio 3, piso 0,90)
+#   desvio dos planos U / V .... 4,19 / 9,56  -- FORA da faixa dos intactos
+#                                (U 5,99-8,52, V 3,40-7,42)
+#
+# ATENCAO: os numeros acima sao da MEDIDA CORRIGIDA. A primeira versao registrou
+# fronteira 292 -> 328 e blocagem 1,34, comparando linhas por igualdade exata --
+# que nao mede o borrao, mede coincidencia (armadilha 40). Os numeros mudaram; a
+# selecao do candidato nao.
+#
+# O concorrente que o juiz ANTERIOR preferia, 103419965 bit 7 (byte 4520),
+# reprova com blocagem 2,306 e respingo 14. Ele libera MAIS que o b5 -- fronteira
+# 360 contra 296 -- e ainda assim e o pior: a faixa que ele libera e suja. A
+# escolha entre os dois nunca dependeu de quem libera mais.
+#
+# A "fragmentacao do borrao" que eu citava como segundo motivo da reprovacao NAO
+# EXISTE: era artefato da igualdade exata. Quem reprova o b7 e a faixa suja,
+# sozinha.
+#
+# E ele nao era o unico concorrente. Com o juiz corrigido a etapa 1 devolve 7
+# candidatos, nao 1, e o b5 NAO ganha em nenhum dos dois criterios:
+#
+#   103420006 b4   fronteira 292   blocagem 1,385   respingo 5   <- melhor cor
+#   103419946 b5   fronteira 296   blocagem 1,375   respingo 7   <- escolha do olho
+#   103420002 b3   fronteira 308   blocagem 1,386   respingo 8
+#
+# Os tres passam. A cadeia segue pelo b5 porque foi o escolhido na tela; os
+# outros dois ficam como ramos nao explorados.
+#
+# COMO ESTE CANDIDATO FOI ESCOLHIDO
+#
+# Pelo olho, antes de existir metrica. O usuario comparou os dois candidatos na
+# tela e escolheu este -- "menos artefatos possiveis", "listras uniformes,
+# parecido com o original so que descendo". As tres medidas foram construidas
+# DEPOIS, para reproduzir esse julgamento, e selecionaram o mesmo bit entre
+# 28.400. Esse acordo e a unica validacao que o juiz tem; nao ha invariante
+# aritmetica aqui como o 16,000 das tarjas.
+#
+# O QUE ISTO NAO E
+#
+# Nao e reparo. Dois tercos do quadro continuam borrados. O que o bit faz e
+# mover PARA BAIXO a linha a partir da qual o decodificador passa a copiar --
+# 36 linhas de imagem a mais, limpas o bastante para passar na blocagem e no
+# croma. O mecanismo esta confirmado: toda sequencia repetida do borrao e copia
+# byte a byte da linha de cima (19/19, 15/15, 11/11, 7/7).
+#
+# CONDICAO DE PROMOCAO
+#
+# Nenhuma, sozinho. So entra no patches.txt se uma cadeia partindo dele chegar
+# a um quadro SEM borrao -- fronteira do borrao alem da ultima linha de imagem.
+# Enquanto a cadeia estiver aberta, isto aqui e ponto de partida de busca, nao
+# conserto, e o patches.txt nao registra pontos de partida.
+#
+# E reversivel de qualquer forma: XOR duas vezes se cancela.
+#
+
+
+# ============================================================================
+# ETAPA 2 -- 103420786 bit 6, encadeado sobre o b5
+#
+# Escolhido entre 734 sobreviventes de 124.400 candidatos de 1 bit na faixa
+# [4450,20000), com o juiz corrigido.
+#
+#   fronteira do borrao ....... linha 296 -> linha 316
+#   respingo de croma .......... 2      (o mesmo do borrao liso do original)
+#   blocagem ................... 1,405
+#   cobertura .................. 0,9935
+#   desvio dos planos U / V .... 7,54 / 6,59  -- DENTRO da faixa dos intactos
+#
+# E o primeiro candidato da sessao cuja faixa liberada tem croma compativel com
+# quadro intacto nos DOIS planos. Trinta dos 734 conseguem isso; o b5 sozinho
+# nao conseguia (dpV 9,56).
+#
+# Na tela a mancha rosa/magenta do b5 SOME e as listras ficam palidas e
+# uniformes, com o batente escuro da direita preservado. Metrica e olho
+# concordam, o que nao acontecia com os candidatos de melhor blocagem.
+#
+# Continua NAO SENDO REPARO: o quadro segue borrado da linha 316 para baixo.
+#
+# ============================================================================
+# CADEIA ATUAL (aplicar as duas linhas, nesta ordem, num patches auxiliar)
+#
+# formato: offset bit
+103419946 5
+103420786 6
