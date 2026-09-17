@@ -1311,3 +1311,58 @@ fileiras 0 a 7 do frame 13 como **`I` — intra**, e macrobloco intra não herda
 nada da referência: o valor vem do próprio frame 13. Então ou a tarja dele já
 está danificada antes da fileira 55, ou há algo na reconstrução intra que ainda
 não entendi. Os 161 quadros verificados do filme têm 16,000.
+
+## GOP 3426 — dois reparos aceitos estavam ERRADOS, e desfazê-los conserta seis quadros
+
+O grupo (a) do `docs/ALVOS.md` eram seis quadros que decodificam **sem erro
+nenhum** e erram a tarja por 0,07 a 0,21. Varredura de 1 bit com `PISO_TARJA`
+(tarja de baixo igual a 16 exato) em cada um:
+
+| frame | bytes | candidatos |
+|---|---|---|
+| 3435 | 963 | **1** |
+| 3439 | 988 | **1** |
+| 3438 | 2.887 | 7 |
+| 3442 | 2.939 | 10 |
+| 3436 | 261 | 307 |
+| 3440 | 261 | 310 |
+
+Controle: o frame 3437, bom, tem 56 candidatos — o juiz é satisfazível.
+
+**E os dois candidatos únicos já estavam no `patches.txt`:** `114237506 4` e
+`114244542 6`, registrados aqui mesmo como os reparos dos frames 3435 e 3439. A
+varredura aplica o flip **por cima**, então o que ela achou foi que **desfazê-los**
+é que acerta.
+
+| frame | com o patch | sem o patch |
+|---|---|---|
+| 3435 | base **16,197 / 0,419** | base **16,000 / 0,000** |
+| 3439 | base **16,111 / 0,464** | base **16,000 / 0,000** |
+
+O campo é o mesmo nos dois casos — 34 e 25, em cima da rampa. **Os patches não
+mudavam a imagem; só estragavam a tarja.**
+
+### O efeito é do GOP inteiro, não de dois quadros
+
+| | quadros do filme com tarja 16,000 / 0,000 |
+|---|---|
+| com os dois patches | 161 |
+| **sem os dois patches** | **167** |
+
+O fade-out inteiro fecha:
+
+```
+3434 40,994   3433 37,999   3436 36,000   3435 33,997   3438 31,997
+3437 29,001   3440 27,001   3439 25,000   3442 23,009   3441 21,000   3443 16,000
+```
+
+Todos com tarja **16,0000 / 0,0000** e campo em cima da rampa. Os frames 3436,
+3438, 3440 e 3442 estavam envenenados pela cadeia, não por defeito próprio.
+
+### Por que passaram na época
+
+O registro diz `3435 — reparado, campo uniforme 34` e `3439 — reparado, imagem
+perfeita`. **O campo era 34 e 25 com ou sem o patch**, então o juiz da época
+aprovou uma mudança que não melhorava o que ele media, e a tarja — que teria
+reprovado — não foi conferida depois. É a armadilha 19 na forma inversa: lá o
+gabarito foi usado como ranking; aqui ele não foi usado como veto.
