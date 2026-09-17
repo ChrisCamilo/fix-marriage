@@ -171,6 +171,61 @@ Ou seja: **nesta frente não há nada a fazer.** As varreduras ficam como estão
 o ganho de tempo, se vier, vem de reduzir o número de candidatos com juiz melhor
 — não de reescrever o motor.
 
+## 4b. Separar os juízes num arquivo — vale, e por um motivo melhor que arrumação
+
+Medido o acoplamento das 19 funções de medida e juízo:
+
+| grupo | quantas | do que dependem |
+|---|---|---|
+| **puras** — só os argumentos | **11** | nada. `blocagem`, `propagacao`, `linhas_reais`, `linhas_identicas`, `sem_imagem`, `fronteira_borrao`, `estrutura_borrao`, `blocagem_faixa`, `tarja_des`, `base_uniforme`, `tarja_perfeita` |
+| leem a captura | 5 | `cap_u`, `cap_v`, `cap_w`, `cap_h` — toda a família do croma |
+| leem uma flag | 2 | `linha_copia` lê `tol_copia`; `topo_uniforme` lê `piso_topo` |
+| lê tudo | 1 | `trinca_ok`: captura, `base_*`, flags e `img_base` |
+
+**Onze das dezenove já são puras.** Movem de arquivo sem uma linha de mudança.
+As cinco do croma leem a captura por variável global em vez de receber por
+argumento — virar puras é acrescentar parâmetros, mudança mecânica.
+
+### O motivo que justifica de verdade
+
+Não é o tamanho do arquivo. É que **medida pura se testa sem decodificador**.
+
+Hoje, para conferir o que `fronteira_borrao` realmente faz, é preciso
+decodificar um quadro real e olhar. Foi exatamente essa fricção que deixou
+passar as armadilhas 40 a 43 — todas da forma "a medida mede outra coisa, e eu
+só descobri depois de horas". A armadilha 40 (igualdade exata é frágil) morreria
+em segundos com um buffer sintético de listras que derivam de 1 por linha.
+
+Com `src/medidas.c` puro, um `src/testes_medidas.c` monta quadros sintéticos com
+estrutura conhecida — borrão de N linhas a partir da linha L, faixa com salto de
+croma de valor V — e afirma o resultado. **É a única parte deste projeto que dá
+para testar sem oráculo**, porque a resposta é conhecida por construção.
+
+### O que fica de fora
+
+`trinca_ok` **não é medida, é política**: 87 linhas que compõem cinco medidas
+com limiares, estado da base e flags. Vai junto com os `piso_*`, o `base_*` e a
+linha de pontuação — não com as medidas puras. Misturar as duas camadas é o que
+torna o juiz difícil de auditar hoje.
+
+E a linha de pontuação merece virar função. Hoje ela mora dentro do
+`worker_avanco`, e **por isso os pisos só funcionam no modo `avanco`** — quem
+passar `PISO_TARJA` para o `varrek` ou o `cresce` não recebe erro, recebe
+silêncio. Extraída como `nota_do_quadro()`, passa a valer em qualquer modo, e o
+fato de hoje não valer fica visível.
+
+### O custo
+
+O programa é **um arquivo só** hoje, compilado por uma linha de `gcc` no
+`ESTADO.md`. Separar exige cabeçalho e mudar a linha de compilação — ou um
+`Makefile`, que o projeto não tem. É custo real, pequeno, e paga-se na primeira
+vez que uma medida for testada em vez de conferida no olho.
+
+**Critério de aceitação:** o mesmo dos workers — saída byte a byte idêntica,
+mesmo SHA-256, modo a modo. E a mudança de assinatura do croma tem que ser
+**mecânica**: passar o que hoje é lido de global, sem tocar em amostragem nem em
+limiar. Qualquer alteração de amostragem invalida calibração.
+
 ## 5. Ordem sugerida
 
 Da menor para a maior chance de quebrar coisa:
@@ -180,9 +235,11 @@ Da menor para a maior chance de quebrar coisa:
 | 1 | tabela de modos e validação de `argc` | baixo | mata o `report` silencioso e o `argv[5]` nulo |
 | 2 | documentar o contrato das duas `blocagem` | **nenhum** | tira a armadilha do 0 x 99 sem tocar em calibração |
 | 3 | renomear as famílias do croma e da tarja | baixo | o nome passa a dizer o que mede |
-| 4 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
+| 4 | `src/medidas.c` com as 11 puras + as 5 do croma | **baixo** | abre teste sem decodificador — é o item de maior retorno por risco |
+| 5 | `nota_do_quadro()` fora do `worker_avanco` | médio | os pisos passam a valer em todo modo, não só no `avanco` |
+| 6 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
 
-O item 4 é o que mais encolhe o arquivo e o que mais pode quebrar. Só entra com
+O item 6 é o que mais encolhe o arquivo e o que mais pode quebrar. Só entra com
 a prova de saída idêntica, modo a modo.
 
 **Descartados, e o registro fica para ninguém reabrir:** unificar as duas
