@@ -2060,6 +2060,14 @@ int main(int argc, char **argv) {
          * eu media candidatos quebrados, achava 0,00 e concluia que o juiz
          * estava com defeito -- quando o defeito era o meu teste. */
         if (piso_croma) {
+            if (getenv("CROMA_DEBUG")) {
+                int cw0 = cap_w / 2;
+                fprintf(stderr, "[base] cap_w=%d cap_h=%d hash=%llx  u[200][500]=%d u[201][500]=%d u[200][501]=%d\n",
+                        cap_w, cap_h, (unsigned long long)cap_hash,
+                        cap_u ? cap_u[(size_t)200 * cw0 + 500] : -1,
+                        cap_u ? cap_u[(size_t)201 * cw0 + 500] : -1,
+                        cap_u ? cap_u[(size_t)200 * cw0 + 501] : -1);
+            }
             int ok = croma_real(160, 640);
             printf("[+] croma da base: %s a faixa calibrada\n",
                    ok ? "DENTRO de" : "FORA da");

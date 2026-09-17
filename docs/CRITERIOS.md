@@ -300,11 +300,39 @@ o chama **não existia na cadeia de pontuação** — um `replace` de script nã
 casou o padrão, não alterou nada e mesmo assim imprimiu "ok". Por isso
 `PISO_CROMA=1` aceitava lixo: não estava julgando coisa nenhuma.
 
-**Divergência ainda em aberto, não usar em produção:** para dois estados de lixo
-do IDR 3047, o dump medido por fora dá 2,51 / 33,59 e a base do próprio `avanco`
-dá 0,00 / 0,00 no mesmo arquivo de patches. Nos três casos de referência acima os
-dois caminhos batem à segunda casa. Enquanto essa diferença não for explicada, o
-piso não pode ser usado para aceitar candidato.
+**A divergência que eu tinha registrado não existia — era eu lendo a linha
+errada.** O `croma_real` imprime uma linha de depuração a cada chamada, e ele é
+chamado tanto pelos *workers*, um por candidato, quanto pela base. Eu pegava a
+última linha com `tail`, e a intercalação entre `stdout` e `stderr` no pipe não é
+determinística: às vezes a última era a de um candidato quebrado, com 0,00.
+
+Listando a sequência inteira em ordem, o que se vê é:
+
+```
+[croma] dentro_MB=0.00  p99=0.00      <- um worker, candidato quebrado
+[base]  ... u[200][500]=122 ...
+[croma] dentro_MB=2.51  p99=33.59     <- a BASE, igual ao python
+[+] croma da base: FORA da faixa      <- reprovado corretamente
+```
+
+E os bytes de croma batem exatamente entre os dois caminhos — 131/131/131 no
+borrão e 122/122/122 no estado de lixo. **O juiz estava certo desde que foi
+ligado.**
+
+**Validação final, seis casos, todos com o veredito certo:**
+
+| caso | veredito |
+|---|---|
+| 2333 bom | **DENTRO** |
+| 3326 bom | **DENTRO** |
+| 3374 bom | **DENTRO** |
+| 3047 borrão (chato demais) | **FORA** |
+| 3047 lixo, 4 bits | **FORA** |
+| 3047 lixo, 3 bits | **FORA** |
+
+O piso **pode ser usado**. A lição que fica é de leitura de saída, não de código:
+ferramenta que imprime a mesma linha de vários lugares precisa **marcar de onde
+vem**, senão `tail` mente.
 
 **E o QP confere:** o IDR 3047 tem QP de croma **29**, idêntico ao do 2333, e a
 calibração cobre 25 a 29. A faixa vale para ele.
