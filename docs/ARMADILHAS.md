@@ -855,21 +855,31 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     recuperada. A pergunta certa é sempre "quantos passam no critério", nunca
     "quantos saem".
 
-49. **Redundância quebrada não diz qual lado está podre.** O prefixo AVCC e o
-    `stsz` são redundantes, e em 702 quadros discordam. Eu dei o `stsz` como
-    certo porque ele tem testemunha independente — os 345 chunks de vídeo fecham
-    exatamente contra os offsets de áudio — e concluí que o prefixo era o lado
-    corrompido. **Estava errado:** a amostra pode conter o NAL **mais
-    enchimento** (`cabac_zero_word`, visível na cauda como `00 00 03` repetido),
-    e aí `prefixo < tamanho − 4` é o valor certo.
+49. **Medir no arquivo cru em vez do buffer remendado — e "descobrir" o reparo
+    que já existe.** Comparando o início do frame 11 com os irmãos do fade, achei
+    o prefixo AVCC errado: 133.900 para uma amostra de 2.832 bytes. Varri o
+    arquivo: **702 dos 3.445 quadros assim**, com assinatura limpa de bit rot
+    (1,6 bits por quadro, mediana 1). Numa região que o `avanco` nunca toca,
+    porque tem `ini_k >= 5` cravado.
 
-    Os frames 10 e 12 decodificam **perfeitos** com o prefixo divergente —
-    tarjas 16,000/0,000 e campos 36 e 41, ambos na rampa — e "corrigir" o
-    prefixo faz cada um deles **parar de produzir quadro**. Cada correção quebra
-    exatamente o quadro que ela toca.
+    Tudo verdade, e tudo já sabido. O `ESTADO.md` diz na linha 85 que os **1.338
+    primeiros patches são determinísticos, "prefixos de NAL e cabeçalhos"**. Com
+    o `patches.txt` aplicado, **os 3.445 prefixos estão corretos, zero divergem.**
 
-    A testemunha independente provou que o `stsz` está certo. Não provou que o
-    prefixo está errado: os dois podem estar certos e medir coisas diferentes.
-    Antes de tratar uma discordância como dano, é preciso um caso em que o lado
-    acusado produza saída **comprovadamente pior** — e aqui ele produzia a
-    melhor saída possível.
+    Eu gerei os 1.107 bits que faltavam e **anexei**. Já estavam lá. XOR duas
+    vezes se cancela: apliquei o desfazimento do reparo. Daí todos os resultados
+    estranhos — "274 quadros passam a analisar 100%" era lixo sendo analisado
+    mais longe com o comprimento de NAL recorrompido, e "corrigir o prefixo do
+    frame 10 o quebra" era desfazer o reparo dele.
+
+    Pior: inventei uma explicação para o paradoxo — enchimento `cabac_zero_word`
+    fora do NAL — e ela é **falsa**. Não existe enchimento fora do NAL em quadro
+    nenhum deste arquivo. Quando a medida não fecha, a hipótese seguinte tem que
+    ser testada, não narrada.
+
+    **Toda medida sobre bytes sai do buffer remendado, nunca do MP4 cru.** O
+    `reparador` faz isso sozinho; scripts em Python que abrem o arquivo direto,
+    não. E o sintoma é reconhecível: um achado grande, com assinatura limpa,
+    numa região que o projeto inteiro nunca varreu. Se nunca varreu e o dano é
+    óbvio, a primeira hipótese não é "ninguém tinha visto" — é "já está
+    consertado e eu estou olhando o lugar errado".

@@ -76,31 +76,12 @@
 147711 3
 
 # ============================================================================
-# JANELA C -- o byte 1, que nao e do fluxo: o PREFIXO AVCC
+# NAO EXISTE JANELA C. Eu achei que o prefixo AVCC do frame 11 estivesse
+# corrompido (133.900 para 2.832 bytes) e que corrigi-lo levasse o quadro do
+# macrobloco 15 para 8160. Era leitura do MP4 CRU: com o patches.txt aplicado o
+# prefixo dele ja vale 2.828, correto. O "conserto" era o desfazimento do
+# reparo, e o quadro analisava mais longe porque estava analisando lixo -- tanto
+# que nao emitia imagem nenhuma. Ver docs/PREFIXOS.md e armadilha 49.
 #
-# Achado depois, comparando o frame 11 com os irmaos do fade:
-#
-#   frame  8  00 00 0b 77  = 2935 = 2939-4  OK
-#   frame  9  00 00 0e 0e  = 2830 = 2834-4  OK
-#   frame 11  00 02 0b 0c  = 133900         ERRADO (deveria 2828)
-#
-# UM bit: byte 147690, bit 1. Com ele o frame 11 vai do macrobloco 15 para 8160
-# -- 100% do payload analisado, sem erro.
-#
-# NAO se confirmou como classe de dano. A hipotese geral -- 702 quadros com o
-# prefixo podre -- foi REFUTADA: a amostra pode conter enchimento fora do NAL, e
-# os frames 10 e 12 param de produzir quadro quando o prefixo deles e
-# "corrigido". Ver docs/PREFIXOS.md e armadilha 49.
-#
-# O frame 11 e o unico caso que sobrevive ao teste: o prefixo dele diz 133.900
-# para uma amostra de 2.832 bytes, grande demais para ser enchimento, e
-# corrigi-lo NAO quebra nada -- o GOP 0 mantem exatamente os mesmos quadros
-# bons. As janelas A e B continuam validas para procurar o resto.
-#
-# MAS o quadro continua sem emitir imagem, com FOLGA de 2 a 16. Ver
-# docs/PREFIXOS.md: sao 702 quadros do filme com o mesmo defeito, corrigi-los
-# leva 274 quadros a analisar 100% sem nenhum piorar, e ao mesmo tempo 872
-# deixam de emitir. Isso precisa ser resolvido antes de promover qualquer bit
-# deste arquivo.
-#
-# 147690 1
+# As janelas A e B continuam validas: elas foram medidas com o patches.txt
+# aplicado, pelo proprio reparador.
