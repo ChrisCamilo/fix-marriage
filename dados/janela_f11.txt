@@ -87,8 +87,15 @@
 # UM bit: byte 147690, bit 1. Com ele o frame 11 vai do macrobloco 15 para 8160
 # -- 100% do payload analisado, sem erro.
 #
-# As janelas A e B ficam OBSOLETAS se isto se confirmar: elas procuravam no
-# fluxo um dano que esta no container.
+# NAO se confirmou como classe de dano. A hipotese geral -- 702 quadros com o
+# prefixo podre -- foi REFUTADA: a amostra pode conter enchimento fora do NAL, e
+# os frames 10 e 12 param de produzir quadro quando o prefixo deles e
+# "corrigido". Ver docs/PREFIXOS.md e armadilha 49.
+#
+# O frame 11 e o unico caso que sobrevive ao teste: o prefixo dele diz 133.900
+# para uma amostra de 2.832 bytes, grande demais para ser enchimento, e
+# corrigi-lo NAO quebra nada -- o GOP 0 mantem exatamente os mesmos quadros
+# bons. As janelas A e B continuam validas para procurar o resto.
 #
 # MAS o quadro continua sem emitir imagem, com FOLGA de 2 a 16. Ver
 # docs/PREFIXOS.md: sao 702 quadros do filme com o mesmo defeito, corrigi-los

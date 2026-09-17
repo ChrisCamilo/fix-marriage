@@ -819,3 +819,57 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     não é cópia. Em alvo que **tem** tarja, o guia do encadeamento é o desvio da
     tarja, cujo estado de chegada é zero; a fronteira do borrão leva ao ramo
     errado.
+
+47. **A decodificação do ffmpeg NÃO é determinística com as threads padrão, e
+    isso invalida comparação de pixel.** Decodificando o **mesmo arquivo duas
+    vezes**, com `-threads` no padrão:
+
+    | | |
+    |---|---|
+    | quadros em comum | 3.095 |
+    | com pixel idêntico | **371 (12,0%)** |
+
+    Com `-threads 1`, o mesmo controle dá **3.095 de 3.095, 100%**. A ocultação
+    de erro depende do escalonamento das threads, e num arquivo com 3.236
+    quadros quebrados quase toda saída passa por ocultação.
+
+    Eu comparei duas remontagens e concluí "só 1,1% dos quadros ficam iguais"
+    antes de rodar o controle. O número estava certo e não queria dizer nada.
+    **Todo `framemd5`, todo `cmp` entre YUVs e toda contagem de quadro tem que
+    passar por `-threads 1`**, e o controle arquivo-contra-ele-mesmo tem que
+    rodar antes de qualquer comparação ser lida.
+
+    O `reparador.c` já faz certo desde sempre — `ctx->thread_count = 1`, com o
+    comentário "determinismo acima de velocidade". Então `mapa`, `serie` e
+    `panorama` nunca tiveram esse problema. Quem introduziu a não-determinismo
+    fui eu, medindo por fora com a linha de comando do ffmpeg em vez de usar a
+    ferramenta do projeto.
+
+48. **Contar quadros emitidos continua não medindo nada — inclusive quando eu
+    mesmo escrevo isso na armadilha 1.** Medindo a remontagem com e sem os 702
+    prefixos corrigidos, li "3.107 contra 2.308 quadros" como piora de 799
+    quadros. Mas o critério rigoroso diz que o estado atual tem **209 quadros
+    bons de 3.445**: os outros 3.236 que o ffmpeg emite são ocultação. Uma
+    diferença de 800 quadros emitidos pode ser inteiramente diferença de quanta
+    ocultação o decodificador resolveu fabricar, e não diz nada sobre imagem
+    recuperada. A pergunta certa é sempre "quantos passam no critério", nunca
+    "quantos saem".
+
+49. **Redundância quebrada não diz qual lado está podre.** O prefixo AVCC e o
+    `stsz` são redundantes, e em 702 quadros discordam. Eu dei o `stsz` como
+    certo porque ele tem testemunha independente — os 345 chunks de vídeo fecham
+    exatamente contra os offsets de áudio — e concluí que o prefixo era o lado
+    corrompido. **Estava errado:** a amostra pode conter o NAL **mais
+    enchimento** (`cabac_zero_word`, visível na cauda como `00 00 03` repetido),
+    e aí `prefixo < tamanho − 4` é o valor certo.
+
+    Os frames 10 e 12 decodificam **perfeitos** com o prefixo divergente —
+    tarjas 16,000/0,000 e campos 36 e 41, ambos na rampa — e "corrigir" o
+    prefixo faz cada um deles **parar de produzir quadro**. Cada correção quebra
+    exatamente o quadro que ela toca.
+
+    A testemunha independente provou que o `stsz` está certo. Não provou que o
+    prefixo está errado: os dois podem estar certos e medir coisas diferentes.
+    Antes de tratar uma discordância como dano, é preciso um caso em que o lado
+    acusado produza saída **comprovadamente pior** — e aqui ele produzia a
+    melhor saída possível.

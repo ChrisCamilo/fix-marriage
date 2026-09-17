@@ -1,66 +1,81 @@
-# O prefixo AVCC — uma classe de dano que nenhuma varredura tocou
+# O prefixo AVCC — uma hipótese de dano, testada e REFUTADA
 
-## O achado
+**Conclusão: não aplicar. `prefixo == tamanho − 4` não é invariante deste
+arquivo, e "corrigir" a divergência destrói quadros que hoje decodificam
+perfeitamente.**
 
-Cada amostra do MP4 começa com 4 bytes de comprimento (AVCC, `nalLengthSize=4`)
-que devem valer **tamanho da amostra − 4**. No frame 11 eles valem 133.900 para
-uma amostra de 2.832 bytes.
+Este arquivo fica como registro do caminho, porque a hipótese era plausível e a
+refutação custou uma remontagem inteira.
 
-**702 dos 3.445 quadros têm o prefixo divergente.**
+## A hipótese
 
-## Por que não é mal-entendido de formato
+Cada amostra do MP4 começa com 4 bytes de comprimento (AVCC, `nalLengthSize=4`).
+Em 2.743 dos 3.445 quadros eles valem exatamente **tamanho da amostra − 4**. Nos
+outros **702**, não. No frame 11 dizem 133.900 para uma amostra de 2.832 bytes.
 
-A objeção óbvia é que a amostra poderia conter mais de um NAL, e aí um prefixo
-menor seria legítimo. Testado: percorrendo os NALs de cada amostra e vendo se
-eles ladrilham o tamanho exato,
+Três coisas apoiavam a hipótese de bit rot:
 
 | | |
 |---|---|
-| amostras que fecham exatamente com **um** NAL | **2.743** |
-| amostras que fecham com **vários** NALs | **0** |
-| amostras que **não fecham** | **702** |
+| assinatura da divergência | **1,6 bits por quadro, mediana 1, máximo 5** |
+| `stsz` conferido contra os offsets de chunk de vídeo **e** áudio | **345 de 345 fecham exatamente** |
+| `mapa` com os 702 corrigidos | **+274 quadros analisam 100%, zero pioram** |
 
-Nenhuma amostra do filme tem mais de um NAL. E a corrupção tem a assinatura de
-bit rot, não de outro formato: **1,6 bits por quadro em média, mediana 1,
-máximo 5** — 1.107 bits em 702 quadros.
+E a região nunca tinha sido olhada: o modo `avanco` tem `ini_k >= 5` cravado e o
+`corta` reescreve o prefixo antes de medir. **Nenhuma varredura deste projeto
+jamais alterou os bytes 0 a 4 de um NAL.**
 
-## Por que ninguém tinha visto
+## A refutação
 
-O modo `avanco` tem `if (ini_k < 5) ini_k = 5` cravado, e todo `corta` reescreve
-o prefixo antes de medir. **Nenhuma varredura deste projeto jamais alterou os
-bytes 0 a 4 de um NAL.** A janela de busca sempre começou depois deles.
+Remontando o filme e medindo quadro a quadro pelo critério rigoroso:
 
-E isto não é problema de busca: o valor correto é determinado pelo índice, não
-procurado. São 1.107 bits conhecidos, não candidatos.
+| | quadros bons de 3.445 |
+|---|---|
+| estado atual | **209** |
+| com os 702 prefixos "corrigidos" | **206** |
 
-## O que corrigir os 702 faz
+Mantidos 206, **perdidos 3** (frames 10, 12 e 2360), **ganhos 0**.
 
-| | antes | depois |
+E isolando por quadro, no GOP 0:
+
+| cenário | bons |
+|---|---|
+| base | 0–10, 12 |
+| só o prefixo do frame 10 | 0–9, 12 — **perde o 10** |
+| só o prefixo do frame 11 | 0–10, 12 — **nada muda** |
+| só o prefixo do frame 12 | 0–10 — **perde o 12** |
+
+Cada correção quebra **exatamente o quadro que ela toca**. Medido no pixel:
+
+| cenário | frame 10 | frame 12 |
 |---|---|---|
-| quadros que analisam 100% (`mapa`) | 2.376 | **2.650** |
-| quadros que melhoram | — | **274** |
-| quadros que pioram | — | **0** |
+| base | tarjas 16,000/0,000, campo 36 | tarjas 16,000/0,000, campo 41 |
+| prefixo do 10 corrigido | **sem quadro** | 16,000/0,000, campo 41 |
+| prefixo do 12 corrigido | 16,000/0,000, campo 36 | **sem quadro** |
 
-Entre os 274 estão o **frame 11** (macrobloco 15 → 8160) e o **frame 19**
-(macrobloco 1 → 8160), dois alvos que consumiram sessões inteiras.
+Os dois decodificam **perfeitos** com o prefixo divergente — tarjas exatas e
+campos na rampa do fade.
 
-## O QUE NÃO FECHA, e é por isso que nada foi promovido
+## Por que a premissa é falsa
 
-O `panorama` anda para o outro lado: **872 quadros deixam de emitir imagem** e
-120 passam a emitir. E **468 dos 872 são quadros cujo prefixo eu não toquei**,
-então é propagação pela cadeia de referências, não dano direto.
+A amostra do MP4 pode conter o NAL **mais enchimento que não faz parte dele**. A
+cauda do frame 12 é `... 00 00 03 00 00 03 00 00 03 00 00 03`: `cabac_zero_word`
+com o byte de prevenção de emulação. O prefixo 2.931 deixa 4 desses de fora, e é
+isso que está certo. `tamanho − 4` inclui o enchimento no NAL e quebra o quadro.
 
-O frame 11 é o caso limpo do paradoxo: passa a analisar os 8.160 macroblocos sem
-erro e **continua sem produzir quadro nenhum**, com `FOLGA` de 2 a 16.
+Então `prefixo < tamanho − 4` é legítimo, e a divergência sozinha não prova nada.
 
-Duas leituras possíveis, e nenhuma medida ainda as separa:
+## O que sobra de verdadeiro
 
-1. a captura por PTS do `reparador` é que quebra, e as imagens estão lá;
-2. o prefixo grande demais fazia o ffmpeg tratar o pacote de outro jeito, e
-   corrigi-lo muda a estrutura de referências de um jeito que ainda não entendi.
+1. **O `mapa` melhorar não prevê nada.** Ele subiu 274 quadros enquanto o
+   critério rigoroso caía de 209 para 206. "Analisa os 8.160 macroblocos sem
+   erro" e "produz imagem" são coisas diferentes — armadilha 38, de novo.
+2. **O frame 11 é caso à parte.** O prefixo dele (133.900 contra 2.832 de
+   amostra) é grande demais para ser enchimento, e corrigi-lo leva o quadro do
+   macrobloco 15 para 8.160 **sem quebrar nada** — o GOP 0 mantém os mesmos
+   bons. Mas ele continua sem emitir imagem, então não é reparo também.
+3. Os 572 prefixos **maiores** que a amostra continuam sem explicação inocente:
+   enchimento justifica prefixo menor, não maior.
 
-**Antes de promover qualquer coisa daqui é preciso decidir entre as duas.** O
-teste natural é remontar o filme com os 702 aplicados e assistir — se as imagens
-aparecem, o problema é da captura; se somem, o remendo está errado.
-
-Os 1.107 bits estão em `dados/prefixos_avcc.txt`, prontos e não aplicados.
+Os 1.107 bits ficam em `dados/prefixos_avcc.txt` **como registro do que foi
+testado e reprovado**, não como candidatos.
