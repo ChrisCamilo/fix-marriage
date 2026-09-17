@@ -275,6 +275,65 @@ mesmo SHA-256, modo a modo. E a mudança de assinatura do croma tem que ser
 **mecânica**: passar o que hoje é lido de global, sem tocar em amostragem nem em
 limiar. Qualquer alteração de amostragem invalida calibração.
 
+## 4c. Documentar as funções — padrão fixo, e sem apagar o que já existe
+
+**Estado medido:** 46 funções, **20 com comentário e 26 sem nenhum**. Entre as
+sem estão **os 9 workers**, o `main`, o `carrega_patches`, o `grava_patch`, o
+`abre_decoder`, o `captura_frame`, o `blocagem_faixa`, o `base_uniforme` e o
+`tarja_perfeita` — ou seja, quase tudo que grava em fonte de verdade ou decide
+veredito.
+
+### O padrão
+
+Um bloco acima de cada função, nesta ordem:
+
+    /* Descricao: o que a funcao faz e por que existe. Ate 8 linhas.
+     *
+     *   Y       o plano de luma, empacotado com passo w
+     *   w, h    largura e altura em pixels; abaixo de 1920x1080 devolve falha
+     *   y0, y1  faixa a medir, [y0, y1), em linhas do quadro
+     *
+     * Devolve: a razao borda/interior. 99,0 quando nao da para medir --
+     *          valor ALTO, que reprova; a `blocagem` devolve 0 no mesmo caso.
+     */
+
+Três regras:
+
+1. **Um parâmetro por linha, no máximo duas.** Parâmetros que só fazem sentido
+   juntos (`w, h`, `y0, y1`) compartilham a linha.
+2. **Descrição de até 8 linhas.** Se não couber, a função faz coisa demais — é
+   sinal de refatoração, não de comentário maior.
+3. **O valor de retorno é obrigatório**, e com o significado do caso de falha.
+   Foi exatamente a falta disso que deixou `blocagem` devolver `0` e
+   `blocagem_faixa` devolver `99,0` para "não deu para medir", dois veredictos
+   opostos com o mesmo nome de raiz (seção 2).
+
+### O que NÃO fazer: comprimir o que já está escrito
+
+As 20 funções documentadas têm **6 linhas de mediana e até 23**, e o conteúdo
+não é interface — é a justificativa medida de por que aquele critério existe. O
+comentário do `topo_uniforme` carrega os oito quadros verificados que fixaram a
+tarja em 16,000; o do `linha_copia` carrega a armadilha 40 inteira, com os
+números que a provaram.
+
+**Isso é a memória do projeto e não cabe em 8 linhas.** O padrão acrescenta o
+bloco de interface; a justificativa fica, abaixo dele, separada por uma linha em
+branco e um `/* Por que: ... */`. Comprimir seria trocar memória por formatação
+— e este projeto já perdeu a armadilha 33 numa reescrita.
+
+### Onde começa
+
+Pelas 26 sem nada, e dentro delas pela ordem do risco:
+
+| primeiro | por quê |
+|---|---|
+| `grava_patch`, `carrega_patches` | escrevem e leem a fonte de verdade |
+| os 9 `worker_*` | decidem veredito, e vão ser reescritos no item 7 — documentar antes é o que torna a reescrita conferível |
+| `blocagem_faixa`, `base_uniforme`, `tarja_perfeita` | são juízes sem contrato escrito |
+
+Os workers ganham a documentação **antes** da refatoração do item 7, não depois:
+é o bloco de interface que diz o que a saída de cada um tem que continuar sendo.
+
 ## 5. Ordem sugerida
 
 Da menor para a maior chance de quebrar coisa:
@@ -285,10 +344,11 @@ Da menor para a maior chance de quebrar coisa:
 | 2 | documentar o contrato das duas `blocagem` | **nenhum** | tira a armadilha do 0 x 99 sem tocar em calibração |
 | 3 | renomear as famílias do croma e da tarja | baixo | o nome passa a dizer o que mede |
 | 4 | `src/juizes.c` com as 19, em duas camadas | **baixo** | 6 funções colapsam em 2 primitivas, e abre teste sem decodificador |
-| 5 | `nota_do_quadro()` fora do `worker_avanco` | médio | os pisos passam a valer em todo modo, não só no `avanco` |
-| 6 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
+| 5 | documentar as 26 funções sem comentário | **nenhum** | 9 workers, `main` e `grava_patch` hoje não têm contrato escrito |
+| 6 | `nota_do_quadro()` fora do `worker_avanco` | médio | os pisos passam a valer em todo modo, não só no `avanco` |
+| 7 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
 
-O item 6 é o que mais encolhe o arquivo e o que mais pode quebrar. Só entra com
+O item 7 é o que mais encolhe o arquivo e o que mais pode quebrar. Só entra com
 a prova de saída idêntica, modo a modo.
 
 **Descartados, e o registro fica para ninguém reabrir:** unificar as duas
