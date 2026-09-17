@@ -65,7 +65,7 @@ raiz/                   o que todo comando cita, e o que nunca se move
     molde_idr.py molde_slice.py escapes.py cabecalhos.py
     encadeia.py         busca por etapas com o modo `avanco`
     remontar.py conferir_dump.py
-  docs/                 os onze documentos que crescem
+  docs/                 os doze documentos que crescem
   dados/                registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
     deterministicos.txt remontados.txt
@@ -163,6 +163,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 | [`RASTREIO.md`](docs/RASTREIO.md) | **toda varredura já feita**, por alvo — consultar antes de disparar qualquer corrida |
 | [`MELHORIAS.md`](docs/MELHORIAS.md) | o que foi feito, o que falta e o que foi descartado no `reparador.c` |
 | [`PARALELIZACAO.md`](docs/PARALELIZACAO.md) | por que `thread_count` fica em 1 e como a varredura paralela preserva determinismo |
+| [`REFATORACAO.md`](docs/REFATORACAO.md) | **plano de refatoração do `reparador.c`** — o que separar, o que unificar e por que quicksort não se aplica |
 
 **Se for medir qualquer coisa, leia o `ARMADILHAS.md` primeiro.** É o arquivo
 que mais economiza tempo: quase toda métrica óbvia deste problema já foi tentada
