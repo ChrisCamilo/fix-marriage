@@ -3,7 +3,7 @@
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
 comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
-qualquer coisa — são treze maneiras de medir errado que já custaram horas aqui.
+qualquer coisa — são **50** maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
 
@@ -21,7 +21,7 @@ Este repositório é **local e privado**. Material pessoal de família.
 | arquivo | regra |
 |---|---|
 | `Caio & Lizandra - Making- Caio-Balu.mp4` | **nunca modificar.** Fica fora do git; integridade em `CHECKSUMS.txt` |
-| `patches.txt` | **append-only.** Cada linha é `offset bit` |
+| `patches.txt` | cada linha é `offset bit`. **Toda mudança passa pelo usuário antes** — incluindo remoção |
 
 Tudo o mais é derivado e reconstruível: `index.txt`, `reparado.mp4` e o binário
 saem desses dois. Se precisar mexer em algo, mexa nos patches, nunca no MP4.
@@ -29,17 +29,26 @@ saem desses dois. Se precisar mexer em algo, mexa nos patches, nunca no MP4.
 Antes de qualquer operação de git que possa descartar trabalho, confira o
 `git status` e o número de linhas do `patches.txt`.
 
+**Linha duplicada se cancela** — XOR duas vezes é identidade. Isso foi usado de
+propósito para desfazer reparos aceitos por engano, e hoje há **18 pares assim**
+no arquivo. Nenhum é acidente: conferidos um a um, remover qualquer um deles
+piora o filme. Não "limpar" duplicata sem medir os dois estados.
+
 ## 3. Só entra patch que passa no critério rigoroso
 
 O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
 com zero linhas de log**. Nada mais conta.
 
-A `docs/ARMADILHAS.md` lista seis maneiras de medir errado que já produziram
-conclusões falsas neste projeto. As duas que mais enganam:
+A `docs/ARMADILHAS.md` lista **50** maneiras de medir errado que já produziram
+conclusões falsas neste projeto. As três que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
   ocultação cinza e infla o número. Foi assim que "2808 de 3445" virou verdade
-  por um tempo; o número real era 306.
+  por um tempo. Hoje o filme emite ~3.100 quadros e **209 passam no critério
+  rigoroso**; os outros 3.236 são ocultação. Armadilhas 1 e 48.
+- **Toda medida sobre bytes sai do buffer remendado, nunca do MP4 cru.** Script
+  em Python que abre o arquivo direto enxerga dano que já foi consertado há
+  centenas de commits. Armadilha 49.
 - **Métrica agregada esconde falha em subgrupo.** Medir sempre separado por
   tipo (I, P, B). Um "conserto" no `weighted_pred_flag` já matou 100% dos
   frames P sem que a média acusasse.
@@ -47,10 +56,17 @@ conclusões falsas neste projeto. As duas que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje `7 válidos, 4 falsos, 74 determinísticos pulados` — os 4 falsos são
-insuficientes, não errados, e estão explicados no `docs/INVESTIGACOES.md`. **Qualquer
-falso além desses 4 é problema.** Rodar `verify` **sem** `BASE_N` acusa ~1328 falsos por construção,
-o que é esperado e não é bug — veja a `docs/RESULTADOS.md`.
+hoje **`5 válidos, 10 falsos, 479 determinísticos pulados`**, e os 10 falsos são
+todos explicados — nenhum é patch ruim:
+
+| falsos | frames | leitura |
+|---|---|---|
+| 4 | 2362, 2364, 2365, 2366 | `com=1 sem=1` — insuficientes, não errados (`docs/INVESTIGACOES.md`) |
+| 2 | 12 | `com=1 sem=1` — a cadeia do GOP 0 sempre erra por causa do frame 11; o `verify` não usa `ERROS_BASE` |
+| 4 | 3435, 3439 | `com=1 sem=0` — pares **cancelados de propósito**; o `verify` testa cada ocorrência e não entende cancelamento |
+
+**Qualquer falso além desses 10 é problema.** Rodar `verify` **sem** `BASE_N`
+acusa ~1328 falsos por construção, o que é esperado e não é bug.
 
 ## 4. Manter a documentação viva
 
@@ -106,7 +122,9 @@ quando é argumento.
 
 Trabalho que testa candidatos independentes **deve** ser paralelizado. A máquina
 tem 28 núcleos e as corridas duram dezenas de minutos; deixar isso numa thread
-só é desperdício. A máquina já existe no `reparador.c` (`varre_par`) — use-a em
+só é desperdício. **Atenção:** o padrão de `quantas_threads()` é **12**, com teto
+em `NUMBER_OF_PROCESSORS - 2` = 26. Corrida longa merece `THREADS=26` explícito,
+senão metade da máquina fica parada. A máquina já existe no `reparador.c` (`varre_par`) — use-a em
 vez de escrever laço sequencial novo. Já aconteceu de eu paralelizar um modo e,
 logo depois, escrever outro com laços sequenciais próprios ao lado.
 
@@ -140,8 +158,10 @@ diff <(sed -E 's/ *\[[0-9.]+s\]//' seq.txt) <(sed -E 's/ *\[[0-9.]+s\]//' par.tx
 mesmo binário, mesma máquina, mesmos dados. Se divergir, **o desenho está errado
 — corrija o código, nunca ajuste a referência.**
 
-Referência já validada: modo `unico` sobre os 71 IDRs deu saída byte a byte
-idêntica (mesmo SHA-256) em 1, 6 e 10 threads, com ganho de 4,8x e 6,5x.
+Referência já validada: modo `unico` sobre os IDRs deu saída byte a byte
+idêntica (mesmo SHA-256) em 1, 6 e 10 threads, com ganho de 4,8x e 6,5x. (O
+filme tem **132** IDRs no `index.txt`; anotações antigas falam em 71 ou 128 —
+ver `docs/IDRS.md`.)
 
 ## 8. Commits — um por ideia
 

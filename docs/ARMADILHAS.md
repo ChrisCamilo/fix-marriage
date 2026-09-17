@@ -883,3 +883,26 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     numa região que o projeto inteiro nunca varreu. Se nunca varreu e o dano é
     óbvio, a primeira hipótese não é "ninguém tinha visto" — é "já está
     consertado e eu estou olhando o lugar errado".
+
+50. **Documento com número antigo apresentado como "hoje".** Auditando os
+    documentos, seis afirmações numéricas estavam desatualizadas e todas se
+    liam como estado atual:
+
+    | onde | dizia | é |
+    |---|---|---|
+    | `AGENTS.md` | "treze maneiras de medir errado" / "seis maneiras" | 50 |
+    | `AGENTS.md` | `verify`: 7 válidos, 4 falsos, 74 pulados | 5, 10, 479 |
+    | `AGENTS.md` | modo `unico` sobre "os 71 IDRs" | 132 |
+    | `ESTADO.md` | "os seguintes são reparos reais — hoje são apenas 5" | 15 |
+    | `ESTADO.md` | "os nove documentos" em `docs/` | 11 |
+    | `docs/IDRS.md` | `patches.txt` 1467 linhas, `deterministicos.txt` 118 | 1.832 e 479 |
+    | `docs/RESULTADOS.md` | medida com o modo `report` | o modo não existe mais |
+
+    O risco concreto não é o número errado: é **refazer reparo já feito**.
+    "Hoje são apenas 5 reparos reais" convida a procurar o sexto, quando já são
+    quinze — e foi assim que eu reencontrei, e desfiz, o reparo dos prefixos de
+    NAL (armadilha 49).
+
+    **Toda seção chamada "números de hoje" leva data.** E número que descreve
+    estado se remede antes de ser citado, porque medir custa segundos e a
+    conclusão errada custa uma sessão.

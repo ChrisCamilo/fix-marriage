@@ -172,20 +172,29 @@ pixels, que se descarta a cada mudança a montante. Toda varredura futura nesses
 quadros parte de cabeçalho correto em vez de procurar bit num NAL que já tem
 bits sabidamente errados.
 
-## 8. Números de hoje
+## 8. Números de hoje — 2026-09-17
 
 | | |
 |---|---|
 | IDRs no índice | **132** |
-| que decodificam limpo | **7** — 1683, 2333, 3319, 3348, 3368, 3397, 3426 |
-| quebrados | **125** |
+| que **analisam** os 8.160 macroblocos (`mapa`) | **59** |
+| que não analisam | **73** |
+| que decodificam limpo **e com imagem** (critério rigoroso) | **7** — 1683, 2333, 3319, 3348, 3368, 3397, 3426 |
 | cabeçalhos fechados | **130 de 131** |
-| `patches.txt` | 1467 linhas |
-| `deterministicos.txt` | 118 |
-| `verify` | 7 válidos, 4 falsos, 118 determinísticos pulados |
+| `patches.txt` | **1.832** linhas |
+| `deterministicos.txt` | **479** |
+| `verify` com `BASE_N=1338` | **5 válidos, 10 falsos, 479 pulados** — os 10 estão explicados no `AGENTS.md` |
+
+**"Analisa 100%" não é "tem imagem".** Dos 132 IDRs, 59 percorrem os 8.160
+macroblocos sem erro, mas só 7 produzem quadro que passa no critério rigoroso.
+A diferença são 52 IDRs em dessincronização silenciosa — armadilha 38.
 
 O IDR 1683 decodifica mas é **34,3% listra** — conta como quadro, não como
 cena. Os utilizáveis de verdade são **6**.
+
+> A tabela anterior desta seção dizia `patches.txt` 1467 linhas,
+> `deterministicos.txt` 118 e `verify` 7/4/118. Eram os números de uma medida
+> antiga apresentados como atuais.
 
 ## 9. Frentes conferidas que não abriram nada
 

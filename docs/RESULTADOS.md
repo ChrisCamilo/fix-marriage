@@ -1,7 +1,44 @@
 # Resultados medidos
 
-Números medidos do reparo. Atualizar depois de qualquer corrida que mude
-resultado, sempre com o filtro da armadilha 12 aplicado (ver `ARMADILHAS.md`).
+## Estado de hoje — 2026-09-17
+
+Medido com `TARJA=1 ./reparador.exe "$MP4" index.txt patches.txt serie 0 3444`,
+que é o critério rigoroso do projeto. **O `reparador` usa `thread_count = 1`,
+então esta medida é determinística** — ver armadilha 47.
+
+| | |
+|---|---|
+| quadros que passam no critério rigoroso | **209** de 3.445 |
+| quadros que analisam 100% dos macroblocos (`mapa`) | **2.376** |
+| quadros com tarja 16,0000 / 0,0000 (`panorama`) | **166** |
+| tempo de vídeo bom | **6,97 s** de 114,95 s |
+| trechos contínuos | **28**, sendo 20 deles de 1 ou 2 quadros |
+
+Os trechos com 3 quadros ou mais:
+
+| trecho | quadros | duração | início |
+|---|---|---|---|
+| **3319–3444** | **126** | 4,20 s | 110,74 s — o final do filme inteiro |
+| **2333–2361** | **29** | 0,97 s | 77,84 s |
+| 0–10 | 11 | 0,37 s | 0,00 s |
+| 1140–1142 | 3 | 0,10 s | 38,04 s |
+| 1583–1585 | 3 | 0,10 s | 52,82 s |
+| 1685–1687 | 3 | 0,10 s | 56,22 s |
+| 1979–1981 | 3 | 0,10 s | 66,03 s |
+| 2161–2163 | 3 | 0,10 s | 72,11 s |
+
+**Cuidado com "quadros emitidos".** O ffmpeg emite ~3.100 quadros deste filme;
+3.236 deles são ocultação. A diferença entre duas remontagens pode ser
+inteiramente diferença de quanta ocultação o decodificador fabricou. Ver
+armadilhas 1 e 48.
+
+---
+
+## Medida histórica — 2026-09-13
+
+O texto abaixo é o registro da medida anterior. O modo `report` que ele cita
+**não existe mais** no `reparador.c`; os modos de hoje são `serie`, `mapa` e
+`panorama`. Os números dele não valem como estado atual.
 
 Medido em 2026-09-13 com `report` (ffmpeg 8.1.1). O critério agora tem **duas
 partes**, e a segunda é indispensável: além do sintático (flush, quadros ==
@@ -37,7 +74,12 @@ e o número de tons vai de 110 a 1. Não tentar "consertar" esses frames.
 
 **Os 5 reparos do `patches.txt` não produziram nenhum frame com imagem.** Eles
 pertencem aos frames **2362–2366**, e os cinco estão classificados como
-`propagado` — listra vertical. O trecho real de 0,90 s é o 2333–2359, que não
+`propagado` — listra vertical.
+
+> **Desatualizado.** Hoje o `patches.txt` tem 15 reparos reais além da base
+> determinística, incluindo o frame 12 (campo 41,000, as duas tarjas 16,000) e o
+> desfazimento de dois patches errados do GOP 3426, que consertou seis quadros
+> de uma vez. Ver a seção "Estado de hoje" no topo e o `docs/RASTREIO.md`. O trecho real de 0,90 s é o 2333–2359, que não
 tem patch algum: estava íntegro por conta própria. A anotação antiga de "1,03 s
 a partir de 77,84 s exigiu 4 reparos" confundia as duas coisas, porque só media
 pelo critério sintático.

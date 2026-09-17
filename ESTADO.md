@@ -65,10 +65,13 @@ raiz/                   o que todo comando cita, e o que nunca se move
     molde_idr.py molde_slice.py escapes.py cabecalhos.py
     encadeia.py         busca por etapas com o modo `avanco`
     remontar.py conferir_dump.py
-  docs/                 os nove documentos que crescem
+  docs/                 os onze documentos que crescem
   dados/                registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
     deterministicos.txt remontados.txt
+    candidatos_f13.txt candidatos_f19.txt candidatos_idr3047.txt
+    janela_f11.txt      candidatos e janelas de busca -- NAO sao patches,
+                        cada um traz sua condicao de promocao escrita
   saidas/               produtos: novos_*.txt, vídeo remontado, ver_final.html
   logs/                 saída de corrida — fora do versionamento
 ```
@@ -82,10 +85,20 @@ pessoal de família: não publicar em lugar nenhum. O `.mp4` e o binário compil
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 
-Os 1338 primeiros patches são determinísticos (prefixos de NAL e cabeçalhos), e
-isto foi reconferido: regerar com `base` reproduz exatamente os mesmos 1338, byte
-a byte. Os seguintes são reparos reais — hoje são apenas **5**, todos no trecho
-dos 77,5–77,8 s. Use `BASE_N=1338` no modo `verify`.
+**Composição do `patches.txt` — 1.832 linhas:**
+
+| faixa | quantas | o que é |
+|---|---|---|
+| 1–1338 | 1.338 | base determinística (prefixos de NAL e cabeçalhos). Reconferido: regerar com `base` reproduz os mesmos 1338 byte a byte |
+| 1339–1832 | 494 | destas, **479** também estão em `dados/deterministicos.txt` |
+| | **15** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` |
+
+**18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
+identidade), desfazendo reparos que foram aceitos por engano. Conferido par a
+par: remover qualquer um deles piora o filme. Não "limpar" duplicata sem medir.
+
+O `patches.txt` **não** é append-only, mas **toda mudança nele passa pelo
+usuário antes**.
 
 ## 3. Comandos
 
@@ -143,7 +156,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 |---|---|
 | [`RESULTADOS.md`](docs/RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
 | [`CRITERIOS.md`](docs/CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
-| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **49 maneiras de medir errado** que já produziram conclusão falsa aqui |
+| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **50 maneiras de medir errado** que já produziram conclusão falsa aqui |
 | [`CABAC.md`](docs/CABAC.md) | **por que não existe ressincronização dentro do slice**, e o que dá para explorar |
 | [`INVESTIGACOES.md`](docs/INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
 | [`IDRS.md`](docs/IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |
