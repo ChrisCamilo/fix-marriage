@@ -57,6 +57,90 @@
 # E reversivel de qualquer forma: XOR duas vezes se cancela, como foi feito com
 # os dois patches do GOP 3426.
 #
+
+# ============================================================================
+# O DEFEITO 2 CAIU -- 184311 bit 6, UM bit
+#
+# Byte 30.851 do payload (offset absoluto 184311). Destrava a fileira 54:
+#
+#   macrobloco de parada ....... 6600 -> 8160 (o quadro inteiro)
+#   linhas que mudam ........... SO da 864 a 1079; acima disso byte a byte
+#                                identico, que e o que a validade do prefixo
+#                                do CABAC exige de um candidato honesto
+#   tarja de baixo ............. 48,9 / 1,5 (lixo) -> uniforme, desvio 0,0000
+#
+# POR QUE AS VARREDURAS ANTERIORES DERAM ZERO
+#
+# Elas cobriam 16 bytes, [31472,31488), escolhidos em volta do ponto onde o
+# modo `corta` mostra a parada. Exaustivo ate 3 bits, 341.376 combinacoes,
+# zero. A resposta esta 630 bytes ANTES, no meio da fileira 54.
+#
+# A licao: o byte onde o decodificador PARA nao e o byte onde o fluxo quebrou.
+# O `corta` localiza o fim do que da para consumir, nao a origem do dano.
+#
+# O QUE O JUIZ NOVO FEZ DIFERENTE
+#
+#   INTACTO_ATE=864   a imagem acima da linha 864 tem que ficar byte a byte
+#                     identica. Exato, sem calibracao. Sozinho ja separa.
+#   TARJA_DESCE=1     guiar pelo desvio da tarja, nao pela fronteira do borrao.
+#                     Neste quadro os candidatos que levam a fronteira a 1080
+#                     -- "sem borrao nenhum" -- tem desvio de tarja de 13 a 26:
+#                     liberar tudo aqui quer dizer transformar a tarja em ruido.
+#   SEM_CROMA=1       o quadro e escuro e quase monocromatico: p99 de croma = 1
+#                     na imagem BOA e no borrao igualmente. A faixa calibrada em
+#                     quadros claros reprova ate a parte boa deste quadro.
+#
+# Com esse juiz, 1.086 de 8.008 bits reduzem o desvio da tarja mantendo a
+# imagem intacta, e exatamente UM a torna uniforme.
+#
+# ============================================================================
+# A CONDICAO DE PROMOCAO DO PAR FOI RESOLVIDA
+#
+# O par da tarja de cima nao era independente: ele soma +1 nas DUAS tarjas.
+# Medido com a fileira 54 destravada -- coisa que antes nao dava para medir,
+# porque a metade de baixo era borrao:
+#
+#   estado                       tarja topo     tarja base
+#   base .......................  15,000         lixo
+#   + par ......................  16,000         lixo
+#   + 184311 b6 ................  15,000         14,000 / 0,000
+#   + os tres ..................  16,000         15,000 / 0,000
+#
+# E o par muda 0,00% dos pixels de imagem, agora verificado na imagem inteira
+# e nao so na metade de cima.
+#
+# POR QUE A TARJA DE BAIXO DA 15 E NAO 16
+#
+# Ela e inter-predita a partir do frame 11, cuja tarja vale 15 no DPB -- o
+# repinte do frame 11 acontece DEPOIS da decodificacao e nao corrige a
+# referencia. A tarja de cima do 13 e intra, valor proprio, e da 16 com o par.
+# Os dois numeros estao certos, cada um pelo seu motivo.
+#
+# Controle: varredura de 1 bit em TODO o resto do payload, [30480,36532),
+# 48.416 combinacoes com PISO_TARJA (uniforme E igual a 16): ZERO. Nenhum bit
+# em lugar nenhum do frame 13 produz tarja 16. Isso e o que se espera se o 15
+# vier da referencia, e nao do bitstream do proprio quadro.
+#
+# PREVISAO FALSIFICAVEL: quando o frame 11 for consertado, a tarja de baixo do
+# 13 vira 16 sozinha, sem tocar em mais nenhum bit daqui.
+#
+# ============================================================================
+# O QUE FOI VERIFICADO NO FILME INTEIRO (com os tres aplicados)
+#
+#   mapa ........ so o frame 13 muda: 6600 -> 8160. Nenhum outro quadro dos
+#                 3.445 altera onde para.
+#   panorama .... 4 quadros mudam -- 13, 16, 18 e 20 -- e os quatro MELHORAM:
+#                 tarja de 49,18 / 1,45 para 15,0000 / 0,0000, listra de 6,5
+#                 para 1,2. Nenhum quadro do filme piora.
+#   tarjas uniformes no filme: 927 -> 931
+#   faixa nova (linhas 864-943): 0,024% dos pixels com salto horizontal > 6,
+#                 nenhum acima de 20. A regiao boa logo acima da 0,000%.
+#
+# NAO ESTA NO patches.txt. Precisa da decisao de quem le -- o patches.txt e
+# fonte de verdade e so cresce, e a licao do GOP 3426 e que dois patches foram
+# aceitos por um juiz que nao media o que eles estragavam.
+#
 # formato: offset bit
 153470 5
 153471 6
+184311 6

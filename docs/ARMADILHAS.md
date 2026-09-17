@@ -793,3 +793,29 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     E a janela tem que ser **fixa**, não "a faixa que cada um liberou": faixa
     estreita concentra o respingo, faixa larga o dilui. Com janela própria dois
     candidatos trocam de lugar; com 64 linhas fixas a partir da base, não.
+
+44. **O byte onde o decodificador PARA não é o byte onde o fluxo quebrou.** O
+    modo `corta` cravou a parada do frame 13 entre os bytes 31.478 e 31.480, e
+    eu varri aqueles 16 bytes exaustivamente até 3 bits — 341.376 combinações,
+    **zero**. A resposta está no byte **30.851**, 630 bytes antes, no meio da
+    fileira 54. O `corta` localiza o fim do que dá para consumir; a origem do
+    dano pode estar em qualquer lugar antes dele, porque um erro de CABAC é
+    detectado quando o estado fica inconsistente, não quando o bit errado é
+    lido. Janela de varredura tem que cobrir a fileira inteira, não o ponto de
+    parada.
+
+45. **Critério calibrado num tipo de conteúdo reprova o alvo certo em outro.**
+    A `croma_real` exige desvio entre 0,70 e 1,60, medido em quadros claros. O
+    frame 13 é escuro e quase monocromático: p99 de croma **= 1 na imagem boa e
+    no borrão igualmente**, desvio de 0,4 a 0,8 do topo à base. A parte
+    verificadamente BOA do quadro mede 0,10 — o piso reprovaria o próprio
+    conserto. Deu 0 de 8.008, e o zero não valia nada. Antes de usar um piso num
+    alvo novo, medir a **parte boa daquele alvo** e ver se ela passa.
+
+46. **"Liberar tudo" pode ser destruir.** No frame 13, os candidatos que levam a
+    fronteira do borrão a 1080 — *nenhum* trecho de cópia no quadro inteiro —
+    têm desvio de tarja entre **13 e 26**, contra ~2,5 dos que avançam uma
+    fileira. Eles não decodificaram a tarja: transformaram-na em ruído, e ruído
+    não é cópia. Em alvo que **tem** tarja, o guia do encadeamento é o desvio da
+    tarja, cujo estado de chegada é zero; a fronteira do borrão leva ao ramo
+    errado.

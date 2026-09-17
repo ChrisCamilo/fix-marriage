@@ -929,23 +929,53 @@ static double blocagem_faixa(const uint8_t *Y, int w, int y0, int y1) {
 
 static int croma_real(int y0, int y1);
 static int croma_respingo(int y0, int y1);
+static double tarja_des(const uint8_t *Y, int w, int h);
 static void croma_dp(int y0, int y1, double *du, double *dv);
 static _Thread_local int tri_front = -1, tri_nt = -1, tri_mx = -1, tri_ln = -1, tri_lg = -1, tri_resp = -1;
 static int teto_respingo = 8;   /* TETO_RESPINGO */
 static int croma_faixa  = 0;   /* CROMA_FAIXA */
+static int intacto_ate  = 0;   /* INTACTO_ATE: linhas que tem que ficar identicas */
+static int sem_croma    = 0;   /* SEM_CROMA=1: quadro sem croma utilizavel */
+static int tarja_desce  = 0;   /* TARJA_DESCE=1: guiar pela tarja, nao pela fronteira */
+static double base_tarja_des = -1;
+static uint8_t *img_base = NULL;  /* luma da base, so leitura nos workers */
 static int janela_resp  = 64;  /* JANELA_RESP: linhas medidas a partir da base */
-static _Thread_local double tri_bloc = -1;
+static _Thread_local double tri_bloc = -1, tri_tarja = -1;
 /* Os numeros do croma, nao so o veredito. Sem eles o modo `trinca` so diz
  * "passou/reprovou" e nao da para ver QUAL criterio derrubou o candidato --
  * que e exatamente a informacao de que a etapa seguinte precisa. */
 static _Thread_local double cr_dentro = -1, cr_p99 = -1;
 
-/* Veredito dos tres criterios. Precisa da linha de base ja medida. */
+/* Veredito dos criterios. Precisa da linha de base ja medida. */
 static int trinca_ok(void) {
     if (!cap_buf || cap_w <= 0 || base_fronteira < 0) return 0;
+    /* 0. NAO ESTRAGUE O QUE JA ESTA BOM.
+     *
+     * Num slice CABAC tudo antes do primeiro erro esta correto, entao um flip
+     * num byte que so e lido depois da linha N nao pode mexer em nada acima de
+     * N. Candidato que mexe ou deslocou o estado do CABAC mais cedo do que a
+     * janela diz, ou o decodificador reconstruiu outra coisa -- em qualquer dos
+     * dois casos ele esta apagando imagem boa para "avancar".
+     *
+     * E exato: memcmp, sem calibracao e sem limiar. So existe em alvo que TEM
+     * imagem boa antes do travamento, que e o caso do frame 13 (linhas 0 a 879
+     * sao imagem de verdade) e nao e o caso do IDR 3047, borrado quase desde o
+     * topo. INTACTO_ATE=<linha> liga. */
+    if (intacto_ate > 0 && img_base &&
+        memcmp(cap_buf, img_base, (size_t)cap_w * intacto_ate) != 0) return 0;
+    /* Guia alternativo: a TARJA em vez da fronteira. Em alvo com tarja o estado
+     * de chegada e desvio zero, e o caminho ate la e monotono -- a fronteira
+     * nao e (ver o comentario do tarja_des). Com TARJA_DESCE=1 o criterio 1
+     * passa a ser "a tarja ficou mais uniforme", e a fronteira sai do juiz. */
+    if (tarja_desce) {
+        double td = tarja_des(cap_buf, cap_w, cap_h);
+        tri_tarja = td;
+        if (td < 0 || td >= base_tarja_des) return 0;
+        if (intacto_ate > 0 && img_base) return 1;  /* a invariante exata ja julgou */
+    }
     int f = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
     tri_front = f;
-    if (f <= base_fronteira) return 0;              /* 1. tem que DESCER */
+    if (!tarja_desce && f <= base_fronteira) return 0;   /* 1. tem que DESCER */
     tri_bloc = blocagem_faixa(cap_buf, cap_w, base_fronteira, f);
     if (tri_bloc > 1.45) return 0;                  /* 2a. faixa liberada LIMPA na luma */
     /* 2b. e na COR. Janela FIXA de 64 linhas a partir da fronteira da base, nao
@@ -954,10 +984,19 @@ static int trinca_ok(void) {
      * janela fixa a ordem bate com a do olho; com a propria, dois candidatos
      * trocam de lugar. E a mesma licao da blocagem, que eu tinha medido no
      * quadro inteiro e so discrimina na regiao onde os candidatos atuam. */
+    /* Os criterios de croma so valem em quadro que TEM croma. O frame 13 mede
+     * p99 = 1 e desvio 0,4 a 0,8 do topo a base -- na imagem boa e no borrao
+     * igualmente -- porque e quadro escuro de saida de fade, quase
+     * monocromatico. Ali o croma nao separa nada, e a faixa calibrada em
+     * quadros claros (0,70 a 1,60) reprova ate a parte BOA do proprio quadro,
+     * que mede 0,10. Criterio que reprova o alvo certo nao filtra: zera.
+     * TETO_RESPINGO=0 e SEM_CROMA=1 desligam os dois. */
     int jr = base_fronteira + janela_resp;
     if (jr > cap_h) jr = cap_h;
-    tri_resp = croma_respingo(base_fronteira, jr);
-    if (tri_resp < 0 || tri_resp > teto_respingo) return 0;
+    if (teto_respingo > 0) {
+        tri_resp = croma_respingo(base_fronteira, jr);
+        if (tri_resp < 0 || tri_resp > teto_respingo) return 0;
+    }
     /* 2c. desvio dos planos de croma na MESMA janela, dentro da faixa dos
      * quadros intactos (armadilha 39). Desligado por padrao, e o motivo importa:
      * e uma porta de CHEGADA, nao de passagem. Na etapa 1 do IDR 3047 a base e
@@ -992,6 +1031,7 @@ static int trinca_ok(void) {
     }
     /* area <= 64 e o desfecho: nao sobrou borrao. Nao ha o que exigir de
      * "intacto" -- quem julga ai sao a blocagem e o croma, ja medidos. */
+    if (sem_croma) return 1;
     return croma_real(160, 640);                    /* e o croma na faixa */
 }
 
@@ -1061,6 +1101,22 @@ static int croma_real(int y0, int y1) {
  * so foi repintada depois da decodificacao e continua 15 no DPB -- entao exigir
  * 16 reprovaria ate o conserto certo, e o zero da varredura nao valeria nada.
  * Com o valor livre, sobra a uniformidade, que e o que se sabe a priori. */
+/* Desvio da tarja de baixo. Em alvo que TEM tarja, ela e o melhor guia de
+ * encadeamento que existe: o estado de chegada e desvio zero, e o caminho ate
+ * la e monotono de um jeito que a fronteira do borrao nao e.
+ *
+ * Medido no frame 13: os candidatos que levam a fronteira a 1080 -- "sem borrao
+ * nenhum" -- tem desvio de tarja de 13 a 26, contra ~2,5 dos que avancam pouco.
+ * Ali "liberar tudo" quer dizer transformar a tarja em ruido. Seguir a fronteira
+ * neste alvo e subir no ramo errado. */
+static double tarja_des(const uint8_t *Y, int w, int h) {
+    if (w < 1920 || h < 1080) return -1;
+    double s = 0, s2 = 0; long n = 0;
+    for (int y = 962; y < 1080; y++)
+        for (int x = 0; x < w; x++) { double c = Y[(size_t)y * w + x]; s += c; s2 += c * c; n++; }
+    double m = s / n, va = s2 / n - m * m;
+    return va > 0 ? sqrt(va) : 0;
+}
 static int base_uniforme(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return 0;
     int v = Y[(size_t)962 * w];
@@ -1783,6 +1839,9 @@ int main(int argc, char **argv) {
     if (getenv("TETO_RESPINGO")) teto_respingo = atoi(getenv("TETO_RESPINGO"));
     if (getenv("JANELA_RESP")) janela_resp = atoi(getenv("JANELA_RESP"));
     if (getenv("CROMA_FAIXA")) croma_faixa = atoi(getenv("CROMA_FAIXA"));
+    if (getenv("INTACTO_ATE")) intacto_ate = atoi(getenv("INTACTO_ATE"));
+    if (getenv("SEM_CROMA")) sem_croma = atoi(getenv("SEM_CROMA"));
+    if (getenv("TARJA_DESCE")) tarja_desce = atoi(getenv("TARJA_DESCE"));
     if (getenv("PISO_TRINCA")) { piso_trinca = atoi(getenv("PISO_TRINCA")); if (piso_trinca) guardar_croma = 1; }
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
@@ -2258,6 +2317,15 @@ int main(int argc, char **argv) {
                 base_fronteira = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
                 estrutura_borrao(cap_buf, cap_w, cap_h, base_fronteira,
                                  &base_ntrechos, &base_maior, &base_linhas, &base_longos);
+                if (intacto_ate > 0) {
+                    if (intacto_ate > cap_h) intacto_ate = cap_h;
+                    img_base = malloc((size_t)cap_w * intacto_ate);
+                    memcpy(img_base, cap_buf, (size_t)cap_w * intacto_ate);
+                    printf("[+] guardadas %d linhas da base que nao podem mudar\n", intacto_ate);
+                }
+                base_tarja_des = tarja_des(cap_buf, cap_w, cap_h);
+                if (tarja_desce)
+                    printf("[+] tarja da base: desvio %.4f (alvo: zero)\n", base_tarja_des);
             }
             printf("[+] base da trinca: fronteira na linha %d, %d trechos cobrindo %d linhas "
                    "(densidade %.4f, media %.2f), maior de %d linhas\n",
@@ -2796,6 +2864,11 @@ int main(int argc, char **argv) {
         if (cap_w <= 0) { fprintf(stderr, "base do frame %d nao da imagem\n", alvo); return 1; }
         base_fronteira = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
         estrutura_borrao(cap_buf, cap_w, cap_h, base_fronteira, &base_ntrechos, &base_maior, &base_linhas, &base_longos);
+        if (intacto_ate > 0) {
+            if (intacto_ate > cap_h) intacto_ate = cap_h;
+            img_base = malloc((size_t)cap_w * intacto_ate);
+            memcpy(img_base, cap_buf, (size_t)cap_w * intacto_ate);
+        }
         int base_mb = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
         croma_real(160, 640);
         printf("# base: mb %d fronteira %d trechos %d maior %d linhas %d "
@@ -2806,7 +2879,7 @@ int main(int argc, char **argv) {
                cr_dentro, cr_p99);
         printf("# base: longos %d = %.4f da area\n", base_longos,
                (double)base_longos / (cap_h - base_fronteira));
-        printf("off bit mb fronteira blocagem respingo cobertura dpU dpV croma_dentro croma_p99 veredito\n");
+        printf("off bit mb fronteira blocagem respingo cobertura dpU dpV tarja_med tarja_des intacta veredito\n");
         FILE *f = fopen(argv[6], "r");
         if (!f) { fprintf(stderr, "nao abriu a lista\n"); return 1; }
         char linha[256];
@@ -2830,10 +2903,25 @@ int main(int argc, char **argv) {
             int rp = (cap_w > 0 && fr > base_fronteira) ? croma_respingo(base_fronteira, jr2) : -1;
             double du = -1, dv = -1;
             if (cap_w > 0) croma_dp(base_fronteira, jr2, &du, &dv);
-            printf("%ld %d %d %d %.3f %d %.4f %.2f %.2f %.2f %.2f %s\n",
+            /* Tarja de baixo: media e desvio, e o VALOR sai junto. Pode ser 16
+             * ou 15 -- o frame 11 deixa 15 no DPB e a tarja de cima do 13 sai
+             * 15 -- entao o criterio de chegada e "uniforme", com o valor
+             * livre, e nao "igual a 16". */
+            double tm = -1, td = -1;
+            if (cap_w >= 1920 && cap_h >= 1080) {
+                double s = 0, s2 = 0; long n = 0;
+                for (int y = 962; y < 1080; y++)
+                    for (int x = 0; x < cap_w; x++) {
+                        double c = cap_buf[(size_t)y * cap_w + x]; s += c; s2 += c * c; n++;
+                    }
+                tm = s / n; double va = s2 / n - tm * tm; td = va > 0 ? sqrt(va) : 0;
+            }
+            int intacta = (intacto_ate > 0 && img_base && cap_w > 0)
+                        ? (memcmp(cap_buf, img_base, (size_t)cap_w * intacto_ate) == 0) : -1;
+            printf("%ld %d %d %d %.3f %d %.4f %.2f %.2f %.3f %.3f %d %s\n",
                    o, b, mb, fr, bl, rp,
                    (fr >= 0 && cap_h > fr) ? (double)ln / (cap_h - fr) : -1.0,
-                   du, dv, cr_dentro, cr_p99, ok ? "passa" : "nao");
+                   du, dv, tm, td, intacta, ok ? "passa" : "nao");
             arq[o] ^= (1 << b);
         }
         fclose(f);
