@@ -45,7 +45,11 @@ Medido no panorama, quadros com tarja 16,000 / desvio 0,000:
 a imagem ocupa a tela toda. Eu vinha tratando a tarja como gabarito de qualquer
 quadro; ela é gabarito só onde existe — que, por sorte, é onde o dano está.
 
-## Os 23 que faltam
+## Os 23 que faltavam — hoje são 17
+
+> **Atualizado.** Desfazer os dois patches errados do GOP 3426 fechou os seis do
+> grupo (a). Sobram **17**, todos no GOP 0: 11, 13 a 28. As ilhas 2333–2361 e
+> 3319–3444 estão completas.
 
 Restringindo às ilhas, onde há gabarito:
 

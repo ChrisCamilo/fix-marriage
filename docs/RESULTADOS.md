@@ -405,3 +405,24 @@ A rampa completa do fade-in, toda medida:
 ```
 16  18  21  23  25  27  29  32  34  36  38  41  43
 ```
+
+## GOP 3426 fechado — desfazendo dois patches, em 16/09/2026
+
+O fade-out final do filme está completo. Onze quadros, todos com tarja
+**16,0000 / 0,0000** e campo em cima da rampa:
+
+```
+3434 40,994   3433 37,999   3436 36,000   3435 33,997   3438 31,997   3437 29,001
+3440 27,001   3439 25,000   3442 23,009   3441 21,000   3443 16,000
+```
+
+Não custou bit novo nenhum: custou **desfazer dois** que estavam errados desde
+que foram aceitos. Ver o `docs/RASTREIO.md`.
+
+**Estado das três ilhas de dano:**
+
+| ilha | situação |
+|---|---|
+| 0–28 | 12 quadros bons, **17 em aberto** |
+| 2333–2361 | **fechada** |
+| 3319–3444 | **fechada** |

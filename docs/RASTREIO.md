@@ -389,8 +389,8 @@ estava errada: aquele `MB 15 0, bytestream 2778` é do frame **11**
 | 3428 | 3426 | 5.211 | NAL inteiro | 41.648 | 70 s | 25.537 | **reprovado** — o melhor tem quebra de macrobloco visível |
 | 3430 | 3426 | 7.223 | NAL inteiro | 57.744 | 148 s | 17.448 | reprovado — blocagem 2,199 contra 1,40 dos vizinhos |
 | 3432 | 3426 | 1.626 | NAL inteiro | 12.968 | 40 s | 6.266 | reprovado — retângulos de macrobloco no mapa de diferença |
-| **3435** | 3426 | 963 | NAL inteiro | 7.664 | 28 s | 14 | **reparado** — `114237506 4`, campo uniforme 34 |
-| **3439** | 3426 | 988 | NAL inteiro | 7.864 | 36 s | 349 | **reparado** — `114244542 6`, imagem perfeita |
+| ~~3435~~ | 3426 | 963 | NAL inteiro | 7.664 | 28 s | 14 | **DESFEITO** — `114237506 4` estragava a tarja; ver o fim deste arquivo |
+| ~~3439~~ | 3426 | 988 | NAL inteiro | 7.864 | 36 s | 349 | **DESFEITO** — `114244542 6` estragava a tarja; ver o fim deste arquivo |
 | 3441 | 3426 | 940 | NAL inteiro | 7.480 | 38 s | 1 | reprovado — campo 16–19, devia ser 21 |
 | **3442** | 3426 | 2.939 | NAL inteiro | 23.472 | 125 s | 959 | **reparado** — `114260576 3`, erra 6 linhas na borda |
 | 3443 | 3426 | 261 | NAL inteiro | 2.048 | 12 s | **0** | sem solução |
@@ -1366,3 +1366,19 @@ perfeita`. **O campo era 34 e 25 com ou sem o patch**, então o juiz da época
 aprovou uma mudança que não melhorava o que ele media, e a tarja — que teria
 reprovado — não foi conferida depois. É a armadilha 19 na forma inversa: lá o
 gabarito foi usado como ranking; aqui ele não foi usado como veto.
+
+### Desfeito, e medido depois
+
+Anexados `114237506 4` e `114244542 6` de novo ao `patches.txt` — XOR duas vezes
+se cancela, então a fonte de verdade continua append-only e a operação é
+reversível do mesmo jeito. O arquivo foi de 1.830 para 1.832 linhas, e o sha256
+do MP4 continua conferindo.
+
+| medida | antes | depois |
+|---|---|---|
+| quadros do filme com tarja 16,000 / 0,000 | 161 | **167** |
+| alvos restantes nas ilhas | 23 | **17** |
+| pixels da tarja fora de 16, nos seis quadros | 3.405 a 11.300 | **0 em todos** |
+
+Os 17 que sobram são todos do GOP 0: `11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+22, 23, 24, 25, 26, 27, 28`. **As ilhas 2333–2361 e 3319–3444 estão fechadas.**
