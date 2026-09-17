@@ -760,7 +760,7 @@ static int iguais     = 0;      /* IGUAIS=1: grava tambem quem empata com a base
 static int piso_croma = 0;      /* PISO_CROMA=1: desvio de croma dentro da faixa real */
 static int piso_trinca = 0;     /* PISO_TRINCA=1: libera + limpa + borrao intacto */
 static int base_fronteira = -1; /* fronteira do borrao sem nenhum flip */
-static int base_ntrechos = -1, base_maior = -1;
+static int base_ntrechos = -1, base_maior = -1, base_linhas = -1, base_longos = -1;
 
 /* O juiz que faltava, e ele veio do olho do usuario antes de vir da medida.
  *
@@ -797,9 +797,23 @@ static int base_ntrechos = -1, base_maior = -1;
  *
  * A terceira e a que inverte o que eu vinha fazendo: menos listra so e melhor
  * ACIMA da fronteira. Abaixo dela, a listra tem que ficar como estava. */
+/* Tolerancia da comparacao entre linhas vizinhas. Era igualdade exata, e
+ * igualdade exata NAO mede o borrao: mede uma coincidencia fragil.
+ *
+ * Medido no IDR 3047, nas linhas 400 a 1070: em 100% delas a diferenca para a
+ * linha de cima e no maximo 1, mas so ~75% sao exatamente iguais, espalhadas.
+ * Exigir 8 linhas exatas seguidas e um evento de sorte -- um bit de dither
+ * quebra a corrida e a fronteira salta centenas de linhas. Dois quadros com o
+ * MESMO borrao mediam 328 e 1080.
+ *
+ * Foi assim que a etapa 2 devolveu 591 candidatos "sem borrao nenhum" que, na
+ * tela, sao o mesmo quadro listrado da base. TOL_COPIA=0 volta ao antigo. */
+static int tol_copia = 1;
 static int linha_copia(const uint8_t *Y, int w, int y) {
-    for (int x = 0; x < w; x += 16)
-        if (Y[(size_t)y * w + x] != Y[(size_t)(y - 1) * w + x]) return 0;
+    for (int x = 0; x < w; x += 16) {
+        int d = (int)Y[(size_t)y * w + x] - (int)Y[(size_t)(y - 1) * w + x];
+        if (d < -tol_copia || d > tol_copia) return 0;
+    }
     return 1;
 }
 
@@ -816,21 +830,92 @@ static int fronteira_borrao(const uint8_t *Y, int w, int h, int y0) {
 }
 
 /* Estrutura do borrao abaixo de y: quantos trechos de 3+ e o maior deles. */
+/* Estrutura do borrao abaixo de y0. Alem da contagem de trechos devolve quantas
+ * LINHAS eles cobrem, porque contagem nao e comparavel entre candidatos: o
+ * numero de trechos e proporcional a area que ainda esta borrada, e essa area
+ * encolhe exatamente quando o conserto avanca. Medido no IDR 3047, a densidade
+ * de trechos por linha e praticamente constante -- 0,2354 na base contra 0,2361
+ * de media em 119 candidatos -- entao quem compara e a densidade e a cobertura,
+ * nao os totais. Exigir "80% dos trechos da base" em valor absoluto reprovaria
+ * um candidato por liberar imagem demais. */
 static void estrutura_borrao(const uint8_t *Y, int w, int h, int y0,
-                             int *ntrechos, int *maior) {
-    int nt = 0, mx = 0;
+                             int *ntrechos, int *maior, int *linhas, int *longos) {
+    int nt = 0, mx = 0, tot = 0, lg = 0;
     for (int y = y0 + 1; y < h; ) {
         if (!linha_copia(Y, w, y)) { y++; continue; }
         int n = 0;
         while (y + n < h && linha_copia(Y, w, y + n)) n++;
-        if (n >= 3) { nt++; if (n > mx) mx = n; }
+        if (n >= 3) { nt++; tot += n; if (n >= 8) lg += n; if (n > mx) mx = n; }
         y += n + 1;
     }
     *ntrechos = nt; *maior = mx;
+    if (linhas) *linhas = tot;
+    if (longos) *longos = lg;
 }
 
 /* Blocagem: salto medio nas bordas de macrobloco contra o do interior. Num
  * quadro bom fica perto de 1,0; lixo decodificado passa de 2. */
+/* Respingo de croma na faixa liberada: p99 da diferenca entre pixels VIZINHOS
+ * de U e de V, o maior dos dois planos. Em histograma de 256 baldes, exato para
+ * inteiros e sem ordenacao.
+ *
+ * Existe porque a blocagem nao pega o artefato que o olho pega. Os candidatos
+ * com respingo colorido na linha da fronteira tinham blocagem MELHOR que o
+ * aprovado -- 1,194 e 1,254 contra 1,375 -- porque o respingo e pequeno em area
+ * e a media o dilui. O p99 do vizinho de croma, medido so na faixa liberada,
+ * separa na mesma ordem do olho:
+ *
+ *   original (borrao liso) .... 2 / 1
+ *   o candidato do olho ....... 3 / 7
+ *   os dois da blocagem ....... 7 / 9  e  16 / 19
+ *   o descartado pelo olho .... 14 / 14
+ *
+ * O teto de 8 e o dobro do pior quadro INTACTO medido (p99U ate 6, p99V ate 3,
+ * em 20 faixas de 5 quadros). Isso quer dizer que nem o melhor candidato chega
+ * a ter faixa liberada com cara de imagem: ele e o menos ruim, nao um acerto. */
+static int croma_respingo(int y0, int y1) {
+    if (!cap_u || !cap_v || cap_w <= 0 || y1 > cap_h || y1 - y0 < 8) return -1;
+    int cw = cap_w / 2, h0 = y0 / 2, h1 = y1 / 2, pior = -1;
+    for (int p = 0; p < 2; p++) {
+        const uint8_t *C = p ? cap_v : cap_u;
+        int hist[256] = {0}; long n = 0;
+        for (int y = h0; y < h1; y++)
+            for (int x = 1; x < cw; x++) {
+                int d = (int)C[(size_t)y * cw + x] - (int)C[(size_t)y * cw + x - 1];
+                hist[d < 0 ? -d : d]++; n++;
+            }
+        if (n < 1000) return -1;
+        long alvo = n - n / 100, acc = 0; int p99 = 255;
+        for (int d = 0; d < 256; d++) { acc += hist[d]; if (acc >= alvo) { p99 = d; break; } }
+        if (p99 > pior) pior = p99;
+    }
+    return pior;
+}
+/* Desvio padrao dos planos U e V numa faixa. E a medida calibrada da armadilha
+ * 39, em 12 quadros verificados de dois trechos do filme:
+ *
+ *   imagem real .... U 5,99 a 8,52   V 3,40 a 7,42
+ *   borrao ......... U 2,78          V 2,25
+ *   lixo ........... U 21,43         V 15,49
+ *
+ * Repetir linha ACHATA a cor, lixo a ESTOURA, e o alvo esta no meio -- por isso
+ * e faixa e nao limiar. Estava calibrada desde a armadilha 39 e o juiz nao a
+ * consultava: o `croma_real` mede outra coisa (variacao DENTRO do macrobloco e
+ * salto entre medias de macroblocos vizinhos), nao o desvio do plano. */
+static void croma_dp(int y0, int y1, double *du, double *dv) {
+    *du = *dv = -1;
+    if (!cap_u || !cap_v || cap_w <= 0 || y1 > cap_h || y1 - y0 < 8) return;
+    int cw = cap_w / 2, h0 = y0 / 2, h1 = y1 / 2;
+    for (int p = 0; p < 2; p++) {
+        const uint8_t *C = p ? cap_v : cap_u;
+        double s = 0, s2 = 0; long n = 0;
+        for (int y = h0; y < h1; y++)
+            for (int x = 0; x < cw; x++) { double c = C[(size_t)y * cw + x]; s += c; s2 += c * c; n++; }
+        if (n < 100) return;
+        double m = s / n, var = s2 / n - m * m;
+        *(p ? dv : du) = var > 0 ? sqrt(var) : 0;
+    }
+}
 static double blocagem_faixa(const uint8_t *Y, int w, int y0, int y1) {
     double bo = 0, bi = 0; long no = 0, ni = 0;
     for (int y = y0 + 1; y < y1; y += 2)
@@ -843,8 +928,17 @@ static double blocagem_faixa(const uint8_t *Y, int w, int y0, int y1) {
 }
 
 static int croma_real(int y0, int y1);
-static _Thread_local int tri_front = -1, tri_nt = -1, tri_mx = -1;
+static int croma_respingo(int y0, int y1);
+static void croma_dp(int y0, int y1, double *du, double *dv);
+static _Thread_local int tri_front = -1, tri_nt = -1, tri_mx = -1, tri_ln = -1, tri_lg = -1, tri_resp = -1;
+static int teto_respingo = 8;   /* TETO_RESPINGO */
+static int croma_faixa  = 0;   /* CROMA_FAIXA */
+static int janela_resp  = 64;  /* JANELA_RESP: linhas medidas a partir da base */
 static _Thread_local double tri_bloc = -1;
+/* Os numeros do croma, nao so o veredito. Sem eles o modo `trinca` so diz
+ * "passou/reprovou" e nao da para ver QUAL criterio derrubou o candidato --
+ * que e exatamente a informacao de que a etapa seguinte precisa. */
+static _Thread_local double cr_dentro = -1, cr_p99 = -1;
 
 /* Veredito dos tres criterios. Precisa da linha de base ja medida. */
 static int trinca_ok(void) {
@@ -853,11 +947,51 @@ static int trinca_ok(void) {
     tri_front = f;
     if (f <= base_fronteira) return 0;              /* 1. tem que DESCER */
     tri_bloc = blocagem_faixa(cap_buf, cap_w, base_fronteira, f);
-    if (tri_bloc > 1.45) return 0;                  /* 2. faixa liberada LIMPA */
-    int nt, mx; estrutura_borrao(cap_buf, cap_w, cap_h, f, &nt, &mx);
-    tri_nt = nt; tri_mx = mx;
-    if (mx < base_maior - 4) return 0;              /* 3. borrao que sobra INTACTO */
-    if (nt < base_ntrechos * 8 / 10) return 0;
+    if (tri_bloc > 1.45) return 0;                  /* 2a. faixa liberada LIMPA na luma */
+    /* 2b. e na COR. Janela FIXA de 64 linhas a partir da fronteira da base, nao
+     * a faixa que cada candidato liberou: faixa estreita concentra o respingo e
+     * faixa larga o dilui, entao medir "cada um na sua" nao compara. Com a
+     * janela fixa a ordem bate com a do olho; com a propria, dois candidatos
+     * trocam de lugar. E a mesma licao da blocagem, que eu tinha medido no
+     * quadro inteiro e so discrimina na regiao onde os candidatos atuam. */
+    int jr = base_fronteira + janela_resp;
+    if (jr > cap_h) jr = cap_h;
+    tri_resp = croma_respingo(base_fronteira, jr);
+    if (tri_resp < 0 || tri_resp > teto_respingo) return 0;
+    /* 2c. desvio dos planos de croma na MESMA janela, dentro da faixa dos
+     * quadros intactos (armadilha 39). Desligado por padrao, e o motivo importa:
+     * e uma porta de CHEGADA, nao de passagem. Na etapa 1 do IDR 3047 a base e
+     * borrao puro -- dpV 2,21 -- e TODOS os candidatos dao dpV 9 a 10; com a
+     * porta ligada nenhum passaria e a etapa 1 nao teria saida. Na etapa 2,
+     * partindo do candidato escolhido, 30 dos 734 entram na faixa nos dois
+     * planos. Serve para escolher entre sobreviventes e para saber quando
+     * chegou, nao para filtrar cedo. CROMA_FAIXA=1 liga. */
+    if (croma_faixa) {
+        double du, dv; croma_dp(base_fronteira, jr, &du, &dv);
+        if (du < 5.99 || du > 8.52 || dv < 3.40 || dv > 7.42) return 0;
+    }
+    int nt, mx, ln, lg; estrutura_borrao(cap_buf, cap_w, cap_h, f, &nt, &mx, &ln, &lg);
+    tri_nt = nt; tri_mx = mx; tri_ln = ln; tri_lg = lg;
+    /* 3. o borrao que SOBRA tem que continuar sendo borrao: COBERTURA, so.
+     *
+     * A versao anterior comparava densidade de trechos, comprimento medio e
+     * maior trecho. Com a tolerancia certa nada disso existe -- o borrao e UM
+     * trecho unico cobrindo 99% da area abaixo da fronteira, nos tres quadros
+     * de calibracao. Os 181 trechos de "maior 19" que eu media, e a
+     * "fragmentacao" que reprovava o candidato descartado pelo olho (92
+     * trechos, maior 11), eram artefato da igualdade exata, nao propriedade da
+     * imagem. Quem reprovou aquele candidato foi a blocagem, sozinha.
+     *
+     * Entao o que sobra aqui e um piso barato contra o caso em que a regiao de
+     * baixo deixa de ser borrao e vira outra coisa. Nao e o criterio que
+     * seleciona -- esse e o 2. */
+    int area = cap_h - f;
+    if (area > 64) {
+        double cob = (double)ln / area;
+        if (cob < 0.90) return 0;
+    }
+    /* area <= 64 e o desfecho: nao sobrou borrao. Nao ha o que exigir de
+     * "intacto" -- quem julga ai sao a blocagem e o croma, ja medidos. */
     return croma_real(160, 640);                    /* e o croma na faixa */
 }
 
@@ -913,6 +1047,7 @@ static int croma_real(int y0, int y1) {
     qsort(dif, ndif, sizeof(double), cmp_double);
     double p99 = dif[(int)(ndif * 0.99)];
     free(dif);
+    cr_dentro = dentro; cr_p99 = p99;
     if (getenv("CROMA_DEBUG"))
         fprintf(stderr, "[croma] dentro_MB=%.2f  p99_vizinho=%.2f  (%d blocos)\n",
                 dentro, p99, nblocos);
@@ -1644,6 +1779,10 @@ int main(int argc, char **argv) {
     if (getenv("CONSUMO")) consumo_t = atoi(getenv("CONSUMO"));
     if (getenv("IGUAIS")) iguais = atoi(getenv("IGUAIS"));
     if (getenv("PISO_CROMA")) { piso_croma = atoi(getenv("PISO_CROMA")); if (piso_croma) guardar_croma = 1; }
+    if (getenv("TOL_COPIA")) tol_copia = atoi(getenv("TOL_COPIA"));
+    if (getenv("TETO_RESPINGO")) teto_respingo = atoi(getenv("TETO_RESPINGO"));
+    if (getenv("JANELA_RESP")) janela_resp = atoi(getenv("JANELA_RESP"));
+    if (getenv("CROMA_FAIXA")) croma_faixa = atoi(getenv("CROMA_FAIXA"));
     if (getenv("PISO_TRINCA")) { piso_trinca = atoi(getenv("PISO_TRINCA")); if (piso_trinca) guardar_croma = 1; }
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
@@ -2118,10 +2257,13 @@ int main(int argc, char **argv) {
             if (cap_w > 0) {
                 base_fronteira = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
                 estrutura_borrao(cap_buf, cap_w, cap_h, base_fronteira,
-                                 &base_ntrechos, &base_maior);
+                                 &base_ntrechos, &base_maior, &base_linhas, &base_longos);
             }
-            printf("[+] base da trinca: fronteira na linha %d, %d trechos, maior de %d linhas\n",
-                   base_fronteira, base_ntrechos, base_maior);
+            printf("[+] base da trinca: fronteira na linha %d, %d trechos cobrindo %d linhas "
+                   "(densidade %.4f, media %.2f), maior de %d linhas\n",
+                   base_fronteira, base_ntrechos, base_linhas,
+                   base_fronteira >= 0 ? (double)base_ntrechos / (1080 - base_fronteira) : 0.0,
+                   base_ntrechos ? (double)base_linhas / base_ntrechos : 0.0, base_maior);
             free(cap_buf); cap_buf = NULL;
         }
         pthread_t *th = calloc(nthr, sizeof *th);
@@ -2634,6 +2776,67 @@ int main(int argc, char **argv) {
         fclose(g); fclose(m); free(zero);
         printf("faixa %d-%d: %d de %d decodificaram -> %s\n",
                ini, fim, bons, fim - ini + 1, argv[7]);
+        free(cap_buf); cap_buf = NULL;
+    }
+    /* ---- modo trinca ----
+     * Abre a caixa-preta do juiz de tres partes: para cada candidato de uma
+     * lista imprime as CINCO medidas em vez do veredito.
+     *
+     * Existe porque a etapa 2 do IDR 3047 devolveu 82 candidatos com
+     * "macrobloco 8160" -- sem erro nenhum -- e 8160 e nota maxima no `avanco`.
+     * Se forem dessincronizacao silenciosa eles vencem o feixe e a cadeia sobe
+     * num ramo falso, que foi exatamente o que aconteceu no frame 12. A unica
+     * maneira de separar os dois casos e olhar a fronteira do borrao de cada
+     * um: quadro consertado nao tem borrao, quadro dessincronizado tem. */
+    else if (!strcmp(modo, "trinca")) {
+        int alvo = atoi(argv[5]);
+        guardar_croma = 1;
+        cap_buf = malloc((size_t)1920 * 1088);
+        decodifica(ancora_de(alvo), alvo, NULL, 0, NULL);
+        if (cap_w <= 0) { fprintf(stderr, "base do frame %d nao da imagem\n", alvo); return 1; }
+        base_fronteira = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
+        estrutura_borrao(cap_buf, cap_w, cap_h, base_fronteira, &base_ntrechos, &base_maior, &base_linhas, &base_longos);
+        int base_mb = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        croma_real(160, 640);
+        printf("# base: mb %d fronteira %d trechos %d maior %d linhas %d "
+               "densidade %.4f media %.2f croma %.2f/%.2f\n",
+               base_mb, base_fronteira, base_ntrechos, base_maior, base_linhas,
+               (double)base_ntrechos / (cap_h - base_fronteira),
+               base_ntrechos ? (double)base_linhas / base_ntrechos : 0.0,
+               cr_dentro, cr_p99);
+        printf("# base: longos %d = %.4f da area\n", base_longos,
+               (double)base_longos / (cap_h - base_fronteira));
+        printf("off bit mb fronteira blocagem respingo cobertura dpU dpV croma_dentro croma_p99 veredito\n");
+        FILE *f = fopen(argv[6], "r");
+        if (!f) { fprintf(stderr, "nao abriu a lista\n"); return 1; }
+        char linha[256];
+        while (fgets(linha, sizeof linha, f)) {
+            long o; int b;
+            if (sscanf(linha, "%ld %d", &o, &b) != 2) continue;
+            arq[o] ^= (1 << b);
+            cr_dentro = cr_p99 = -1;
+            decodifica(ancora_de(alvo), alvo, NULL, 0, NULL);
+            int mb = (cap_w <= 0) ? -1 : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+            int ok = trinca_ok();
+            int fr = -1, nt = -1, mx = -1, ln = -1, lg = -1; double bl = -1;
+            if (cap_w > 0) {
+                fr = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
+                if (fr > base_fronteira)
+                    bl = blocagem_faixa(cap_buf, cap_w, base_fronteira, fr);
+                estrutura_borrao(cap_buf, cap_w, cap_h, fr, &nt, &mx, &ln, &lg);
+                croma_real(160, 640);
+            }
+            int jr2 = base_fronteira + janela_resp; if (jr2 > cap_h) jr2 = cap_h;
+            int rp = (cap_w > 0 && fr > base_fronteira) ? croma_respingo(base_fronteira, jr2) : -1;
+            double du = -1, dv = -1;
+            if (cap_w > 0) croma_dp(base_fronteira, jr2, &du, &dv);
+            printf("%ld %d %d %d %.3f %d %.4f %.2f %.2f %.2f %.2f %s\n",
+                   o, b, mb, fr, bl, rp,
+                   (fr >= 0 && cap_h > fr) ? (double)ln / (cap_h - fr) : -1.0,
+                   du, dv, cr_dentro, cr_p99, ok ? "passa" : "nao");
+            arq[o] ^= (1 << b);
+        }
+        fclose(f);
         free(cap_buf); cap_buf = NULL;
     }
     else if (!strcmp(modo, "dumpyuv")) {

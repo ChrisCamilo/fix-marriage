@@ -732,3 +732,64 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     filtrando.** Encadeando com ele ligado, o estado resultante mede U 23,83 —
     fora da faixa que o próprio piso exige. A calibração acima é confiável; o
     código que a aplica ainda não. Não usar até depurar.
+
+40. **Igualdade exata não mede o borrão — mede uma coincidência frágil.** O
+    `fronteira_borrao` procurava 8 linhas seguidas **byte a byte iguais** à de
+    cima. Medido no IDR 3047, linhas 400 a 1070: em **100%** delas a diferença
+    para a linha de cima é no máximo 1, mas só ~75% são exatamente iguais, e
+    espalhadas. Uma corrida de 8 exatas é sorte; um bit de dither a quebra.
+
+    | quadro | fronteira tol 0 | fronteira tol 1 |
+    |---|---|---|
+    | original | 292 | **264** |
+    | candidato aprovado | 328 | **296** |
+    | candidato reprovado | 692 | **360** |
+
+    Dois quadros com o **mesmo** borrão mediam 328 e 1080. Foi assim que a
+    etapa 2 devolveu **591 candidatos "sem borrão nenhum"** que, na tela, são o
+    mesmo quadro listrado da base. Corrigido com `tol_copia = 1`; `TOL_COPIA=0`
+    volta ao antigo para reproduzir medidas velhas.
+
+    **E derrubou junto o critério 3 inteiro.** Com a tolerância certa o borrão é
+    **um trecho único** cobrindo 99% da área abaixo da fronteira, nos três
+    quadros de calibração. Os "181 trechos de maior 19" e a "fragmentação" que
+    eu usava para reprovar (92 trechos, maior 11) eram artefato da igualdade
+    exata. Quem reprovava aquele candidato era a blocagem, sozinha — eu tinha
+    creditado a dois critérios o trabalho de um.
+
+41. **A nota do `avanco` não vale neste alvo: 82 de 119 são dessincronização
+    silenciosa.** Na etapa 2 do IDR 3047, 82 candidatos alcançaram o macrobloco
+    8160 — nota máxima, "sem erro nenhum". Medida a fronteira do borrão de cada
+    um: **367,5 de média**, estatisticamente idêntica à dos que só chegam ao
+    2.280 (366,1). Quadro consertado não tem borrão; estes analisam os 8.160
+    macroblocos sem erro **e continuam borrados**. Se o feixe escolhesse pela
+    nota, a cadeia subiria num ramo falso na etapa 3 — a mesma armadilha 38, uma
+    etapa antes. Neste alvo quem pontua é a fronteira, e o `BASE=-1` existe para
+    tirar o macrobloco do filtro.
+
+42. **Contagem proporcional à área não pode ter piso absoluto.** O critério 3
+    exigia `trechos >= 80% dos da base`. Mas o número de trechos é proporcional
+    à área ainda borrada, e essa área encolhe **exatamente quando o conserto
+    avança**: densidade 0,2354 na base contra 0,2361 de média em 119
+    candidatos. Um candidato que liberasse até a linha 630 teria ~106 trechos e
+    seria reprovado **por ser bom demais**. Medido: com o piso absoluto, 119
+    sobreviventes; sem ele, **920**. Oitocentos e um candidatos estavam sendo
+    descartados por liberar imagem demais.
+
+43. **A blocagem não pega o artefato que o olho pega — o croma da faixa pega.**
+    Dos sete sobreviventes da etapa 1, os dois de **melhor** blocagem (1,194 e
+    1,254 contra 1,375 do aprovado) têm respingo colorido bem na linha da
+    fronteira. A blocagem é média de luma e dilui um artefato pequeno em área.
+    O p99 da diferença entre pixels vizinhos de croma, medido **só na faixa
+    liberada**, ordena igual ao olho:
+
+    | | blocagem | respingo de croma |
+    |---|---|---|
+    | original (borrão liso) | — | 2 |
+    | candidato do olho | 1,375 (pior) | **7** (melhor) |
+    | os dois da blocagem | 1,194 / 1,254 | 9 / 19 |
+    | descartado pelo olho | 2,306 | 14 |
+
+    E a janela tem que ser **fixa**, não "a faixa que cada um liberou": faixa
+    estreita concentra o respingo, faixa larga o dilui. Com janela própria dois
+    candidatos trocam de lugar; com 64 linhas fixas a partir da base, não.

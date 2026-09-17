@@ -336,50 +336,75 @@ vem**, senão `tail` mente.
 
 **E o QP confere:** o IDR 3047 tem QP de croma **29**, idêntico ao do 2333, e a
 calibração cobre 25 a 29. A faixa vale para ele.
+## O juiz do IDR 3047 — três versões, e o que sobrou de cada uma
 
-## O juiz de três partes — e ele veio do olho, não da métrica
+Este juiz foi reescrito três vezes na mesma sessão. O que está abaixo é a
+versão medida; as duas anteriores estão registradas porque cada uma produziu uma
+conclusão que eu apresentei como certa e não era.
 
-Cada parte corrige um jeito meu de medir errado, e as três juntas selecionaram,
-entre **28.400 candidatos**, exatamente **o que o usuário tinha escolhido
-olhando a imagem**.
+### A versão que vale
 
-| # | critério | limiar | por que |
+| # | critério | medida | limiar |
 |---|---|---|---|
-| 1 | **libera** | a fronteira do borrão tem que **descer** | no IDR 3047 o primeiro trecho grande de cópia começa na linha 292; o bom leva para 328 |
-| 2 | **limpa** | blocagem na faixa liberada `<= 1,45` | 0,97 em quadro bom, 1,34 no candidato bom, **2,08** no ruim |
-| 3 | **intacta** | o borrão que sobra mantém `maior >= base-4` e `trechos >= 80%` | o bom mantém 181 trechos com maior de 19; o ruim fragmenta |
+| 1 | **libera** | `fronteira_borrao` com tolerância 1 tem que descer | qualquer descida |
+| 2a | **limpa na luma** | `blocagem_faixa` na faixa liberada | `<= 1,45` |
+| 2b | **limpa na cor** | p99 da diferença entre pixels vizinhos de croma, janela **fixa** de 64 linhas a partir da fronteira da base | `<= 8` |
+| 3 | **ainda é borrão** | cobertura de linhas-cópia abaixo da fronteira | `>= 0,90` |
+| 4 | **croma plausível** | `croma_real` por macrobloco, 160–639 | faixa calibrada |
 
-Mais o croma por macrobloco, já calibrado.
+O critério 2b é o que seleciona. O 1 ordena. O 3 e o 4 são pisos baratos contra
+o caso degenerado; nenhum dos dois escolhe entre candidatos bons.
 
-### As três coisas que eu estava medindo errado
+### O que cada versão errou
 
-**A blocagem eu tinha descartado** por não discriminar: 1,07 / 1,17 / 1,19. Media
-no quadro inteiro. **Restrita à faixa liberada** ela separa forte: 0,97 / 1,34 /
-2,08. Era a medida certa no lugar errado.
+**Versão 1 — "as três partes".** Fronteira, blocagem e estrutura do borrão
+(densidade de trechos, comprimento médio, maior trecho). Selecionou 1 candidato
+em 28.400, o mesmo que o olho tinha escolhido, e eu apresentei isso como
+validação do juiz inteiro. Dois dos três critérios não mediam nada:
 
-**A listra eu tratava como "quanto menos melhor" em toda parte.** O certo é
-**menos listra acima da fronteira, listra intacta abaixo dela**. O candidato ruim
-zerava a listra na faixa liberada *e* fragmentava o borrão restante — o maior
-trecho caindo de 19 para 11, com dezenas de trechos de 3. Borrão fragmentado não
-é borrão, é ruído invadindo a região borrada.
+- a **estrutura** era artefato da igualdade exata (armadilha 40) — com a
+  tolerância certa o borrão é um trecho só, e não há estrutura para comparar;
+- o piso de trechos era **absoluto sobre uma quantidade proporcional à área**
+  (armadilha 42), e descartava 801 de 920 candidatos por liberarem demais.
 
-**E a comparação entre candidatos eu fazia na faixa inteira**, o que favorece
-quem libera mais e dilui o artefato na média. Tem que ser na região onde os dois
-atuam.
+Quem reprovava o candidato descartado pelo olho era a **blocagem, sozinha**.
 
-### O modelo do borrão, confirmado
+**Versão 2 — densidade em vez de contagem.** Corrigiu a armadilha 42 e passou de
+119 para 920 sobreviventes na etapa 2. Mas continuava com a igualdade exata, e
+por isso aprovou **591 candidatos "sem borrão nenhum"** que na tela são o mesmo
+quadro listrado. Foi aí que eu abri o YUV e olhei, em vez de ler número.
 
-Toda sequência repetida é **cópia byte a byte** da linha acima — 19/19, 15/15,
-7/7, 11/11. É predição intra vertical sem resíduo, bloco a bloco. Por isso o
-borrão "desce" quando o conserto avança: muda qual linha é repetida.
+**Versão 3 — a que vale.** Tolerância 1 na comparação entre linhas, estrutura
+substituída por cobertura, e o respingo de croma como critério de seleção.
 
-| | primeiro trecho grande |
-|---|---|
-| original | linha **292**, 19 linhas |
-| com o `b5` | linha **328**, 19 linhas |
+### A calibração do respingo
 
-### O resultado
+Medido em 20 faixas de 64 linhas, em 5 quadros intactos: **p99U de 0 a 6, p99V
+de 0 a 3.** O teto de 8 é "o dobro do pior intacto".
 
-`103419946 bit 5`, único sobrevivente de 28.400. **Não é reparo** — o quadro
-segue com 66% de borrão — mas é o primeiro candidato da sessão aprovado por um
-juiz que distingue imagem de lixo, e ele coincide com o julgamento visual.
+Nos candidatos da etapa 1, na mesma janela:
+
+| | fronteira | blocagem | respingo | veredito |
+|---|---|---|---|---|
+| original (nada aplicado) | 264 | — | 2 | — |
+| `103420006 b4` | 292 | 1,385 | **5** | passa |
+| `103419946 b5` — escolha do olho | 296 | 1,375 | **7** | passa |
+| `103420002 b3` | 308 | 1,386 | **8** | passa |
+| `103420047 b7` | 292 | 1,362 | 9 | reprova |
+| `103420052 b0` | 328 | 1,254 | 9 | reprova |
+| `103419932 b2` | 296 | 1,345 | 11 | reprova |
+| `103419965 b7` — descartado pelo olho | 360 | 2,306 | 14 | reprova |
+| `103420026 b0` | 308 | 1,194 | 19 | reprova |
+
+Os dois de **melhor blocagem** são reprovados pelo respingo — e são justamente
+os que têm salpico colorido na linha da fronteira, visível na tela. A blocagem é
+média de luma e dilui artefato pequeno em área.
+
+### O que isto NÃO diz
+
+Nenhum candidato tem faixa liberada com cara de imagem real. O melhor,
+`103420006 b4`, tem respingo 5 contra o máximo 6 dos intactos — mas o que ele
+libera são listras pálidas, não mais cena. A barra do usuário é "a faixa
+liberada precisa destravar a imagem real"; o juiz hoje sabe **reprovar o que o
+olho reprova** e **ordenar como o olho ordena**, e isso não é a mesma coisa que
+achar o conserto.
