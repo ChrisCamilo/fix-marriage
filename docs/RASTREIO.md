@@ -1446,3 +1446,27 @@ macrobloco de parada que eu tinha anotado eram dano parecido, não cadeia.
 **Mas o julgamento por pixel não é independente.** Para julgar qualquer um dos 13
 a 28 pela tarja, a cadeia desde o IDR precisa estar limpa. Isso recoloca o frame
 13 como porteiro — não pelo parse, pela julgabilidade.
+
+## IDR 29 — dessincronização silenciosa, janela em 10 bytes
+
+Analisa os 8.160 macroblocos sem erro, mas consome **4.719 de 289.388 bytes
+(1,6%)** e tem 71,6% de listra. Ver a armadilha 38.
+
+| corte | macrobloco |
+|---|---|
+| 4.700 | 1.101 |
+| **4.710** | **1.101** |
+| **4.720** | **8.160** — dispara |
+
+**O dano está entre os bytes 4.710 e 4.720.**
+
+| varredura | janela | combinações | tempo | resultado |
+|---|---|---|---|---|
+| 1 bit | `[4650,4780)` | 1.040 | **1,6 s** | 0 passam; **200** deixam de disparar |
+| 2 bits | `[4600,4800)` | 1.279.200 | 28 min | 0 passam; **361.434** deixam de disparar, melhor chega ao mb **2.400** |
+
+Juiz: `CONSUMO=245983` (85% do payload) — candidato que ainda completa truncado
+está disparando. Controle: no IDR 3426, bom, 35 candidatos passam o mesmo juiz.
+
+Varredura de IDR é **barata**: a cadeia é ele mesmo, 650 pares/s contra os ~200
+de um quadro no meio de um GOP.

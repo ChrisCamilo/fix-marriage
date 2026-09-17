@@ -628,7 +628,8 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     É a armadilha 30 numa terceira forma. Julgar ali exige medir o YUV por fora,
     e foi o que se fez.
 
-36. **"Completa cedo" não prova atalho — o juiz de consumo é refutado.** O frame
+36. **"Completa cedo" não prova atalho — refutei o juiz de consumo, e a
+    refutação estava generalizada demais.** *(corrigida no fim do item)* O frame
     13 com o candidato `184311 bit 6` fecha o quadro no byte **31.900** de
     **36.528**, e o payload dele não tem `cabac_zero_word` nenhum. Parecia prova
     de que o candidato atravessava a cauda como skip em vez de decodificá-la, e
@@ -669,3 +670,37 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
 
     A regra: **dependência se mede mudando a causa e olhando o efeito**, não
     lendo quem aparece junto no log.
+
+### Correção da armadilha 36
+
+A refutação acima vale para **quadro de campo liso**, e eu a escrevi como se
+valesse para todos. Medindo a razão de consumo em IDRs de conteúdo real:
+
+| IDR | bytes | completa em | % usado | listra |
+|---|---|---|---|---|
+| 2333 (reparado) | 175.857 | 175.860 | **100,0%** | 0,0% |
+| 3319 (reparado) | 247.520 | 247.523 | **100,0%** | 0,0% |
+| 3426 (reparado) | 58.412 | 58.415 | **100,0%** | 0,0% |
+| 0 (fade preto) | 2.298 | 420 | 18,3% | 100% |
+| **29 (borrado)** | 289.388 | **4.719** | **1,6%** | 71,6% |
+
+**Quadro de conteúdo real consome 100% do payload.** O frame 12, que derrubou o
+juiz, é campo chapado de fade — legitimamente barato, como o IDR 0. O erro foi
+testar a regra num caso que não a representa e concluir que ela não vale em
+lugar nenhum.
+
+O `CONSUMO` do `reparador.c` é **válido para quadro de conteúdo real** e o
+controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
+
+38. **Dessincronização silenciosa: analisa limpo, não é cópia, e está borrado.**
+    O IDR 29 percorre os 8.160 macroblocos **sem emitir um erro sequer**, não é
+    cópia de nenhum vizinho, e tem **71,6% das linhas repetindo a de cima**.
+
+    O mecanismo: num IDR não há referência, todo macrobloco é intra, e **intra
+    vertical sem resíduo copia a linha de cima** — sintaxe legal e baratíssima
+    em símbolos. Ele decodifica ~1.101 macroblocos direito e depois dispara,
+    atravessando os 7.000 restantes com 2 KB.
+
+    **Escapa de todos os detectores anteriores:** não para cedo, não duplica
+    vizinho, não emite erro. Só a listra com conteúdo real e a razão de consumo
+    pegam. E IDR assim envenena o GOP inteiro.
