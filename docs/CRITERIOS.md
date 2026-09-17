@@ -224,3 +224,56 @@ tentativas. Se os juízes discordarem, vale a imagem.
 - Frame que não produz imagem nenhuma não passa por lugar nenhum.
 - Patch aceito com defeito conhecido tem o defeito **escrito no commit**, em
   números. Nunca entra como se fosse perfeito.
+
+## O croma é por macrobloco — e o que dá e o que não dá para prever
+
+Medido em **94.080 macroblocos de 16 quadros intactos**, dos GOPs 2333 e 3319.
+
+### Como o formato define
+
+O H.264 dá **uma predição de croma por macrobloco** — `intra_chroma_pred_mode`
+(DC, horizontal, vertical, plano) num macrobloco intra, ou vetores derivados dos
+de luma num inter — mais um `coded_block_pattern` de croma que diz se há resíduo
+**DC apenas** ou **DC+AC**. Sem AC, o bloco 8×8 inteiro de croma é **um valor só**.
+
+### Dentro do macrobloco: baixa variação, mas não constante
+
+| desvio do croma U dentro do macrobloco | quadros bons |
+|---|---|
+| chapado, < 0,05 | **14,2%** — sem resíduo AC |
+| quase, < 0,5 | 16,3% |
+| com textura, < 2 | 58,3% |
+| acima de 2 | 11,2% |
+
+### Entre vizinhos: previsível em distribuição, não por bloco
+
+| diferença para o macrobloco à esquerda | percentil |
+|---|---|
+| 0,81 | 50 |
+| 1,78 | 75 |
+| 3,42 | 90 |
+| 5,12 | 95 |
+| 10,98 | 99 |
+| **60,08** | máximo |
+
+**Não dá para prever um macrobloco individual.** O 1% que difere mais de 11 são
+as bordas reais da imagem, e o máximo chega a 60. Quem tentar usar "o croma tem
+que parecer com o do vizinho" como regra por bloco vai condenar toda borda.
+
+**Mas a distribuição é apertada e independente da cena**, e é isso que serve de
+juiz:
+
+| estado | viz p50 | viz p90 | **viz p99** | dentro do MB |
+|---|---|---|---|---|
+| **5 quadros bons** | 0,50–0,98 | 3,03–4,58 | **8,48–14,31** | 0,91–1,33 |
+| borrão | 0,50 | 1,50 | **3,69** | 0,33 |
+| lixo | 1,00–1,22 | 7,38–8,56 | **27,12–33,59** | 1,78–2,51 |
+
+**Os dois são de duas pontas**, e é o ponto da armadilha 39: borrão fica
+**abaixo** porque repetir linha achata a cor, lixo fica **acima** porque estoura,
+e a imagem real está no meio. Nenhuma métrica do tipo "quanto mais melhor"
+funciona aqui.
+
+**Juiz proposto:** p99 da diferença entre vizinhos em `[7, 18]` **e** desvio
+médio dentro do macrobloco em `[0,7, 1,6]`. Os dois medidos na mesma faixa de
+linhas, e os dois calibrados contra quadro verificado.
