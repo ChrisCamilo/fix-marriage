@@ -654,3 +654,18 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     vale.** O que ainda pesa contra ele é outra coisa — a tarja em 14 onde devia
     ser 16, e as fileiras 62 a 67 saindo como `i` × 120, padrão que nenhum quadro
     verificado do filme mostra na tarja.
+
+37. **Erro no log do vizinho não é dependência.** Os frames 20, 21 e 22 mostravam
+    `MB 1 0, bytestream 143806` nos seus logs, e `143806` de `143870` é o tamanho
+    do frame **19**. Concluí que o 19 era raiz deles e recomendei o alvo por isso.
+
+    **Era só a cadeia:** decodificar até o frame 22 passa pelo 19, e o erro dele
+    aparece no caminho. Medido com o `mapa` antes e depois de consertar o parse
+    do 19: **muda um quadro só, o próprio 19.**
+
+    O teste que separa custa duas corridas de 11 s — rodar o `mapa` com e sem o
+    conserto e comparar a coluna inteira. Fiz depois de já ter escolhido o alvo
+    e escrito a justificativa.
+
+    A regra: **dependência se mede mudando a causa e olhando o efeito**, não
+    lendo quem aparece junto no log.

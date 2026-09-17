@@ -1382,3 +1382,67 @@ do MP4 continua conferindo.
 
 Os 17 que sobram são todos do GOP 0: `11, 13, 14, 15, 16, 17, 18, 19, 20, 21,
 22, 23, 24, 25, 26, 27, 28`. **As ilhas 2333–2361 e 3319–3444 estão fechadas.**
+
+## Frame 19 — janela cravada em 2 bytes, 28 candidatos, nenhum julgável
+
+### O `corta` precisou ser consertado antes de servir
+
+Ele exigia `cap_w > 0` para pontuar, e o frame 19 **não emite quadro nenhum** —
+devolvia −1 em todo corte, cego justamente no caso que mais interessa. Agora
+mede o **parse** e registra à parte se o quadro saiu. Controle no frame 13:
+continua 6593 / 6598 / 6600.
+
+| corte | parse chega ao macrobloco |
+|---|---|
+| 36 a 56 | 0 |
+| **58** | **1** |
+| 60 em diante, até 143.870 | **1**, e nunca mais avança |
+
+**O dano está entre os bytes 56 e 58** de um payload de 143.870. O decodificador
+lê 58 bytes e morre.
+
+### A varredura
+
+2 bits em `[5,80)` — 600 bits, **179.700 pares**, 952 s. A janela cobre todo o
+trecho consumido com 22 bytes de folga.
+
+**28 candidatos fazem o quadro analisar por inteiro e emitir.** Eles têm
+estrutura: **duas famílias** — primeiro bit no byte 4 (`439003 b0`) ou no byte 5
+(`439004 b6`) — cada uma com **o mesmo conjunto de 14 segundos bits**, nos bytes
+20, 21, 22, 32, 39, 40, 43, 44 e 53. Os dois primeiros bits são equivalentes: os
+hashes de saída coincidem entre as famílias.
+
+| medida | valor |
+|---|---|
+| tarja topo | ~12 (deveria ser 16) |
+| tarja base | 58,64 nos 28 |
+| campo | 59,36 nos 28 |
+
+**Nenhum é confirmável, e a razão é estrutural:** as referências do frame 19 são
+os frames 11, 13, 15 e 17, todos quebrados. A tarja dele herda o lixo deles, e
+por isso não serve de gabarito. É a armadilha 13.
+
+### Correção: o frame 19 NÃO é raiz de oito quadros
+
+Eu havia recomendado esse alvo dizendo que ele era raiz de oito dos dezessete,
+porque o erro `MB 1 0, bytestream 143806` aparecia no log dos frames 20, 21 e 22.
+**Medido com o `mapa`, antes e depois do conserto:**
+
+| frame | sem | com |
+|---|---|---|
+| 19 | 1 | **8160** |
+| 13 a 18, 20 a 28 | inalterados | **inalterados** |
+
+**Muda um quadro só.** O erro aparecia no log dos outros porque a cadeia era
+decodificada até eles e o erro do 19 vinha junto. Eu li vizinhança de log como
+dependência causal.
+
+### O que isso ensina sobre os 17 que faltam
+
+**O parse de cada quadro é independente dos outros** — é o que o CABAC manda, já
+que a decodificação aritmética não lê pixel de referência. Os agrupamentos por
+macrobloco de parada que eu tinha anotado eram dano parecido, não cadeia.
+
+**Mas o julgamento por pixel não é independente.** Para julgar qualquer um dos 13
+a 28 pela tarja, a cadeia desde o IDR precisa estar limpa. Isso recoloca o frame
+13 como porteiro — não pelo parse, pela julgabilidade.

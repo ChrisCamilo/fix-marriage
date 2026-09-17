@@ -1896,9 +1896,14 @@ int main(int argc, char **argv) {
             int n = k - 4;                      /* payload que sobra */
             copia[0] = n >> 24; copia[1] = n >> 16; copia[2] = n >> 8; copia[3] = n;
             decodifica(anc, alvo, copia, k, NULL);
-            int mb = (cap_w <= 0) ? -1 : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
-            printf("  corte %6d -> macrobloco %5d   fileira %3d\n",
-                   k, mb, mb < 0 ? -1 : mb / 120);
+            /* A medida aqui e do PARSE, nao da saida. O frame 19 nao emite
+             * quadro nenhum, e exigir cap_w > 0 devolvia -1 em todo corte --
+             * o modo ficava cego justamente no caso em que mais interessa.
+             * O macrobloco do log diz ate onde a analise sintatica chegou,
+             * exista quadro ou nao; a coluna "quadro" registra se saiu. */
+            int mb = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+            printf("  corte %6d -> macrobloco %5d   fileira %3d   quadro %s\n",
+                   k, mb, mb >= 8160 ? -1 : mb / 120, cap_w > 0 ? "sim" : "nao");
         }
         free(copia); free(cap_buf); cap_buf = NULL;
     }
