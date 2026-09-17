@@ -55,20 +55,31 @@ SHA-256, em pelo menos um caso por modo. Sem isso não entra.
 Não há função repetida literalmente. Há algo pior: **famílias parecidas com
 convenções incompatíveis**.
 
-### `blocagem` x `blocagem_faixa`
+### `blocagem` x `blocagem_faixa` — as duas ficam
 
-Mesma ideia — degrau na grade 16x16 contra o interior — implementações
-diferentes:
+A primeira versão deste plano propunha unificá-las. **Está errado**, e os usos
+mostram por quê:
 
 | | `blocagem` | `blocagem_faixa` |
 |---|---|---|
+| usos | **6** — métrica do `varre_par`, `cresce`, `oraculo`, `dump`, `report` | **2** — só o juiz da trinca |
+| região | quadro inteiro | faixa entre duas linhas |
 | amostragem | todo pixel, eixos X e Y | 1 em 4 pixels, só X, linhas alternadas |
 | interior | só `x % 16 == 8` | tudo que não é borda |
+| calibração documentada | valores 0,80 / 1,04 / 1,429 no `CRITERIOS.md` | limiar **1,45** na faixa liberada |
 | valor em caso de falha | **0** | **99,0** |
 
-A última linha é a armadilha: **0 e 99 são veredictos opostos**. Quem ler
-"blocagem 0" de uma pensando na outra conclui o contrário da medida. Unificar
-numa função com faixa opcional e **uma** convenção de falha.
+São medidas diferentes com calibrações próprias, e cada calibração foi obtida
+com aquela amostragem. **Unificar invalidaria as duas de uma vez** — e o juiz da
+trinca já foi reescrito três vezes por causa de medida trocada de lugar
+(armadilhas 40 a 43). Não se mexe em função calibrada sem recalibrar, e
+recalibrar aqui não compra nada.
+
+**O que fazer em vez disso:** só documentar o contrato nas duas, porque a
+diferença que engana é a última linha — **0 e 99 são veredictos opostos**. Quem
+ler "blocagem 0" de uma pensando na outra conclui o contrário da medida. Um
+comentário em cada assinatura dizendo região, amostragem e o que significa o
+valor de falha. Zero risco, e resolve o que era o problema de verdade.
 
 ### A família do croma — cinco funções
 
@@ -136,27 +147,29 @@ O ganho seria grande: na varredura de 3 bits do frame 11, **cada candidato
 redecodifica os 12 quadros da cadeia desde a âncora**, e os 11 primeiros são
 idênticos nos 893.200 testes.
 
-**Por que não dá hoje:** o libavcodec não expõe checkpoint de estado do
-decodificador. Não há como salvar o estado depois do quadro 10 e restaurá-lo
-893.200 vezes — `avcodec_flush_buffers` não devolve as referências. Fazer isso
+**E está DESCARTADO.** O libavcodec não expõe checkpoint de estado do
+decodificador — não há como salvar o estado depois do quadro 10 e restaurá-lo
+893.200 vezes, e `avcodec_flush_buffers` não devolve as referências. Fazer isso
 exigiria um analisador CABAC próprio, e aí o libavcodec deixaria de ser o
-oráculo independente, que é o alicerce de confiança deste projeto. Não vale o
-risco.
+oráculo independente, que é o alicerce de confiança deste projeto. **Decidido
+não fazer.** Fica escrito aqui para ninguém reabrir a ideia achando que é ganho
+fácil: é ganho grande, com preço que o projeto não pode pagar.
 
-### O que dá para fazer, e é medível
+### O que sobra
 
-1. **Tirar a tabela de combinações da memória.** `gera_combos` materializa
-   todas: hoje 893.200 x 3 ints = 10,7 MB, tolerável. Mas 4 bits numa janela de
-   240 bits dá **141 milhões de combinações = 2,2 GB de tabela mais 565 MB de
-   placar**. A k-ésima combinação se calcula do índice pelo sistema numérico
-   combinatório, sem tabela. Remove o teto e melhora o cache.
+**`gera_combos` fica como está.** Cogitei calcular a k-ésima combinação pelo
+índice para tirar a tabela da memória — 893.200 x 3 ints são 10,7 MB hoje, e 4
+bits numa janela de 240 dariam 2,2 GB. **Decidido não fazer:** a profundidade
+máxima é 4 por construção, as janelas que importam são estreitas, e trocar um
+`malloc` que funciona por aritmética combinatória é risco de erro de índice sem
+ganho no relógio.
 
-2. **Medir onde o tempo vai antes de otimizar.** O custo por candidato é a
-   decodificação de `ancora..alvo`. Quanto disso é prefixo repetido ainda não
-   foi medido, e medir vem antes de mexer.
+**`THREADS` fica em 12** — decisão medida, seção 5 do `PARALELIZACAO.md`. Não é
+aqui que se ganha.
 
-3. **`THREADS` fica em 12** — decisão medida, seção 5 do `PARALELIZACAO.md`.
-   Não é aqui que se ganha.
+Ou seja: **nesta frente não há nada a fazer.** As varreduras ficam como estão, e
+o ganho de tempo, se vier, vem de reduzir o número de candidatos com juiz melhor
+— não de reescrever o motor.
 
 ## 5. Ordem sugerida
 
@@ -165,13 +178,17 @@ Da menor para a maior chance de quebrar coisa:
 | # | item | risco | ganho |
 |---|---|---|---|
 | 1 | tabela de modos e validação de `argc` | baixo | mata o `report` silencioso e o `argv[5]` nulo |
-| 2 | unificar `blocagem` numa convenção só | baixo | tira a armadilha do 0 x 99 |
+| 2 | documentar o contrato das duas `blocagem` | **nenhum** | tira a armadilha do 0 x 99 sem tocar em calibração |
 | 3 | renomear as famílias do croma e da tarja | baixo | o nome passa a dizer o que mede |
 | 4 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
-| 5 | combinações sem tabela | médio | remove o teto de memória para 4 bits |
 
 O item 4 é o que mais encolhe o arquivo e o que mais pode quebrar. Só entra com
 a prova de saída idêntica, modo a modo.
+
+**Descartados, e o registro fica para ninguém reabrir:** unificar as duas
+`blocagem` (invalidaria duas calibrações), analisador CABAC próprio (tiraria do
+libavcodec o papel de oráculo) e tirar `gera_combos` da memória (risco de erro
+de índice sem ganho no relógio).
 
 ## O que não mexer
 
