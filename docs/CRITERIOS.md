@@ -277,3 +277,34 @@ funciona aqui.
 **Juiz proposto:** p99 da diferença entre vizinhos em `[7, 18]` **e** desvio
 médio dentro do macrobloco em `[0,7, 1,6]`. Os dois medidos na mesma faixa de
 linhas, e os dois calibrados contra quadro verificado.
+
+### Estado da implementação do juiz de croma
+
+Reescrito por macrobloco, com as duas estatísticas e faixa de duas pontas:
+
+```
+dentro do MB em [0,70; 1,60]   e   p99 entre vizinhos em [7,0; 18,0]
+```
+
+**Verificado contra medição independente em python, batendo em três casos:**
+
+| quadro | ferramenta | python | veredito |
+|---|---|---|---|
+| 2333 bom | 0,97 / 12,09 | 0,97 / 12,09 | DENTRO |
+| 3326 bom | 1,04 / 11,11 | 1,04 / 11,11 | DENTRO |
+| 3047 borrão | 0,33 / 3,69 | 0,33 / 3,69 | **FORA** — chato demais |
+
+**Defeito encontrado e corrigido:** a primeira versão nunca foi ligada. O
+`piso_croma` estava declarado, lido do ambiente e implementado, mas a linha que
+o chama **não existia na cadeia de pontuação** — um `replace` de script não
+casou o padrão, não alterou nada e mesmo assim imprimiu "ok". Por isso
+`PISO_CROMA=1` aceitava lixo: não estava julgando coisa nenhuma.
+
+**Divergência ainda em aberto, não usar em produção:** para dois estados de lixo
+do IDR 3047, o dump medido por fora dá 2,51 / 33,59 e a base do próprio `avanco`
+dá 0,00 / 0,00 no mesmo arquivo de patches. Nos três casos de referência acima os
+dois caminhos batem à segunda casa. Enquanto essa diferença não for explicada, o
+piso não pode ser usado para aceitar candidato.
+
+**E o QP confere:** o IDR 3047 tem QP de croma **29**, idêntico ao do 2333, e a
+calibração cobre 25 a 29. A faixa vale para ele.

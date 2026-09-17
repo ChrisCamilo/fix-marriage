@@ -775,20 +775,62 @@ static int piso_croma = 0;      /* PISO_CROMA=1: desvio de croma dentro da faixa
  *
  * Por isso e FAIXA e nao limiar: baixo demais e borrao, alto demais e lixo, e a
  * imagem verdadeira esta no meio. Ver armadilha 39. */
+static int cmp_double(const void *a, const void *b) {
+    double x = *(const double *)a, y = *(const double *)b;
+    return x < y ? -1 : x > y ? 1 : 0;
+}
+
+/* Versao por MACROBLOCO. A anterior media o desvio global da faixa, que mistura
+ * "a cena tem muitas cores" com "a cor esta coerente" -- ela varia 33% entre
+ * quadros bons (6,29 a 8,41) e por isso a faixa saia larga demais.
+ *
+ * O croma e definido POR MACROBLOCO: uma predicao por MB mais um CBP que diz se
+ * ha residuo DC apenas ou DC+AC. Medido em 94.080 macroblocos de 16 quadros
+ * intactos, duas estatisticas separam bem e as duas sao de DUAS PONTAS:
+ *
+ *                        dentro do MB      p99 entre vizinhos
+ *   imagem real ....... 0,91 a 1,33        8,48 a 14,31
+ *   borrao ............ 0,33               3,69
+ *   lixo .............. 1,78 a 2,51        27,12 a 33,59
+ *
+ * Borrao fica abaixo porque repetir linha achata a cor; lixo fica acima porque
+ * estoura. Ver a armadilha 39 e o CRITERIOS.md.
+ *
+ * CROMA_DEBUG=1 imprime os valores medidos, para conferir contra a medicao
+ * feita por fora -- foi a falta disso que me deixou cego na primeira versao. */
 static int croma_real(int y0, int y1) {
-    if (!cap_u || !cap_v || cap_w <= 0) return 0;
-    int cw = cap_w / 2;
-    double su = 0, sv = 0, su2 = 0, sv2 = 0; long n = 0;
-    for (int y = y0; y < y1; y += 4)
-        for (int x = 0; x < cap_w; x += 8) {
-            double u = cap_u[(size_t)(y / 2) * cw + x / 2];
-            double v = cap_v[(size_t)(y / 2) * cw + x / 2];
-            su += u; sv += v; su2 += u * u; sv2 += v * v; n++;
+    if (!cap_u || !cap_v || cap_w <= 0 || cap_h < y1) return 0;
+    int cw = cap_w / 2, nmx = cap_w / 16;
+    int nmy = (y1 - y0) / 16;
+    if (nmy < 4 || nmx < 4) return 0;
+    double soma_dentro = 0; int nblocos = 0;
+    double *dif = malloc((size_t)nmy * nmx * sizeof(double));
+    int ndif = 0;
+    for (int my = 0; my < nmy; my++) {
+        double ant = -1;
+        for (int mx = 0; mx < nmx; mx++) {
+            double s = 0, s2 = 0;
+            int by = (y0 / 16 + my) * 8, bx = mx * 8;
+            for (int j = 0; j < 8; j++)
+                for (int i = 0; i < 8; i++) {
+                    double u = cap_u[(size_t)(by + j) * cw + bx + i];
+                    s += u; s2 += u * u;
+                }
+            double m = s / 64.0, var = s2 / 64.0 - m * m;
+            soma_dentro += var > 0 ? sqrt(var) : 0; nblocos++;
+            if (ant >= 0) dif[ndif++] = fabs(m - ant);
+            ant = m;
         }
-    if (n < 100) return 0;
-    double du = sqrt(su2 / n - (su / n) * (su / n));
-    double dv = sqrt(sv2 / n - (sv / n) * (sv / n));
-    return du >= 4.5 && du <= 11.0 && dv >= 2.5 && dv <= 10.0;
+    }
+    if (nblocos < 100 || ndif < 100) { free(dif); return 0; }
+    double dentro = soma_dentro / nblocos;
+    qsort(dif, ndif, sizeof(double), cmp_double);
+    double p99 = dif[(int)(ndif * 0.99)];
+    free(dif);
+    if (getenv("CROMA_DEBUG"))
+        fprintf(stderr, "[croma] dentro_MB=%.2f  p99_vizinho=%.2f  (%d blocos)\n",
+                dentro, p99, nblocos);
+    return dentro >= 0.70 && dentro <= 1.60 && p99 >= 7.0 && p99 <= 18.0;
 }
 
 /* Variante do piso da tarja de baixo que NAO fixa o valor em 16.
@@ -863,6 +905,7 @@ static void *worker_avanco(void *p) {
                : (piso_tarja && !tarja_perfeita(cap_buf, cap_w, cap_h)) ? -1
                : (piso_topo  && !topo_uniforme(cap_buf, cap_w, cap_h)) ? -1
                : (piso_base  && !base_uniforme(cap_buf, cap_w, cap_h)) ? -1
+               : (piso_croma && !croma_real(160, 640)) ? -1
                : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
 
         /* Juiz do consumo -- REFUTADO PELO PROPRIO CONTROLE. Nao usar.
@@ -2012,6 +2055,15 @@ int main(int argc, char **argv) {
             printf(" | sem erro: %ld\n", fx[8]);
         }
         printf("[+] base sem flip: macrobloco %d [%.0fs]\n", base, difftime(time(NULL), t0));
+        /* Medir o croma da BASE e obrigatorio antes de confiar no piso: e o
+         * unico jeito de saber se a faixa calibrada cabe neste quadro. Sem isto
+         * eu media candidatos quebrados, achava 0,00 e concluia que o juiz
+         * estava com defeito -- quando o defeito era o meu teste. */
+        if (piso_croma) {
+            int ok = croma_real(160, 640);
+            printf("[+] croma da base: %s a faixa calibrada\n",
+                   ok ? "DENTRO de" : "FORA da");
+        }
         int melhor = -1;
         for (long c = 0; c < n_combos; c++) if (placar[c] > melhor) melhor = placar[c];
         long quantos = 0;
