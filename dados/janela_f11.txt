@@ -1,0 +1,99 @@
+# janela_f11.txt -- onde atacar o frame 11. NAO SAO PATCHES.
+#
+# ============================================================================
+# O ESTADO
+#
+#   frame 11, NAL em 147689, 2832 bytes
+#   para no macrobloco 15, fileira 0 -- 0,2% do payload
+#   8160 - 15 = 8145 macroblocos de ocultacao, que e exatamente o numero ja
+#   medido antes por outro caminho
+#   imagem: DOIS valores, 15 e 43
+#
+# A fileira 0 e TARJA, entao ele quebra dentro da tarja de cima, no 16o
+# macrobloco. Nao e "o quadro nao decodifica": e "o quadro nao passa da tarja".
+#
+# O ALVO, medido nos vizinhos do fade:
+#
+#   frame  8 -> [16, 32]     frame 10 -> [16, 36]
+#   frame  9 -> [16, 38]     frame 12 -> [16, 41]
+#   frame 11 -> [15, 43]  <- deveria ser [16, 43]
+#
+# Todo quadro do fade tem exatamente DOIS valores: tarja 16 mais o campo. O
+# campo 43 ja esta certo -- e o que a rampa preve. Falta so a tarja.
+#
+# ============================================================================
+# SAO DUAS JANELAS, E CADA UMA RESOLVE METADE
+#
+# JANELA A -- bytes 8 a 11 (absoluto 147697-147700): os pesos no cabecalho
+#
+#   5 bits de 1 flip entregam tarja 16,000/0,000 em CIMA e EMBAIXO:
+#
+#     byte  8 b5   tarjas 16   campo 38   <- campo do frame 9: copia pura
+#     byte  8 b6   tarjas 16   campo 38   <- idem
+#     byte 10 b4   tarjas 16   campo 44
+#     byte 10 b5   tarjas 16   campo 45
+#     byte 11 b5   tarjas 16   campo 44
+#
+#   Nenhum da 43. Isso CONFIRMA por medida o que o registro ja dizia por
+#   aritmetica: "a tarja em 16 custa campo 44; a rampa custa campo 43; os dois
+#   nao coexistem com peso inteiro".
+#
+# JANELA B -- bytes 18 a 30 (absoluto 147707-147719): os primeiros macroblocos
+#
+#   14 bits de 1 flip fazem o quadro decodificar INTEIRO, macrobloco 8160 sem
+#   erro nenhum. TODOS mantem campo 43 e tarja 15:
+#
+#     byte 18 b0, byte 20 b7, byte 22 b3   -> imagem byte a byte IGUAL a base
+#     os outros 11                          -> tarja de cima com ruido
+#
+#   Os tres limpos sao o ponto de partida do encadeamento: o quadro passa a
+#   completar sem erro, entregando o mesmo que a ocultacao entregava.
+#
+# COMO A JANELA B FOI LOCALIZADA -- tres medidas independentes concordam
+#
+#   1. `corta`: cortar em 22 bytes chega ao macrobloco 429, fileira 3. Com MENOS
+#      dados ele vai MAIS longe -- os bytes seguintes derrubam o decodificador.
+#      Do byte 32 em diante, travado no 15 para sempre.
+#   2. os 14 bits que completam o quadro estao todos entre os bytes 18 e 30.
+#   3. os 5 bits que dao tarja 16 estao todos nos bytes 8 a 11, fora dela.
+#
+# ============================================================================
+# O DIAGNOSTICO
+#
+# Num quadro sao a tarja e INTRA e nem passa pela tabela de pesos. No frame 11
+# tudo virou skip ponderado, tarja inclusive, e por isso ela sai 1,25*16-5 = 15.
+# Mexer nos pesos (janela A) conserta a tarja e estraga o campo, porque o mesmo
+# peso faz os dois trabalhos. O conserto tem que fazer os primeiros 960
+# macroblocos voltarem a ser intra -- e isso mora na janela B.
+#
+# Por isso e problema de 2 bits ou mais, e por isso o encadeamento e o caminho:
+# fixar um bit da janela B que faca o quadro completar, e varrer de novo
+# exigindo tarja 16 com campo 43.
+#
+# formato: offset bit   (candidatos da janela B que completam o quadro limpo)
+147707 0
+147709 7
+147711 3
+
+# ============================================================================
+# JANELA C -- o byte 1, que nao e do fluxo: o PREFIXO AVCC
+#
+# Achado depois, comparando o frame 11 com os irmaos do fade:
+#
+#   frame  8  00 00 0b 77  = 2935 = 2939-4  OK
+#   frame  9  00 00 0e 0e  = 2830 = 2834-4  OK
+#   frame 11  00 02 0b 0c  = 133900         ERRADO (deveria 2828)
+#
+# UM bit: byte 147690, bit 1. Com ele o frame 11 vai do macrobloco 15 para 8160
+# -- 100% do payload analisado, sem erro.
+#
+# As janelas A e B ficam OBSOLETAS se isto se confirmar: elas procuravam no
+# fluxo um dano que esta no container.
+#
+# MAS o quadro continua sem emitir imagem, com FOLGA de 2 a 16. Ver
+# docs/PREFIXOS.md: sao 702 quadros do filme com o mesmo defeito, corrigi-los
+# leva 274 quadros a analisar 100% sem nenhum piorar, e ao mesmo tempo 872
+# deixam de emitir. Isso precisa ser resolvido antes de promover qualquer bit
+# deste arquivo.
+#
+# 147690 1
