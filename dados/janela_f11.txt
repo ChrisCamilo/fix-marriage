@@ -165,3 +165,51 @@
 # sem consumir), tarja nao serve (e tudo ou nada), consumo nao serve (o frame 12
 # desmente). Sem gradiente, encadeamento nao tem por onde subir.
 
+# ============================================================================
+# O DEFEITO TEM NOME, E O GRADIENTE EXISTE
+#
+# Com LOG=1 o decodificador diz o que e:
+#
+#   Reference 3 >= 3
+#   error while decoding MB 15 0, bytestream 2778
+#
+# O macrobloco 15 pede o indice de referencia 3 e so existem 3 (0, 1, 2). Nao e
+# dessincronizacao generica do CABAC: e indice de referencia fora da faixa. E
+# consome 2832 - 2778 = 54 bytes antes de falhar.
+#
+# O CRITERIO COM GRADIENTE: BYTES CONSUMIDOS ANTES DO PRIMEIRO ERRO
+#
+# O ffmpeg informa o bytestream restante na propria mensagem de erro, entao o
+# consumo e `tamanho - bytestream`, de graca em toda decodificacao. O
+# acha_corte ja faz essa conta (linha 410), so nunca foi usado como pontuacao.
+#
+# Por que ele serve onde os outros falharam:
+#
+#   continuo ....... 54 -> 348 -> ... e progresso mensuravel, nao tudo-ou-nada
+#   gratuito ....... vem com a mensagem de erro, sem truncar nada
+#   imune a ocultacao ... e medido no PARSE, nao no pixel
+#   separa a falsa conclusao ... quem "completa" nao tem linha de erro, entao
+#                                nao tem consumo -- e distinguivel por construcao
+#
+# MEDIDO NOS CANDIDATOS QUE JA EXISTIAM
+#
+#   base .............. Reference 3 >= 3 no MB 15, consome  54
+#   byte  8 b5 ........ Reference 3 >= 3 no MB 21, consome 348   <- 6,4x
+#   byte 10 b4 ........ identico a base,           consome  54
+#   byte 11 b5 ........ identico a base,           consome  54
+#   byte 18 b0 ........ sem erro (falsa conclusao), ~216 por truncamento
+#
+# O byte 8 b5 avanca o parse de verdade. Ele tinha sido DESCARTADO antes como
+# "copia pura, campo 38" -- mas o campo 38 e a saida da OCULTACAO, que nao diz
+# nada sobre o quadro, exatamente como a tarja 15. O descarte estava errado pelo
+# mesmo motivo que a tarja: julguei pelo pixel de um quadro que nao decodificou.
+#
+# PROXIMO PASSO
+#
+# Pontuar a varredura por consumo em vez de macrobloco, encadear a partir do
+# byte 8 b5 e ver se o consumo sobe. Alvo: os 2.832 bytes, descontado o
+# enchimento cabac_zero_word do fim.
+#
+# Exige uma mudanca pequena no reparador: o worker_avanco pontua por
+# macrobloco; falta a opcao de pontuar por `len - log_bytestream`.
+
