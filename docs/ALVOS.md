@@ -166,3 +166,71 @@ O **IDR 29** analisa até o macrobloco 8160 **sem um único erro** — e tem lis
 não para cedo e não é cópia de ninguém. Só a listra pega. E IDR borrado envenena
 o GOP inteiro: os 12 quadros do GOP 29 que param cedo podem estar parando por
 causa dele.
+
+# Exploração dos quadros fora das ilhas
+
+## 81 dos 132 IDRs estão borrados, e isso ordena tudo
+
+| | GOPs | média de quadros ruins no GOP |
+|---|---|---|
+| com IDR borrado | **81** | **4,05** |
+| com IDR bom | 51 | 1,69 |
+
+**Nenhum dos 81 GOPs com IDR borrado tem GOP limpo.** Dez dos 51 com IDR bom
+estão perfeitos. IDR danificado garante GOP danificado — e são 122 de 132 GOPs
+afetados.
+
+Varrer IDR é **barato**: a cadeia é ele mesmo, **650 candidatos/s** contra ~200
+de um quadro no meio de GOP.
+
+## Duas modalidades de dano em IDR
+
+Medindo a razão de consumo dos oito IDRs borrados mais baratos:
+
+| IDR | bytes | dispara em | % usado |
+|---|---|---|---|
+| 3047 | 68.616 | 4.609 | **6,7%** |
+| 1495 | 75.749 | 8.779 | 11,6% |
+| 323 | 72.185 | 9.934 | 13,8% |
+| 1833 | 69.664 | 15.293 | 22,0% |
+| 814 | 71.455 | 25.707 | 36,0% |
+| 1143 | 50.635 | 50.635 | **100,0%** |
+| 843 | 57.974 | 57.974 | **100,0%** |
+| 3097 | 76.099 | 76.099 | **100,0%** |
+
+**a) Dessincronização silenciosa** — consome uma fração e dispara. Armadilha 38.
+**b) Consome tudo e ainda borra** — modalidade diferente, não explicada.
+
+## O limiar da listra tem faixa, não valor
+
+Os **135 quadros comprovadamente bons com conteúdo real** (ilha fechada, tarja
+16,000/0,000, desvio > 20) dão listra **0,0% — mínimo, mediana e máximo**.
+Nenhum passa de zero.
+
+**Mas os 135 são todos de trecho de fade**, cena simples. Cena complexa pode ter
+linha repetida legitimamente, e extrapolar dali para o filme inteiro é o mesmo
+erro que cometi com o juiz de consumo na armadilha 36.
+
+| limiar | borrados no filme | nas ilhas fechadas |
+|---|---|---|
+| > 60% | **176** | 0 |
+| > 40% | 279 | 0 |
+| > 25% | 384 | 0 |
+| > 0% | 1.246 | 0 |
+
+**O núcleo defensável é 176**, o corcunda em 60–80%. Entre 10% e 60% é incerto.
+
+## O obstáculo de verdade: fora das ilhas não há gabarito
+
+Não há tarja (só existe nos três trechos) e não há rampa. Dano se **detecta**
+— cópia, disparo, listra — mas reparo não se **confirma**.
+
+**Com uma exceção, e ela é a linha de ataque:** a **razão de consumo**. Um quadro
+de conteúdo real consome ~100% do payload, medido nos três IDRs reparados. Um
+IDR que usa 6,7% está disparando, e um reparo tem que levá-lo a ~100%. Isso é
+gabarito *a priori*, não depende de pixel nem de referência, e funciona em
+qualquer lugar do filme.
+
+**Os cinco IDRs que disparam — 3047, 1495, 323, 1833, 814 — são os alvos com
+juiz utilizável fora das ilhas.** O 3047 é o mais extremo (6,7%) e um dos mais
+baratos (68.616 bytes).
