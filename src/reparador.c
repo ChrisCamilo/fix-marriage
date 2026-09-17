@@ -758,6 +758,9 @@ static int piso_base  = 0;      /* PISO_BASE=1: tarja de BAIXO uniforme, valor l
 static int consumo_t  = 0;      /* CONSUMO=n: quadro que fecha truncado em n bytes e atalho */
 static int iguais     = 0;      /* IGUAIS=1: grava tambem quem empata com a base */
 static int piso_croma = 0;      /* PISO_CROMA=1: desvio de croma dentro da faixa real */
+static int piso_trinca = 0;     /* PISO_TRINCA=1: libera + limpa + borrao intacto */
+static int base_fronteira = -1; /* fronteira do borrao sem nenhum flip */
+static int base_ntrechos = -1, base_maior = -1;
 
 /* O juiz que faltava, e ele veio do olho do usuario antes de vir da medida.
  *
@@ -775,6 +778,89 @@ static int piso_croma = 0;      /* PISO_CROMA=1: desvio de croma dentro da faixa
  *
  * Por isso e FAIXA e nao limiar: baixo demais e borrao, alto demais e lixo, e a
  * imagem verdadeira esta no meio. Ver armadilha 39. */
+/* ---- o juiz de tres partes ----
+ *
+ * Veio da leitura do usuario sobre o IDR 3047, e cada parte corrige um jeito
+ * meu de medir errado:
+ *
+ *  1. LIBERA  a fronteira do borrao tem que DESCER. No original o primeiro
+ *             trecho grande de copia comeca na linha 292; com o candidato bom
+ *             comeca na 328.
+ *  2. LIMPA   a faixa liberada nao pode ter artefato. Blocagem restrita a essa
+ *             faixa separa forte -- 0,97 em quadro bom, 1,34 no candidato bom,
+ *             2,08 no ruim -- e eu tinha descartado a blocagem por medi-la no
+ *             quadro inteiro, onde ela nao discrimina.
+ *  3. INTACTA o borrao que SOBRA tem que continuar limpo. Medido: o candidato
+ *             bom mantem 167 trechos com maior de 19 linhas, igual ao original;
+ *             o ruim cai para 158 trechos com maior de 11. Borrao fragmentado
+ *             nao e borrao, e ruido invadindo a regiao borrada.
+ *
+ * A terceira e a que inverte o que eu vinha fazendo: menos listra so e melhor
+ * ACIMA da fronteira. Abaixo dela, a listra tem que ficar como estava. */
+static int linha_copia(const uint8_t *Y, int w, int y) {
+    for (int x = 0; x < w; x += 16)
+        if (Y[(size_t)y * w + x] != Y[(size_t)(y - 1) * w + x]) return 0;
+    return 1;
+}
+
+/* Primeira linha a partir de y0 que inicia uma sequencia de 8+ copias exatas. */
+static int fronteira_borrao(const uint8_t *Y, int w, int h, int y0) {
+    for (int y = y0 + 1; y < h - 8; ) {
+        if (!linha_copia(Y, w, y)) { y++; continue; }
+        int n = 0;
+        while (y + n < h && linha_copia(Y, w, y + n)) n++;
+        if (n >= 8) return y - 1;
+        y += n + 1;
+    }
+    return h;
+}
+
+/* Estrutura do borrao abaixo de y: quantos trechos de 3+ e o maior deles. */
+static void estrutura_borrao(const uint8_t *Y, int w, int h, int y0,
+                             int *ntrechos, int *maior) {
+    int nt = 0, mx = 0;
+    for (int y = y0 + 1; y < h; ) {
+        if (!linha_copia(Y, w, y)) { y++; continue; }
+        int n = 0;
+        while (y + n < h && linha_copia(Y, w, y + n)) n++;
+        if (n >= 3) { nt++; if (n > mx) mx = n; }
+        y += n + 1;
+    }
+    *ntrechos = nt; *maior = mx;
+}
+
+/* Blocagem: salto medio nas bordas de macrobloco contra o do interior. Num
+ * quadro bom fica perto de 1,0; lixo decodificado passa de 2. */
+static double blocagem_faixa(const uint8_t *Y, int w, int y0, int y1) {
+    double bo = 0, bi = 0; long no = 0, ni = 0;
+    for (int y = y0 + 1; y < y1; y += 2)
+        for (int x = 16; x < w - 1; x += 4) {
+            double d = fabs((double)Y[(size_t)y * w + x] - Y[(size_t)y * w + x - 1]);
+            if (x % 16 == 0) { bo += d; no++; } else { bi += d; ni++; }
+        }
+    if (!no || !ni || bi == 0) return 99.0;
+    return (bo / no) / (bi / ni);
+}
+
+static int croma_real(int y0, int y1);
+static _Thread_local int tri_front = -1, tri_nt = -1, tri_mx = -1;
+static _Thread_local double tri_bloc = -1;
+
+/* Veredito dos tres criterios. Precisa da linha de base ja medida. */
+static int trinca_ok(void) {
+    if (!cap_buf || cap_w <= 0 || base_fronteira < 0) return 0;
+    int f = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
+    tri_front = f;
+    if (f <= base_fronteira) return 0;              /* 1. tem que DESCER */
+    tri_bloc = blocagem_faixa(cap_buf, cap_w, base_fronteira, f);
+    if (tri_bloc > 1.45) return 0;                  /* 2. faixa liberada LIMPA */
+    int nt, mx; estrutura_borrao(cap_buf, cap_w, cap_h, f, &nt, &mx);
+    tri_nt = nt; tri_mx = mx;
+    if (mx < base_maior - 4) return 0;              /* 3. borrao que sobra INTACTO */
+    if (nt < base_ntrechos * 8 / 10) return 0;
+    return croma_real(160, 640);                    /* e o croma na faixa */
+}
+
 static int cmp_double(const void *a, const void *b) {
     double x = *(const double *)a, y = *(const double *)b;
     return x < y ? -1 : x > y ? 1 : 0;
@@ -906,6 +992,7 @@ static void *worker_avanco(void *p) {
                : (piso_topo  && !topo_uniforme(cap_buf, cap_w, cap_h)) ? -1
                : (piso_base  && !base_uniforme(cap_buf, cap_w, cap_h)) ? -1
                : (piso_croma && !croma_real(160, 640)) ? -1
+               : (piso_trinca && !trinca_ok()) ? -1
                : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
 
         /* Juiz do consumo -- REFUTADO PELO PROPRIO CONTROLE. Nao usar.
@@ -1557,6 +1644,7 @@ int main(int argc, char **argv) {
     if (getenv("CONSUMO")) consumo_t = atoi(getenv("CONSUMO"));
     if (getenv("IGUAIS")) iguais = atoi(getenv("IGUAIS"));
     if (getenv("PISO_CROMA")) { piso_croma = atoi(getenv("PISO_CROMA")); if (piso_croma) guardar_croma = 1; }
+    if (getenv("PISO_TRINCA")) { piso_trinca = atoi(getenv("PISO_TRINCA")); if (piso_trinca) guardar_croma = 1; }
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",
@@ -2022,6 +2110,20 @@ int main(int argc, char **argv) {
         fflush(stdout);
         atomic_store(&prox_combo, 0);
         time_t t0 = time(NULL);
+        /* A linha de base tem que ser medida ANTES dos workers: o criterio da
+         * trinca compara cada candidato contra ela. */
+        if (piso_trinca) {
+            cap_buf = malloc((size_t)1920 * 1088);
+            decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
+            if (cap_w > 0) {
+                base_fronteira = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
+                estrutura_borrao(cap_buf, cap_w, cap_h, base_fronteira,
+                                 &base_ntrechos, &base_maior);
+            }
+            printf("[+] base da trinca: fronteira na linha %d, %d trechos, maior de %d linhas\n",
+                   base_fronteira, base_ntrechos, base_maior);
+            free(cap_buf); cap_buf = NULL;
+        }
         pthread_t *th = calloc(nthr, sizeof *th);
         for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_avanco, NULL);
         for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);

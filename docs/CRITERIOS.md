@@ -336,3 +336,50 @@ vem**, senão `tail` mente.
 
 **E o QP confere:** o IDR 3047 tem QP de croma **29**, idêntico ao do 2333, e a
 calibração cobre 25 a 29. A faixa vale para ele.
+
+## O juiz de três partes — e ele veio do olho, não da métrica
+
+Cada parte corrige um jeito meu de medir errado, e as três juntas selecionaram,
+entre **28.400 candidatos**, exatamente **o que o usuário tinha escolhido
+olhando a imagem**.
+
+| # | critério | limiar | por que |
+|---|---|---|---|
+| 1 | **libera** | a fronteira do borrão tem que **descer** | no IDR 3047 o primeiro trecho grande de cópia começa na linha 292; o bom leva para 328 |
+| 2 | **limpa** | blocagem na faixa liberada `<= 1,45` | 0,97 em quadro bom, 1,34 no candidato bom, **2,08** no ruim |
+| 3 | **intacta** | o borrão que sobra mantém `maior >= base-4` e `trechos >= 80%` | o bom mantém 181 trechos com maior de 19; o ruim fragmenta |
+
+Mais o croma por macrobloco, já calibrado.
+
+### As três coisas que eu estava medindo errado
+
+**A blocagem eu tinha descartado** por não discriminar: 1,07 / 1,17 / 1,19. Media
+no quadro inteiro. **Restrita à faixa liberada** ela separa forte: 0,97 / 1,34 /
+2,08. Era a medida certa no lugar errado.
+
+**A listra eu tratava como "quanto menos melhor" em toda parte.** O certo é
+**menos listra acima da fronteira, listra intacta abaixo dela**. O candidato ruim
+zerava a listra na faixa liberada *e* fragmentava o borrão restante — o maior
+trecho caindo de 19 para 11, com dezenas de trechos de 3. Borrão fragmentado não
+é borrão, é ruído invadindo a região borrada.
+
+**E a comparação entre candidatos eu fazia na faixa inteira**, o que favorece
+quem libera mais e dilui o artefato na média. Tem que ser na região onde os dois
+atuam.
+
+### O modelo do borrão, confirmado
+
+Toda sequência repetida é **cópia byte a byte** da linha acima — 19/19, 15/15,
+7/7, 11/11. É predição intra vertical sem resíduo, bloco a bloco. Por isso o
+borrão "desce" quando o conserto avança: muda qual linha é repetida.
+
+| | primeiro trecho grande |
+|---|---|
+| original | linha **292**, 19 linhas |
+| com o `b5` | linha **328**, 19 linhas |
+
+### O resultado
+
+`103419946 bit 5`, único sobrevivente de 28.400. **Não é reparo** — o quadro
+segue com 66% de borrão — mas é o primeiro candidato da sessão aprovado por um
+juiz que distingue imagem de lixo, e ele coincide com o julgamento visual.
