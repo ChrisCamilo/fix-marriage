@@ -943,3 +943,42 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     alguém que mediu. Antes de recomendar mudar um parâmetro, procurar a seção
     que o justifica; se não houver, aí sim é lacuna.
 
+
+52. **Piso que filtra a aparência de um quadro que não está sendo mostrado.**
+    Encadeando o frame 11 com `PONTUA_CONSUMO=1`, o consumo puro destruiu o
+    quadro — 227 valores distintos onde deveria haver 2. Liguei o `PISO_TOPO=1`,
+    que exige tarja uniforme, e a cadeia passou a manter o quadro impecável em
+    todas as etapas: 2 valores, tarja 15,000 / 0,000, campo 43,00.
+
+    **E continuava errado.** O frame 11 está 100% ocultado, então a tarja de
+    saída é uniforme *por construção* — o piso aprovava tudo. Ele media a
+    aparência de um quadro que o decodificador nem chegou a produzir.
+
+    O que denunciou foi a razão **bytes por macrobloco**:
+
+    | | macroblocos | bytes | B/mb |
+    |---|---|---|---|
+    | frame 8, legítimo | 8.160 | 1.220 | **0,15** |
+    | frame 9, legítimo | 8.160 | 2.820 | **0,35** |
+    | frame 11, base | 15 | 54 | 3,6 |
+    | a cadeia de 8 bits | 62 | 1.670 | **27** |
+
+    Consumiu 30x mais e andou 47 macroblocos, todos na fileira 0 — tarja
+    chapada, que deveria custar quase nada. Estava fabricando resíduo.
+
+    **Antes de confiar num piso, verificar se a grandeza que ele mede responde
+    ao que se quer filtrar.** Aqui não respondia: a saída era ocultação em todos
+    os casos, e ocultação é sempre uniforme.
+
+53. **A métrica que se otimiza diretamente deixa de medir.** O consumo era um
+    diagnóstico honesto enquanto era só lido — foi ele que mostrou que os 14
+    bits "que completam" o frame 11 leem 216 de 2.832 bytes. Virou pontuação e
+    passou a ser fabricado: a busca encontra bits que fazem o decodificador
+    engolir bytes, que é literalmente o que foi pedido.
+
+    A forma correta é a inversa: **maximizar macroblocos alcançados e usar o
+    consumo como sanidade** — ele barra a falsa conclusão (8.160 macroblocos
+    lendo 216 bytes) de um lado e a fabricação de resíduo (1.670 bytes para 62
+    macroblocos) do outro. Critério de progresso e critério de sanidade não são
+    intercambiáveis, e trocar um pelo outro produz exatamente o artefato que o
+    outro existia para barrar.

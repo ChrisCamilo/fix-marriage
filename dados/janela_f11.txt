@@ -213,3 +213,46 @@
 # Exige uma mudanca pequena no reparador: o worker_avanco pontua por
 # macrobloco; falta a opcao de pontuar por `len - log_bytestream`.
 
+# ============================================================================
+# CONSUMO COMO PONTUACAO: TESTADO, E FALHA -- DUAS VEZES
+#
+# Implementado como PONTUA_CONSUMO=1 e encadeado. As duas tentativas subiram o
+# numero e destruiram o quadro.
+#
+# TENTATIVA 1 -- consumo puro
+#
+#   54 -> 464 -> 1724 -> 2822 -> 2830 -> 2831 bytes, 5 bits
+#
+#   Resultado: 227 valores distintos onde deveria haver 2, tarja 17,372 com
+#   desvio 11,9, e o indice de referencia PIOR que a base -- "Reference 4 >= 3"
+#   contra "Reference 3 >= 3". O primeiro bit ja quebrava: o byte 24 b6, que
+#   pontuava 8,6x a base, leva o quadro a 81 valores de cara.
+#
+# TENTATIVA 2 -- consumo + PISO_TOPO=1 (tarja uniforme, valor livre)
+#
+#   54 -> 386 -> 596 -> 1020 -> 1288 -> 1476 -> 1640 -> 1662 -> 1670, 8 bits
+#
+#   Resultado: o quadro fica intacto em todas as etapas -- 2 valores, tarja
+#   15,000/0,000, campo 43,00. E mesmo assim esta errado.
+#
+#   O GUARDA ERA VAZIO. O quadro segue 100% ocultado, entao a tarja de saida e
+#   sempre uniforme, e o piso aprova tudo. Ele filtra a aparencia de um quadro
+#   que nao esta sendo mostrado.
+#
+# O QUE DENUNCIA: BYTES POR MACROBLOCO
+#
+#   frame  8 (legitimo) ..... 8.160 mb, 1.220 bytes -> 0,15 B/mb
+#   frame  9 (legitimo) ..... 8.160 mb, 2.820 bytes -> 0,35 B/mb
+#   frame 11 base ...........    15 mb,    54 bytes -> 3,6  B/mb
+#   cadeia de 8 bits ........    62 mb, 1.670 bytes -> 27   B/mb
+#
+# A cadeia consumiu 30x mais e andou 47 macroblocos, TODOS na fileira 0 -- que e
+# tarja chapada e deveria custar quase nada. Esta fabricando residuo.
+#
+# CONCLUSAO: consumo nao e pontuacao, e SANIDADE. O que se maximiza e macrobloco
+# alcancado; o consumo entra para separar o avanco real da falsa conclusao (que
+# chega a 8.160 lendo 216 bytes) e para barrar a fabricacao de residuo (que le
+# muito e anda pouco). A razao B/mb tem que ficar perto de 0,3, nao subir.
+#
+# Nenhum bit destas cadeias entra em lugar nenhum.
+

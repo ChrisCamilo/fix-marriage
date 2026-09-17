@@ -937,6 +937,7 @@ static int croma_faixa  = 0;   /* CROMA_FAIXA */
 static int intacto_ate  = 0;   /* INTACTO_ATE: linhas que tem que ficar identicas */
 static int sem_croma    = 0;   /* SEM_CROMA=1: quadro sem croma utilizavel */
 static int tarja_desce  = 0;   /* TARJA_DESCE=1: guiar pela tarja, nao pela fronteira */
+static int pontua_consumo = 0; /* PONTUA_CONSUMO=1: nota = bytes consumidos */
 static double base_tarja_des = -1;
 static uint8_t *img_base = NULL;  /* luma da base, so leitura nos workers */
 static int janela_resp  = 64;  /* JANELA_RESP: linhas medidas a partir da base */
@@ -1185,6 +1186,31 @@ static void *worker_avanco(void *p) {
                : (piso_croma && !croma_real(160, 640)) ? -1
                : (piso_trinca && !trinca_ok()) ? -1
                : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+
+        /* PONTUA_CONSUMO=1: a nota passa a ser BYTES CONSUMIDOS antes do erro,
+         * nao o macrobloco alcancado.
+         *
+         * Existe porque o macrobloco nao tem gradiente em alvo como o frame 11.
+         * Ali o ffmpeg descarta o quadro inteiro ao errar em qualquer
+         * macrobloco -- os MB 0 a 14, decodificados de verdade, saem iguais ao
+         * resto ocultado -- entao a imagem nao informa progresso, e o
+         * macrobloco informa pouco: a base para no 15 e os candidatos que
+         * "avancam" param no 21.
+         *
+         * O consumo informa muito mais, e vem de graca: o decodificador escreve
+         * o bytestream restante na propria mensagem de erro. Medido no frame
+         * 11, mesma escala, mesmo erro `Reference 3 >= 3`:
+         *
+         *     base ....... macrobloco 15, consome  54 de 2.832
+         *     byte 8 b5 .. macrobloco 21, consome 348      <- 6,4x
+         *
+         * Candidato SEM linha de erro nao tem bytestream para ler. Recebe `len`,
+         * a nota maxima, mas isso NAO quer dizer que consumiu: os 14 bits que
+         * "completam" o frame 11 leem ~216 bytes e declaram os 8.160
+         * macroblocos prontos. Sao poucos e conferidos um a um com o `corta`. */
+        if (pontua_consumo && mb >= 0)
+            mb = (log_bytestream < 0 || log_bytestream > len)
+               ? len : (int)(len - log_bytestream);
 
         /* Juiz do consumo -- REFUTADO PELO PROPRIO CONTROLE. Nao usar.
          *
@@ -1842,6 +1868,7 @@ int main(int argc, char **argv) {
     if (getenv("INTACTO_ATE")) intacto_ate = atoi(getenv("INTACTO_ATE"));
     if (getenv("SEM_CROMA")) sem_croma = atoi(getenv("SEM_CROMA"));
     if (getenv("TARJA_DESCE")) tarja_desce = atoi(getenv("TARJA_DESCE"));
+    if (getenv("PONTUA_CONSUMO")) pontua_consumo = atoi(getenv("PONTUA_CONSUMO"));
     if (getenv("PISO_TRINCA")) { piso_trinca = atoi(getenv("PISO_TRINCA")); if (piso_trinca) guardar_croma = 1; }
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
@@ -2343,6 +2370,12 @@ int main(int argc, char **argv) {
         decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
         int base = (cap_w <= 0) ? -1
                  : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        /* A base tem que ser lida na MESMA escala dos candidatos. Sem isto a
+         * linha imprime macrobloco enquanto o placar guarda consumo, e comparar
+         * os dois numeros leva a conclusao errada. */
+        if (pontua_consumo && base >= 0)
+            base = (log_bytestream < 0 || log_bytestream > ix[alvok].size)
+                 ? ix[alvok].size : (int)(ix[alvok].size - log_bytestream);
         /* BASE=n substitui a base medida. Existe porque a base nao passa pelos
          * pisos: no IDR 29 ela vale 8160 -- o quadro "completa" disparando --
          * e com isso nada abaixo dela e gravado, mesmo os 361.434 candidatos
