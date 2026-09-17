@@ -1954,6 +1954,12 @@ int main(int argc, char **argv) {
         decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
         int base = (cap_w <= 0) ? -1
                  : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        /* BASE=n substitui a base medida. Existe porque a base nao passa pelos
+         * pisos: no IDR 29 ela vale 8160 -- o quadro "completa" disparando --
+         * e com isso nada abaixo dela e gravado, mesmo os 361.434 candidatos
+         * que PARAM de disparar e decodificam de verdade ate o macrobloco
+         * 1.700. Sem isto a varredura mede certo e nao guarda nada. */
+        if (getenv("BASE")) base = atoi(getenv("BASE"));
         /* Histograma das notas. Sem ele a corrida do frame 13 devolveu "150.794
          * passam da base" e eu so descobri que eram todas 8160 -- e todas lixo
          * -- depois de abrir os candidatos um a um. Ver armadilha 33. */

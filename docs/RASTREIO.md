@@ -1470,3 +1470,39 @@ está disparando. Controle: no IDR 3426, bom, 35 candidatos passam o mesmo juiz.
 
 Varredura de IDR é **barata**: a cadeia é ele mesmo, 650 pares/s contra os ~200
 de um quadro no meio de um GOP.
+
+### IDR 29 — 3 bits na janela estreita, e o encadeamento
+
+Resposta à pergunta "3 bits em `[4710,4720)` faz sentido?": **como primeiro tiro
+sim, custa 2 min — e o resultado mostra que a janela é tardia demais.**
+
+| varredura | janela | combinações | melhor macrobloco |
+|---|---|---|---|
+| 2 bits | `[4600,4800)` | 1.279.200 | **2.400** |
+| **3 bits** | `[4710,4720)` | 82.160 | **2.280** — *pior* |
+
+Três bits na janela estreita chega **menos longe** que dois na janela larga. O
+`corta` marca onde o decodificador para de precisar de dado, e o leitor CABAC
+consome adiantado: o bit danificado está antes do ponto de parada. É o mesmo
+erro que me custou tempo no frame 13, onde varri 6 bytes antes do travamento.
+
+### Encadeamento, com o `BASE` novo
+
+O `avanco` calcula a base **sem** passar pelos pisos, e no IDR 29 ela vale 8160 —
+o quadro "completa" disparando. Com isso nada abaixo dela era gravado, nem os
+361.434 candidatos que **param de disparar** e decodificam de verdade. Entrou
+`BASE=n` para substituir a base medida.
+
+| etapa | base | melhor | ganho | bit fixado |
+|---|---|---|---|---|
+| 1 | 1.101 | **1.680** | +579 | `1168608 4` |
+| 2 | 1.680 | **2.400** | +720 | `1168528 2` |
+| 3 | 2.400 | 2.400 | 0 | **trava** |
+
+**1.101 → 2.400 macroblocos com 2 bits, e para.** 29% do quadro. Cada etapa
+custa 8 s, porque a cadeia de um IDR é ele mesmo — 650 candidatos/s contra os
+~200 de um quadro no meio de GOP.
+
+Os dois bits **não são reparo** e não foram anexados: o quadro segue borrado dos
+macroblocos 2.400 em diante, e a razão de consumo segue muito abaixo dos 100%
+que um IDR bom mostra.
