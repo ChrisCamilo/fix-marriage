@@ -46,3 +46,26 @@
 439004 6 439042 7   # bytes 5 e 43
 439004 6 439043 7   # bytes 5 e 44
 439004 6 439052 2   # bytes 5 e 53
+#
+# --- a janela NAO precisa ser refeita depois de consertar 11 e 13 ---
+#
+# O CABAC nao le pixel de referencia: a decodificacao aritmetica consome
+# simbolos do bitstream, e os pixels so entram na reconstrucao, depois do parse.
+# Medido: alterando o frame 11 a ponto de ELIMINAR o erro dele, o erro do frame
+# 19 fica bit-identico -- MB 1 0, bytestream 143806, o mesmo byte.
+#
+# O furo possivel era a lista de referencias: o erro do 19 vem precedido de
+# "Reference 4 >= 3", que e verificacao de lista e nao de pixel. Se consertar
+# 11 e 13 mudasse quem esta no DPB, a lista mudaria de tamanho e a janela
+# andaria. Nao muda: 11, 13, 15 e 17 tem nal_ref_idc 2 ou 3 e JA sao
+# armazenados como referencia hoje, mesmo errando.
+#
+# Entao, quando a cadeia do GOP 0 estiver limpa:
+#   1. NAO revarrer. Medir a tarja dos 28 e ver qual separa.
+#   2. So se NENHUM sobreviver e que a resposta nao esta em 2 bits dentro de
+#      [5,80) -- ai sobe para 3 bits ou alarga a janela. 1 bit ja esta fechado
+#      ali (2 candidatos, os dois parando no macrobloco 1).
+#
+# E o teste que reconfere tudo isso custa 11 s: rodar o modo `mapa` antes e
+# depois do conserto e comparar a coluna inteira. Foi ele que derrubou a minha
+# afirmacao de que o frame 19 era raiz de oito quadros.

@@ -96,3 +96,73 @@ mas 143.806 de 143.870 é o tamanho dele.
 
 **A ordem que os números sugerem é (a), depois (b), depois (c)** — e não a ordem
 em que eu vinha atacando, que foi pelo número do quadro.
+
+# Recontagem com a listra — o dano é muito maior que 168 quadros
+
+## A listra sozinha não serve, e por quê
+
+`linhas_identicas` conta linha exatamente igual à de cima. **Quadro de fade dá
+100% e está perfeito** — campo chapado faz toda linha repetir a anterior. Os
+frames 0, 12, 3441 e 3443 dão 100% e são bons.
+
+O sinal de defeito é listra alta **com conteúdo real**: a imagem tem textura e
+mesmo assim as linhas se repetem. Limiar usado: `listra > 40%` **e**
+`desvio do campo > 20`.
+
+| classe | quadros |
+|---|---|
+| listra > 40% com campo chapado (fade, **bom**) | 243 |
+| listra > 40% com conteúdo real (**borrado**) | **279** |
+| listra 0% com conteúdo real (**limpo**) | 633 |
+
+## O controle, que é o que valida o limiar
+
+| trecho | ruins / medidos | |
+|---|---|---|
+| ilha 2333–2361 (fechada) | **0 / 29** | OK |
+| ilha 3319–3444 (fechada) | **0 / 126** | OK |
+| bloco de abertura 0–12 (fechado) | **0 / 13** | OK |
+
+Zero nas três. Um critério que acusasse quadro bom apareceria justamente ali.
+
+## A contagem
+
+| sinal | quadros |
+|---|---|
+| **borrados** (listra alta com conteúdo) | 279 |
+| **cópia** de outro do mesmo GOP | 232 |
+| **união** | **414** |
+| destes, que também param cedo | 197 |
+| (param cedo, sozinho — sinal fraco, ver acima) | 1.069 |
+
+**414 de 2.769 quadros medidos, 15%.** O registro do projeto dizia **168**, e
+esse número contava só as três ilhas que foram investigadas.
+
+| trecho | ruins |
+|---|---|
+| 0–499 | 77 |
+| 500–999 | 66 |
+| 1000–1499 | 69 |
+| 1500–1999 | 48 |
+| 2000–2499 | 60 |
+| 2500–2999 | 55 |
+| 3000–3499 | 39 |
+
+Espalhado pelo filme inteiro, não em ilhas.
+
+## O caso que motivou a recontagem
+
+O **IDR 29** analisa até o macrobloco 8160 **sem um único erro** — e tem listra
+**71,6%** com desvio 82,9. Está borrado.
+
+| linhas | média | desvio | repetidas |
+|---|---|---|---|
+| 0–119 | 16,00 | 0,00 | 119/120 (tarja) |
+| 240–359 | 119,19 | 83,52 | **93/120** |
+| 360–479 | 119,22 | 83,15 | **97/120** |
+| 720–839 | 119,32 | 82,03 | **95/120** |
+
+**Quadro borrado que analisa sem erro escapa dos dois detectores anteriores** —
+não para cedo e não é cópia de ninguém. Só a listra pega. E IDR borrado envenena
+o GOP inteiro: os 12 quadros do GOP 29 que param cedo podem estar parando por
+causa dele.
