@@ -890,7 +890,7 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
 
     | onde | dizia | é |
     |---|---|---|
-    | `AGENTS.md` | "treze maneiras de medir errado" / "seis maneiras" | 50 |
+    | `AGENTS.md` | "treze maneiras de medir errado" / "seis maneiras" | 51 |
     | `AGENTS.md` | `verify`: 7 válidos, 4 falsos, 74 pulados | 5, 10, 479 |
     | `AGENTS.md` | modo `unico` sobre "os 71 IDRs" | 132 |
     | `ESTADO.md` | "os seguintes são reparos reais — hoje são apenas 5" | 15 |
@@ -906,3 +906,21 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     **Toda seção chamada "números de hoje" leva data.** E número que descreve
     estado se remede antes de ser citado, porque medir custa segundos e a
     conclusão errada custa uma sessão.
+
+51. **"Corrigir" uma decisão explícita sem ler a justificativa dela.** Auditando
+    os documentos, vi que a máquina tem 28 núcleos e que `quantas_threads()` usa
+    12, e escrevi no `AGENTS.md` que corrida longa "merece `THREADS=26`
+    explícito, senão metade da máquina fica parada".
+
+    A seção 5 do `docs/PARALELIZACAO.md` já explicava que **12 é decisão**: cada
+    worker carrega um `AVCodecContext` de 1920×1080 com buffers de referência, e
+    saturar vira pressão de cache que come o ganho; o ganho é sublinear bem
+    antes de 26; e a máquina precisa continuar usável durante corrida de meia
+    hora. O default inclusive já subiu de 6 para 12 por decisão explícita.
+
+    Aconteceu **dentro de uma auditoria cujo objetivo era remover
+    inconsistências** — e o que fiz foi criar uma, contradizendo um documento do
+    próprio projeto. Número que parece subutilizado geralmente é escolha de
+    alguém que mediu. Antes de recomendar mudar um parâmetro, procurar a seção
+    que o justifica; se não houver, aí sim é lacuna.
+

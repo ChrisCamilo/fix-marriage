@@ -3,7 +3,7 @@
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
 comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
-qualquer coisa — são **50** maneiras de medir errado que já custaram horas aqui.
+qualquer coisa — são **51** maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
 
@@ -39,7 +39,7 @@ piora o filme. Não "limpar" duplicata sem medir os dois estados.
 O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
 com zero linhas de log**. Nada mais conta.
 
-A `docs/ARMADILHAS.md` lista **50** maneiras de medir errado que já produziram
+A `docs/ARMADILHAS.md` lista **51** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
@@ -120,11 +120,21 @@ quando é argumento.
 
 ## 7. Paralelizar tudo que der, sem abrir mão do determinismo
 
-Trabalho que testa candidatos independentes **deve** ser paralelizado. A máquina
-tem 28 núcleos e as corridas duram dezenas de minutos; deixar isso numa thread
-só é desperdício. **Atenção:** o padrão de `quantas_threads()` é **12**, com teto
-em `NUMBER_OF_PROCESSORS - 2` = 26. Corrida longa merece `THREADS=26` explícito,
-senão metade da máquina fica parada. A máquina já existe no `reparador.c` (`varre_par`) — use-a em
+Trabalho que testa candidatos independentes **deve** ser paralelizado. As
+corridas duram dezenas de minutos; deixar isso numa thread só é desperdício.
+
+**`THREADS=12` é o certo, e é o padrão.** A máquina tem 28 núcleos e o teto do
+código é `NUMBER_OF_PROCESSORS - 2` = 26, mas **não se satura**: cada worker
+carrega um `AVCodecContext` de 1920×1080 com buffers de referência, e 26 deles
+viram pressão de cache que come o ganho; o ganho já é sublinear bem antes disso;
+e a máquina precisa continuar usável durante corrida de meia hora. A
+justificativa completa está na seção 5 do `docs/PARALELIZACAO.md`, junto com o
+histórico — o default foi 6, subiu para 12 por decisão explícita, e 12 fica.
+
+Não "otimizar" isto para 26 achando que metade da máquina está parada: ela está
+parada de propósito.
+
+A maquinaria de paralelização já existe no `reparador.c` (`varre_par`) — use-a em
 vez de escrever laço sequencial novo. Já aconteceu de eu paralelizar um modo e,
 logo depois, escrever outro com laços sequenciais próprios ao lado.
 
