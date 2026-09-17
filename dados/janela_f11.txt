@@ -22,6 +22,43 @@
 # campo 43 ja esta certo -- e o que a rampa preve. Falta so a tarja.
 #
 # ============================================================================
+# A TARJA 15 NAO E UM DEFEITO SEPARADO -- NAO PROCURAR BIT PARA ELA
+#
+# Medido no GOP 0 inteiro:
+#
+#   frame   tarja topo      tarja base      campo
+#   0..10   16,000/0,000    16,000/0,000    16 a 38   <- todos certos
+#   11      15,000/0,000    15,000/0,000    43        <- o unico anomalo
+#   12      16,000/0,000    16,000/0,000    41
+#
+# Nao ha erro nos frames 0 a 10. E a rampa fecha em ordem de exibicao:
+#   16 18 21 23 25 27 29 32 34 36 38 41 43
+# O frame 11 e o ULTIMO quadro do fade, e o campo 43 dele ja esta certo.
+#
+# O QUE FECHA A QUESTAO: os 15 macroblocos que o frame 11 REALMENTE decodifica
+# tambem saem 15. Medido na faixa x=0..239, y=0..15, que e exatamente MB 0 a 14:
+#
+#   frame 11, MB 0-14 (decodificados) ... [15]
+#   frame 11, MB 15+  (ocultacao) ....... [15]
+#   frame  9, mesma faixa ............... [16]
+#
+# Quando o erro bate no macrobloco 15 o ffmpeg descarta o quadro inteiro e
+# oculta tudo, inclusive o que ja tinha decodificado. A tarja 15 e a saida da
+# ocultacao: 1,25 * 16 - 5 = 15, a predicao ponderada do fade aplicada a tarja
+# 16 do frame 9. A tarja ocupa 260 linhas (0-129 e 950-1079) e as 260 estao em
+# 15, a mesma geometria que nos quadros bons da 16.
+#
+# CONSEQUENCIA PRATICA: quando o frame 11 decodificar de verdade, a tarja sai 16
+# sozinha, como em todos os vizinhos. Nao ha bit de tarja para procurar.
+#
+# E os 5 candidatos da JANELA A ficam DESQUALIFICADOS como reparo: eles mexem
+# nos pesos, ou seja, consertam o que a OCULTACAO produz, nao o quadro. Por isso
+# entregam tarja 16 e estragam o campo. Servem de diagnostico, nao de conserto.
+#
+# O alvo e um so: fazer o frame 11 passar do macrobloco 15. Tarja e campo vem
+# juntos.
+#
+# ============================================================================
 # SAO DUAS JANELAS, E CADA UMA RESOLVE METADE
 #
 # JANELA A -- bytes 8 a 11 (absoluto 147697-147700): os pesos no cabecalho
