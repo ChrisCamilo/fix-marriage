@@ -757,6 +757,39 @@ static int piso_topo  = 0;      /* PISO_TOPO=1: tarja de CIMA uniforme */
 static int piso_base  = 0;      /* PISO_BASE=1: tarja de BAIXO uniforme, valor livre */
 static int consumo_t  = 0;      /* CONSUMO=n: quadro que fecha truncado em n bytes e atalho */
 static int iguais     = 0;      /* IGUAIS=1: grava tambem quem empata com a base */
+static int piso_croma = 0;      /* PISO_CROMA=1: desvio de croma dentro da faixa real */
+
+/* O juiz que faltava, e ele veio do olho do usuario antes de vir da medida.
+ *
+ * A listra premia ruido: linha diferente da de cima satisfaz o criterio, e lixo
+ * decodificado satisfaz trivialmente. Encadeando no IDR 3047 eu levei a listra
+ * de 69,4% para 40,0% trocando borrao limpo por faixa cheia de artefato
+ * colorido -- "melhorou" na metrica e piorou na imagem.
+ *
+ * O croma separa os tres estados, e a faixa e estreita. Medido em 12 quadros
+ * verificados de dois trechos diferentes do filme, na regiao 160-639:
+ *
+ *     imagem real .... desvio U de 5,99 a 8,52   V de 3,40 a 7,42
+ *     borrao ......... U 2,78  V 2,25   -- repetir linha achata a cor
+ *     lixo ........... U 21,43 V 15,49  -- 2,5x acima do real
+ *
+ * Por isso e FAIXA e nao limiar: baixo demais e borrao, alto demais e lixo, e a
+ * imagem verdadeira esta no meio. Ver armadilha 39. */
+static int croma_real(int y0, int y1) {
+    if (!cap_u || !cap_v || cap_w <= 0) return 0;
+    int cw = cap_w / 2;
+    double su = 0, sv = 0, su2 = 0, sv2 = 0; long n = 0;
+    for (int y = y0; y < y1; y += 4)
+        for (int x = 0; x < cap_w; x += 8) {
+            double u = cap_u[(size_t)(y / 2) * cw + x / 2];
+            double v = cap_v[(size_t)(y / 2) * cw + x / 2];
+            su += u; sv += v; su2 += u * u; sv2 += v * v; n++;
+        }
+    if (n < 100) return 0;
+    double du = sqrt(su2 / n - (su / n) * (su / n));
+    double dv = sqrt(sv2 / n - (sv / n) * (sv / n));
+    return du >= 4.5 && du <= 11.0 && dv >= 2.5 && dv <= 10.0;
+}
 
 /* Variante do piso da tarja de baixo que NAO fixa o valor em 16.
  * Existe para responder uma duvida de satisfazibilidade: o frame 13 decodifica
@@ -1480,6 +1513,7 @@ int main(int argc, char **argv) {
     if (getenv("PISO_BASE")) piso_base = atoi(getenv("PISO_BASE"));
     if (getenv("CONSUMO")) consumo_t = atoi(getenv("CONSUMO"));
     if (getenv("IGUAIS")) iguais = atoi(getenv("IGUAIS"));
+    if (getenv("PISO_CROMA")) { piso_croma = atoi(getenv("PISO_CROMA")); if (piso_croma) guardar_croma = 1; }
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",

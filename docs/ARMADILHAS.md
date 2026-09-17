@@ -704,3 +704,31 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     **Escapa de todos os detectores anteriores:** não para cedo, não duplica
     vizinho, não emite erro. Só a listra com conteúdo real e a razão de consumo
     pegam. E IDR assim envenena o GOP inteiro.
+
+39. **A listra premia ruído — "sem listra" não é "com imagem".** Encadeando bits
+    no IDR 3047 eu levei a listra de **69,4% para 40,0%** e apresentei como
+    progresso. A faixa de linhas 160 a 639 saiu de ~120 linhas repetidas por
+    faixa para **zero**.
+
+    **O usuário olhou e viu o que a métrica não via:** a faixa liberada está
+    cheia de artefato colorido. Linha diferente da de cima satisfaz o critério
+    da listra, e **lixo decodificado satisfaz trivialmente**. Troquei borrão
+    limpo — do qual dá para distinguir o que é real — por ruído.
+
+    O croma separa os três estados, e a faixa é estreita. Medido na região
+    160–639 de 12 quadros verificados, de dois trechos diferentes do filme:
+
+    | estado | desvio U | desvio V |
+    |---|---|---|
+    | **imagem real** | **5,99 a 8,52** | **3,40 a 7,42** |
+    | borrão | 2,78 | 2,25 |
+    | lixo (meus 4 bits) | **21,43** | **15,49** |
+
+    Repetir linha **achata** a cor; lixo a **estoura**. Por isso o juiz tem que
+    ser **faixa e não limiar** — e nenhuma métrica monotônica serve, porque o
+    alvo está no meio e não num extremo.
+
+    **Estado da implementação: o `PISO_CROMA` do `reparador.c` NÃO está
+    filtrando.** Encadeando com ele ligado, o estado resultante mede U 23,83 —
+    fora da faixa que o próprio piso exige. A calibração acima é confiável; o
+    código que a aplica ainda não. Não usar até depurar.
