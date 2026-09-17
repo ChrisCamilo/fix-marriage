@@ -756,6 +756,7 @@ static int piso_tarja = 0;      /* PISO_TARJA=1: sem tarja 16 nao ha pontuacao *
 static int piso_topo  = 0;      /* PISO_TOPO=1: tarja de CIMA uniforme */
 static int piso_base  = 0;      /* PISO_BASE=1: tarja de BAIXO uniforme, valor livre */
 static int consumo_t  = 0;      /* CONSUMO=n: quadro que fecha truncado em n bytes e atalho */
+static int iguais     = 0;      /* IGUAIS=1: grava tambem quem empata com a base */
 
 /* Variante do piso da tarja de baixo que NAO fixa o valor em 16.
  * Existe para responder uma duvida de satisfazibilidade: o frame 13 decodifica
@@ -785,6 +786,13 @@ static int base_uniforme(const uint8_t *Y, int w, int h) {
 static int topo_uniforme(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return 0;
     int v = Y[0];
+    /* PISO_TOPO=2 exige o VALOR, nao so a uniformidade. Medido nos quadros
+     * verificados 0, 5, 9, 12, 2340, 2350, 2360 e 3443: as DUAS tarjas dao
+     * 16,000 com desvio 0,000, sem excecao. O frame 13 da 15,000 na de cima --
+     * uniforme, entao nao e dessincronizacao, e deslocamento global de -1 num
+     * trecho que decodifica MUITO antes do travamento da fileira 54. Julgar por
+     * esse valor isola esse defeito dos outros. */
+    if (piso_topo >= 2 && v != 16) return 0;
     for (int y = 0; y < 124; y++)
         for (int x = 0; x < w; x += 8)
             if (Y[(size_t)y * w + x] != v) return 0;
@@ -1471,6 +1479,7 @@ int main(int argc, char **argv) {
     if (getenv("PISO_TOPO")) piso_topo = atoi(getenv("PISO_TOPO"));
     if (getenv("PISO_BASE")) piso_base = atoi(getenv("PISO_BASE"));
     if (getenv("CONSUMO")) consumo_t = atoi(getenv("CONSUMO"));
+    if (getenv("IGUAIS")) iguais = atoi(getenv("IGUAIS"));
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",
@@ -1975,7 +1984,13 @@ int main(int argc, char **argv) {
         FILE *g = argc > 9 ? fopen(argv[9], "w") : NULL;
         int mostradas = 0;
         for (long c = 0; c < n_combos && mostradas < 40000; c++) {
-            if (placar[c] <= base || placar[c] < porta) continue;
+            /* Quando a base ja esta no maximo -- caso do encadeamento, em que
+             * o bit anterior fecha o quadro -- exigir "> base" nao deixa passar
+             * nada e o arquivo sai vazio mesmo havendo milhares de candidatos
+             * validos. IGUAIS=1 tambem grava os que empatam com a base, e ai
+             * quem separa e o piso, nao o macrobloco. */
+            if (placar[c] < porta) continue;
+            if (iguais ? placar[c] < base : placar[c] <= base) continue;
             const int *comb = combos_k + c * prof_k;
             for (int q = 0; q < prof_k; q++) {
                 long o = ix[alvok].off + ini_k + comb[q] / 8;
@@ -2188,6 +2203,46 @@ int main(int argc, char **argv) {
                    campos[k].imed, campos[k].ides, campos[k].ibloc);
         }
         free(campos);
+    }
+    /* ---- modo mapa ----
+     * Onde cada quadro do filme para, num arquivo so. Uma decodificacao por
+     * GOP, como o panorama: manda pacote por pacote, zera o log antes de cada
+     * um e le depois, entao o macrobloco que sobra e o DAQUELE quadro.
+     *
+     * Serve para escolher alvo por medida em vez de por ordem: quadro que para
+     * cedo tem dano de cabecalho e janela pequena; quadro que para tarde tem
+     * dessincronizacao e janela grande; e quadro que nao para esta bom. */
+    else if (!strcmp(modo, "mapa")) {
+        cap_qualquer = 1;
+        cap_buf = malloc((size_t)1920 * 1088);
+        printf("frame bytes mb_parada fileira pct_decodificado\n");
+        fflush(stdout);
+        AVPacket *pkt = av_packet_alloc();
+        AVFrame *fr = av_frame_alloc();
+        for (int g = 0; g < n_ix; g++) {
+            if (!ix[g].idr) continue;
+            int fim = g + 1;
+            while (fim < n_ix && !ix[fim].idr) fim++;
+            abre_decoder();
+            for (int i = g; i < fim; i++) {
+                av_new_packet(pkt, ix[i].size);
+                memcpy(pkt->data, arq + ix[i].off, ix[i].size);
+                pkt->pts = i;
+                log_zerar();
+                if (avcodec_send_packet(ctx, pkt) == 0) { }
+                av_packet_unref(pkt);
+                while (avcodec_receive_frame(ctx, fr) == 0) av_frame_unref(fr);
+                int mb = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+                printf("%d %d %d %d %.1f\n", i, ix[i].size, mb,
+                       mb >= 8160 ? -1 : mb / 120, 100.0 * mb / 8160.0);
+            }
+            avcodec_send_packet(ctx, NULL);
+            while (avcodec_receive_frame(ctx, fr) == 0) av_frame_unref(fr);
+            fflush(stdout);
+        }
+        av_frame_free(&fr); av_packet_free(&pkt);
+        if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
+        cap_qualquer = 0; free(cap_buf); cap_buf = NULL;
     }
     else if (!strcmp(modo, "panorama")) {
         /* Decodifica cada GOP numa passada e mede TODO quadro emitido. Uma
