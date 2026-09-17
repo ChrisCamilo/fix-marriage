@@ -52,7 +52,7 @@ SHA-256, em pelo menos um caso por modo. Sem isso não entra.
 
 ## 2. Duplicatas e quase-duplicatas
 
-Não há função repetida literalmente. Há algo pior: **famílias parecidas com
+Uma duplicação literal (seção 4b) e, pior que ela, **famílias parecidas com
 convenções incompatíveis**.
 
 ### `blocagem` x `blocagem_faixa` — as duas ficam
@@ -89,12 +89,11 @@ pixels vizinhos, desvio do plano — mas o nome não diz qual, e eu já me confu
 entre `croma_real` e `croma_dp` nesta sessão. Renomear pelo que medem:
 `croma_var_mb`, `croma_salto_p99`, `croma_desvio_plano`.
 
-### A família da tarja — quatro funções
+### A família da tarja — quatro funções, e duas são a mesma
 
-`tarja_perfeita` (uniforme **e** 16), `base_uniforme` (uniforme, valor livre),
-`topo_uniforme` (com `piso_topo >= 2` exigindo 16) e `tarja_des` (desvio). Três
-percorrem a mesma região com o mesmo laço. Uma `tarja(regiao, &media, &desvio)`
-mais predicados finos resolve.
+`tarja_perfeita` e `base_uniforme` são idênticas exceto pelo valor de
+referência. Esta é a única duplicação literal do arquivo, e o conserto está na
+seção 4b — a primitiva `regiao_uniforme`.
 
 ## 3. Tabela de modos — e um bug que ela mata
 
@@ -171,9 +170,48 @@ Ou seja: **nesta frente não há nada a fazer.** As varreduras ficam como estão
 o ganho de tempo, se vier, vem de reduzir o número de candidatos com juiz melhor
 — não de reescrever o motor.
 
-## 4b. Separar os juízes num arquivo — vale, e por um motivo melhor que arrumação
+## 4b. `src/juizes.c` — todos os juízes num arquivo só
 
-Medido o acoplamento das 19 funções de medida e juízo:
+Mesma forma do `src/workers.c`: um arquivo com **as 19 funções de medida e
+juízo**, da `blocagem` à `trinca_ok`, mais os `piso_*`, o estado da base e a
+linha de pontuação. Tudo que decide se um candidato presta sai do
+`reparador.c`.
+
+### O que há de comum — e aqui há duplicação de verdade
+
+Duas primitivas absorvem **6 das 19**.
+
+**Primitiva 1 — região uniforme.** `base_uniforme` e `tarja_perfeita` são a
+mesma função, caractere por caractere, exceto pelo valor de referência:
+
+| | região | passo | referência |
+|---|---|---|---|
+| `base_uniforme` | 962–1080 | `x += 8` | `Y[962*w]`, o primeiro pixel |
+| `tarja_perfeita` | 962–1080 | `x += 8` | literal `16` |
+| `topo_uniforme` | 0–124 | `x += 8` | `Y[0]`, ou `16` se `piso_topo >= 2` |
+
+Mesmo laço, mesma guarda `w < 1920 || h < 1080`, mesmo retorno. Colapsam em:
+
+    static int regiao_uniforme(const uint8_t *Y, int w, int h,
+                               int y0, int y1, int valor);   /* valor < 0 = livre */
+
+E as três viram uma linha cada. Ganho extra: o `piso_topo >= 2` sai de dentro da
+medida e vai para o chamador, que é onde política pertence — hoje uma função
+chamada `topo_uniforme` consulta uma variável de ambiente por dentro.
+
+**Primitiva 2 — média e desvio de uma região.** `tarja_des`, `croma_dp` e
+`croma_stat` acumulam `s` e `s2` no mesmo formato e tiram `sqrt(s2/n - m²)`. A
+única diferença é o plano (Y, U ou V) e o passo:
+
+    static void estatistica(const uint8_t *P, int w, int y0, int y1, int passo,
+                            double *media, double *desvio);
+
+Três funções, uma primitiva. E `croma_dp` e `croma_stat` passam a diferir só na
+faixa e no passo, que é o que elas realmente são.
+
+### O acoplamento, medido
+
+Das 19, o que cada uma lê além dos argumentos:
 
 | grupo | quantas | do que dependem |
 |---|---|---|
@@ -196,17 +234,28 @@ passar as armadilhas 40 a 43 — todas da forma "a medida mede outra coisa, e eu
 só descobri depois de horas". A armadilha 40 (igualdade exata é frágil) morreria
 em segundos com um buffer sintético de listras que derivam de 1 por linha.
 
-Com `src/medidas.c` puro, um `src/testes_medidas.c` monta quadros sintéticos com
+Com a camada de medidas isolada, um `src/testes_medidas.c` monta quadros sintéticos com
 estrutura conhecida — borrão de N linhas a partir da linha L, faixa com salto de
 croma de valor V — e afirma o resultado. **É a única parte deste projeto que dá
 para testar sem oráculo**, porque a resposta é conhecida por construção.
 
-### O que fica de fora
+### Duas camadas dentro do mesmo arquivo
 
-`trinca_ok` **não é medida, é política**: 87 linhas que compõem cinco medidas
-com limiares, estado da base e flags. Vai junto com os `piso_*`, o `base_*` e a
-linha de pontuação — não com as medidas puras. Misturar as duas camadas é o que
-torna o juiz difícil de auditar hoje.
+Tudo vai para `juizes.c`, mas em duas camadas separadas por um comentário, e a
+de cima não pode chamar a de baixo:
+
+| camada | o que tem | pode ler |
+|---|---|---|
+| **medidas** | as 16 que viram puras, mais as duas primitivas | só os argumentos |
+| **política** | `trinca_ok`, os `piso_*`, `base_*`, `img_base`, `nota_do_quadro()` | o que quiser |
+
+`trinca_ok` tem 87 linhas e não é medida: é a composição de cinco medidas com
+limiares e estado. Misturar as duas camadas é o que torna o juiz difícil de
+auditar hoje — e foi o que me fez reescrevê-lo três vezes nesta sessão sem notar
+que dois dos três critérios não mediam nada.
+
+A regra "a camada de cima não chama a de baixo" é o que garante que as medidas
+continuem testáveis sem decodificador.
 
 E a linha de pontuação merece virar função. Hoje ela mora dentro do
 `worker_avanco`, e **por isso os pisos só funcionam no modo `avanco`** — quem
@@ -235,7 +284,7 @@ Da menor para a maior chance de quebrar coisa:
 | 1 | tabela de modos e validação de `argc` | baixo | mata o `report` silencioso e o `argv[5]` nulo |
 | 2 | documentar o contrato das duas `blocagem` | **nenhum** | tira a armadilha do 0 x 99 sem tocar em calibração |
 | 3 | renomear as famílias do croma e da tarja | baixo | o nome passa a dizer o que mede |
-| 4 | `src/medidas.c` com as 11 puras + as 5 do croma | **baixo** | abre teste sem decodificador — é o item de maior retorno por risco |
+| 4 | `src/juizes.c` com as 19, em duas camadas | **baixo** | 6 funções colapsam em 2 primitivas, e abre teste sem decodificador |
 | 5 | `nota_do_quadro()` fora do `worker_avanco` | médio | os pisos passam a valer em todo modo, não só no `avanco` |
 | 6 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
 
