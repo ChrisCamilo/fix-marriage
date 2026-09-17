@@ -604,6 +604,25 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     A regra geral: toda métrica de progresso precisa de um piso que distinga
     "não errou" de "não chegou a tentar". Ausência de erro não é sucesso.
 
+33. **A métrica premiava o desastre completo.** Irmã da 32, e pior: ali o quadro
+    não existia; aqui ele existe e é lixo. No frame 13, **51,6% de todos os
+    flips de 1 bit — 150.794 de 292.216 — tiravam 8160** e "passavam da base".
+
+    O motivo é que o decodificador **desiste em silêncio** e devolve ocultação:
+    quadro liso, sem uma única linha de erro no log. A base, que erra
+    honestamente no macrobloco 6600, pontuava **menos que o desastre completo**.
+
+    Exigir `cap_w > 0` (armadilha 32) não pega isso, porque o quadro de
+    ocultação existe e tem 1920×1080.
+
+    O piso que separa é a **tarja**, conhecida a priori em todo quadro do filme:
+    ocultação não a reproduz. Com `PISO_TARJA`, os 150.794 viraram **zero** — e
+    o zero é resposta, não artefato, porque o mesmo piso é satisfazível no frame
+    12 já reparado, onde 9.032 candidatos passam por ele.
+
+    **Sempre conferir que o piso é satisfazível em algum quadro conhecido antes
+    de ler um zero como resposta.**
+
 34. **Arquivo de saída compartilhado num laço faz quadro inexistente parecer
     existir.** Medi "quais quadros do GOP 0 produzem imagem" com um laço que
     escrevia todos no **mesmo** `$SB/h.yuv`. Quando o quadro não saía, o arquivo
