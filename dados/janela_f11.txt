@@ -122,3 +122,46 @@
 #
 # As janelas A e B continuam validas: elas foram medidas com o patches.txt
 # aplicado, pelo proprio reparador.
+
+# ============================================================================
+# 1, 2 E 3 BITS ESGOTADOS NA JANELA B
+#
+#   1 bit   [5,200)    1.560 combinacoes    -> 5 candidatos, TODOS na janela A
+#   2 bits  [5,60)    96.580 combinacoes    -> 1.826, todos com um bit no cabecalho
+#                                              ZERO com os dois na janela B
+#   3 bits  [18,40)  893.200 combinacoes    -> ZERO         (3.301 s)
+#
+# O zero de 3 bits e resposta: o piso PISO_TOPO=2 foi provado satisfazivel antes,
+# aceitando os 5 da janela A.
+#
+# POR QUE O ATAQUE ESTAVA MAL POSTO
+#
+# Exigir tarja 16 e exigir decodificacao COMPLETA e sem erro, porque o ffmpeg
+# descarta o quadro inteiro quando erra em qualquer macrobloco -- os MB 0 a 14
+# do frame 11, que sao decodificados de verdade, saem 15 igual ao resto
+# ocultado. Nao ha gradiente: e tudo ou nada, e 3 bits nao chegam la de um salto.
+#
+# E os 14 bits que "completam" o quadro leem ~216 dos 2.832 bytes e declaram os
+# 8.160 macroblocos prontos. Engolem o quadro como todo-skip.
+#
+# O CONSUMO NAO SERVE COMO CRITERIO
+#
+#   frame  9 (legitimo) .... consome ~100% dos 2.834 bytes
+#   frame  8 (legitimo) .... consome ~41% dos 2.939
+#   frame 12 (reparado) .... consome <1% -- fecha com 20 bytes
+#
+# O frame 12 e quadro verificado e fecha com 20 bytes, entao consumo baixo nao
+# prova nada. Cheguei a suspeitar que o reparo dele fosse falso e a aritmetica
+# desfez: existe peso inteiro consistente, w = 1,25 e o = -4, que leva a tarja
+# 16 -> 16 e o campo 36 do frame 10 -> 41 ao mesmo tempo. Ele e legitimamente
+# todo-skip, e o resto do payload e cabac_zero_word.
+#
+# O contraste com o frame 11 e so o offset: -4 no 12, -5 no 11.
+#
+# PROXIMO PASSO, SE HOUVER
+#
+# Nao e mais bits na mesma janela. O que falta e um criterio com GRADIENTE, que
+# hoje nao existe: macrobloco alcancado nao serve (os 14 bits pulam para 8.160
+# sem consumir), tarja nao serve (e tudo ou nada), consumo nao serve (o frame 12
+# desmente). Sem gradiente, encadeamento nao tem por onde subir.
+

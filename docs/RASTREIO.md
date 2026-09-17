@@ -1529,3 +1529,65 @@ terceiro, a blocagem, fazia o trabalho sozinho.
 etapa 1, **316** com o da etapa 2. Cinquenta e duas linhas de imagem a mais, com
 a faixa liberada entrando na faixa de croma dos quadros intactos. Não é reparo —
 764 linhas seguem borradas.
+
+### Frame 11 — 3 bits na janela dos macroblocos: zero em 893.200
+
+`[18,40)`, 176 bits, **893.200 combinações, 3.301 s** (55 min, 12 threads), juiz
+`PISO_TOPO=2` — tarja de cima uniforme **e** igual a 16.
+
+| | |
+|---|---|
+| reprovadas | **893.200** |
+| melhor macrobloco | **−1** |
+| sobreviventes | **0** |
+
+**O zero é resposta.** Controle de satisfazibilidade rodado antes: o mesmo piso
+aceita os 5 candidatos da janela A (bytes 8 a 11), então ele não é vazio.
+
+Somado ao que já estava fechado, **1, 2 e 3 bits estão esgotados** na janela dos
+primeiros macroblocos do frame 11.
+
+### E a corrida revelou por que o ataque estava mal posto
+
+Os 14 bits de 1 flip que fazem o frame 11 "decodificar inteiro" não consomem o
+quadro. Medido com `corta` sobre um deles:
+
+| corte | macrobloco |
+|---|---|
+| 20 bytes | 8160 |
+| **220 bytes** | **8160, e daí para frente não muda** |
+
+**Ele lê ~216 dos 2.832 bytes, declara os 8.160 macroblocos prontos e nunca olha
+os outros 92%.** Não é conserto: é engolir o quadro como todo-skip.
+
+E o mesmo vale para o critério `PISO_TOPO=2` usado nesta varredura. Como o
+ffmpeg descarta o quadro inteiro quando erra em qualquer macrobloco — medido:
+os MB 0 a 14 do frame 11, que são decodificados de verdade, saem 15 igual ao
+resto ocultado — **exigir tarja 16 é exigir decodificação completa e sem erro**.
+Não há gradiente: é tudo ou nada, e 3 bits não chegam lá de um salto.
+
+### O consumo não serve como critério, e a medida mostra por quê
+
+A ideia natural seria exigir que o candidato **consuma** o payload. Medido nos
+vizinhos legítimos do fade:
+
+| frame | payload | bytes até fechar | consumo |
+|---|---|---|---|
+| 9 | 2.834 | ~2.820 | **~100%** |
+| 8 | 2.939 | ~1.220 | ~41% |
+| 12 (reparado) | 2.939 | **~20** | **<1%** |
+| 11 com o bit que "completa" | 2.832 | ~216 | <8% |
+
+O frame 12 é quadro **verificado** — campo 41,000/0,000 na rampa, as duas tarjas
+16,000/0,000 — e fecha com 20 bytes. Cheguei a suspeitar que o reparo dele fosse
+da mesma classe falsa, e **a aritmética desfez a suspeita**: existe peso inteiro
+consistente, `w = 1,25` e `o = −4`, que leva a tarja 16 → 16 e o campo 36 do
+frame 10 → 41 ao mesmo tempo. O frame 12 é legitimamente todo-skip, e o resto do
+payload dele é `cabac_zero_word` — a cauda `00 00 03` repetida está lá, visível.
+
+O contraste com o frame 11 é só o offset: **−4 no frame 12, −5 no 11**.
+
+Então consumo baixo não prova nada sozinho — é a armadilha 36 outra vez. O que
+separa os dois casos não é quanto se consome, é se o resultado bate com a rampa
+**e** com a tarja ao mesmo tempo, que é o que o frame 12 faz e os 14 bits do
+frame 11 não fazem.
