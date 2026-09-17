@@ -1,0 +1,62 @@
+# candidatos_f13.txt -- NAO SAO PATCHES. Nao anexar ao patches.txt sem antes
+# ler a condicao de promocao no fim deste arquivo.
+#
+# ============================================================================
+# O frame 13 tem DOIS defeitos independentes. Este arquivo e sobre o primeiro.
+#
+#   defeito 1  tarja de CIMA sai 15,000 onde todo quadro verificado da 16,000.
+#              Uniforme, desvio zero, decodificado nas fileiras 0 a 7 -- muito
+#              antes do travamento. Nao e dessincronizacao.
+#   defeito 2  travamento na fileira 54/55, cravado entre os bytes 31.478 e
+#              31.480 pelo modo `corta`. Continua aberto.
+# ============================================================================
+#
+# CANDIDATO PARA O DEFEITO 1
+#
+#   153470 5
+#   153471 6
+#
+# Bytes 6 e 7 do payload, regiao do cabecalho do slice.
+# Achado em 2 bits na faixa [5,100), 288.420 pares, juiz PISO_TOPO=2.
+#
+# O que foi VERIFICADO:
+#
+#   tarja topo ................ 15,000 -> 16,000 / 0,000
+#   imagem, linhas 136-943 .... 0% dos pixels mudam
+#   tarja base ................ 0% muda (segue ocultacao, defeito 2)
+#   primeira linha alterada ... 0      ultima ... 129  (exatamente a tarja)
+#   parse do filme inteiro .... 0 quadros mudam (modo `mapa`, antes x depois)
+#   panorama .................. 0 quadros com qualquer medida alterada,
+#                               nenhum perde nem ganha tarja boa
+#
+# Dos 8 candidatos que empatam com a base no macrobloco 6600, e o UNICO que
+# deixa a imagem intacta. Os outros sete deslocam o campo para 16,23, 1,60,
+# 51,98, 53,43 ou 50,50.
+#
+# O QUE NAO FOI EXPLICADO, e por isso ele nao entrou no patches.txt:
+#
+# Sao dois bits no cabecalho, e mudanca de cabecalho normalmente desloca todo o
+# estado do CABAC -- a imagem deveria mudar junto, e nao muda. A hipotese e que
+# seja campo que afeta so os macroblocos inter da tarja, com o resto do quadro
+# sendo intra, mas isso e hipotese e nao medida.
+#
+# E a lição do caso 3435 e exatamente essa: dois patches foram aceitos por um
+# juiz (o campo) que nao media o que eles estragavam (a tarja), e ficaram
+# errados no patches.txt ate serem desfeitos. A diferenca aqui e que imagem,
+# tarja de baixo, parse e filme inteiro foram todos conferidos.
+#
+# CONDICAO DE PROMOCAO
+#
+# A invariante completa e "as DUAS tarjas em 16,000 / 0,000". Hoje so da para
+# verificar a de cima, porque a de baixo do frame 13 e ocultacao do defeito 2.
+#
+#   Quando a fileira 54 cair:
+#     - se as duas tarjas derem 16,000 com este par aplicado -> promover.
+#     - se a de baixo der 16,000 SEM este par -> ele estava errado, descartar.
+#
+# E reversivel de qualquer forma: XOR duas vezes se cancela, como foi feito com
+# os dois patches do GOP 3426.
+#
+# formato: offset bit
+153470 5
+153471 6
