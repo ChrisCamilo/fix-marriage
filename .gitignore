@@ -20,3 +20,8 @@ logs/*
 # Area de trabalho do arnes de regressao
 logs/.regressao/
 testes.exe
+
+# Quadros do video extraidos para inspecao: sao imagens da familia.
+saidas/*.png
+saidas/*.pgm
+saidas/*.yuv
