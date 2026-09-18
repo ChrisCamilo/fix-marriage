@@ -64,6 +64,10 @@ casos=(
   "cortes|cortes 11 13|"
   "campo|campo 11 LISTA|"
   "trinca|trinca 3047 LISTA|TOL_COPIA=1"
+  # Caso com valor NAO PADRAO da variavel. Sem ele, mover `tol_copia` para
+  # outro arquivo e esquecer de ligar o ajustador passaria despercebido: o
+  # caso acima usa 1, que e o default, e a saida fica igual de qualquer jeito.
+  "trinca_tol0|trinca 3047 LISTA|TOL_COPIA=0"
   "testa|testa TESTALST|"
   "mapa|mapa|"
   "panorama|panorama|"

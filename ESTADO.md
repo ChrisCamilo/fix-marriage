@@ -59,7 +59,11 @@ raiz/                   o que todo comando cita, e o que nunca se move
   ESTADO.md AGENTS.md CLAUDE.md
 
   src/                  programa em C
-    reparador.c         o reparador, com libavcodec
+    reparador.c         o reparador, com libavcodec -- decodificacao e politica
+    juizes.c juizes.h   a camada de MEDIDAS: so depende dos argumentos, nao le
+                        estado do decodificador. E o que da para testar sozinho
+    testes_juizes.c     testa as medidas com quadros SINTETICOS, sem decodificar
+                        nada:  gcc -O2 -Isrc -o testes.exe src/testes_juizes.c                                    src/juizes.c -lm && ./testes.exe
   ferramentas/          programas em Python
     ferramentas.py      gera índice, patches base, e remonta o MP4
     molde_idr.py molde_slice.py escapes.py cabecalhos.py
@@ -122,7 +126,7 @@ O Python é o do Windows (3.14, em `C:\Python314`), invocado como `python` — n
 existe `python3` no UCRT64 a menos que instalado à parte.
 
 ```bash
-gcc -O2 -o reparador.exe src/reparador.c $(pkg-config --cflags --libs libavcodec libavutil)
+gcc -O2 -o reparador.exe src/reparador.c src/juizes.c $(pkg-config --cflags --libs libavcodec libavutil)
 
 python ferramentas/ferramentas.py base  "$MP4" patches.txt   # só na 1a vez; hoje aborta (ver abaixo)
 python ferramentas/ferramentas.py index "$MP4" index.txt patches.txt

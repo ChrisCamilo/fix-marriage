@@ -19,3 +19,4 @@ logs/*
 
 # Area de trabalho do arnes de regressao
 logs/.regressao/
+testes.exe
