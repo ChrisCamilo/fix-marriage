@@ -3,7 +3,7 @@
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
 comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
-qualquer coisa — são **56** maneiras de medir errado que já custaram horas aqui.
+qualquer coisa — são **57** maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
 
@@ -52,9 +52,12 @@ desde 2026-09-18, os cabeçalhos de slice consertados por coerência
 (`dados/patches_cabecalho.txt`, gerados pelo `ferramentas/cabecalho_slice.py`).
 Condição de entrada deste segundo lote, aprovada pelo usuário: solução **única**
 de 1 ou 2 bits, e as imagens dos 167 quadros bons **byte a byte iguais** com o
-lote aplicado. O `verify` pula os dois arquivos.
+lote aplicado. **E o parse de nenhum quadro pode piorar sem que a imagem de antes
+fosse borrão** — essa faltou na primeira vez e deixou passar 6 correções erradas
+(armadilha 57). Medir parse, não emissão: a emissão muda com a reordenação. O
+`verify` pula os dois arquivos.
 
-A `docs/ARMADILHAS.md` lista **56** maneiras de medir errado que já produziram
+A `docs/ARMADILHAS.md` lista **57** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
@@ -72,8 +75,8 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`5 válidos, 10 falsos, 1270 determinísticos pulados`** (os 479 de
-`dados/deterministicos.txt` mais os 791 de `dados/patches_cabecalho.txt`), e os 10 falsos são
+hoje **`3 válidos, 10 falsos, 1262 determinísticos pulados`** (os 479 de
+`dados/deterministicos.txt` mais os 783 de `dados/patches_cabecalho.txt`), e os 10 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |

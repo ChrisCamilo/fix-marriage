@@ -22,16 +22,25 @@ Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 
 | | |
 |---|---|
-| `patches.txt` | 2.623 linhas (+791: cabeçalhos de slice de 573 quadros, `dados/patches_cabecalho.txt`) |
+| `patches.txt` | 2.613 linhas (+781: cabeçalhos de slice de 569 quadros, `dados/patches_cabecalho.txt`). Entraram 791; 12, de 6 quadros, estavam erradas e saíram no mesmo dia (armadilha 57); depois entraram 2 (1597 e 1610), achadas quando o 1595 deixou de contar como IDR |
 | `serie 0 3444` com a cadeia de referência (`TARJA=1`) | **167** — idêntico antes e depois do lote. O conjunto é as três ilhas + o 1683 (listrado, falso positivo); o 12 fica de fora por depender do frame 11 |
 | imagens dos 167 bons | **byte a byte iguais** antes e depois do lote |
-| `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **165 / 2.129 / 1.151** |
-| `verify` com `BASE_N=1338` | 5 válidos, os mesmos 10 falsos explicados, 1.270 pulados |
+| `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **159 / 2.133 / 1.153** (com as 12 linhas erradas eram 165: elas tiravam a imagem de 6 quadros) |
+| `verify` com `BASE_N=1338` | 3 válidos, os mesmos 10 falsos explicados, 1.262 pulados (o par do 2361 saiu dos válidos — ver abaixo) |
+
+**Frame 2361 (aprovado pelo usuário):** o reparo antigo (`77528961 0` +
+`77528965 2`) dava cabeçalho inválido e o B decodificava "tudo skip" em 8 bytes —
+uma interpolação que parecia perfeita, ignorando 30 KB de dado. Saiu a linha
+`77528965 2`, entrou `77528966 4`; o `77528961 0` é o `frame_num` e fica. Agora o
+dado real decodifica até o MB 989 e o resto é ocultação de vizinhos bons. O
+`serie` com `TARJA=1` ainda o aceita (tarja 16); os outros 166 bons seguem byte a
+byte iguais. Virou alvo de reparo: dano no corpo a partir da fileira 8, numa ilha
+com as referências intactas.
 
 **Consertado por reparo neste lote: cabeçalhos, não imagem.** Nenhum quadro novo
 ficou bom — o que já se sabia do trabalho de cabeçalho anterior (RASTREIO.md):
-o dano continua no corpo. O ganho é que toda busca futura nesses 573 quadros
-parte de um cabeçalho correto; antes, 157 deles nem chegavam a gerar imagem.
+o dano continua no corpo. O ganho é que toda busca futura nesses 569 quadros
+parte de um cabeçalho correto; 179 quadros que não geravam imagem passam a gerar.
 
 ## Medida de 2026-09-17 (o 209 está inflado — ver acima)
 

@@ -482,6 +482,14 @@ armadilha 17.
 
 ### Frame 2361: reparado — a rejeição anterior está superada
 
+> **REVISTO em 2026-09-18: era falsa completude.** Com o par abaixo o cabeçalho
+> fica INVÁLIDO (alinhamento CABAC em 0; o deblocking sai 1 e o cabeçalho termina
+> cedo) e o B decodifica "tudo skip" em 8 bytes, ignorando 30 KB: a imagem que
+> "passa em tudo" é interpolação das referências. Com aprovação do usuário saiu
+> `77528965 2` e entrou `77528966 4` — cabeçalho válido e igual ao esperado; o
+> `77528961 0` é o `frame_num` e ficou. O dado real decodifica até o MB 989; o
+> resto é ocultação. Ver `dados/patches_cabecalho.txt`.
+
 A revarredura com a cadeia limpa devolveu **1 solução** onde a anterior dera 0 —
 confirmação direta da armadilha 13. O par `77528961 bit 0` + `77528965 bit 2`
 está aplicado, e **medido hoje o quadro passa em tudo**:

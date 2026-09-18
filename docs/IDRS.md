@@ -57,6 +57,21 @@ decide para os dois lados. Regerar o base muda exatamente 5 bits em 5 quadros.
 
 ## 3. O caso 1595
 
+**RESOLVIDO em 2026-09-18: o 1595 NÃO é IDR.** A terceira fonte que a tabela
+abaixo dizia não existir existe: os cabeçalhos dos quadros seguintes. Dos 9
+cabeçalhos legíveis de 1596 a 1610, **9 continuam a sequência do IDR 1582**
+(`frame_num` 5–8, POC 26–54) e **nenhum reinicia** a partir do 1595. Ele é o P
+daquela posição (`frame_num` 4, POC 32), com o byte NAL corrompido de `0x41`
+para `0x65` (2 bits). Consertá-lo não fecha: com o byte certo o cabeçalho segue
+inválido e não há solução em até 2 bits a mais — fica como está, mas nenhuma
+ferramenta deve mais contá-lo como IDR (o `cabecalho_slice.py` já não conta).
+
+Tratá-lo como IDR custou caro uma vez: o lote de cabeçalhos de 2026-09-18
+"consertou" `frame_num`/POC certos em 6 quadros contando a partir dele, e os 6
+perderam a imagem. Revertido no mesmo dia (`dados/patches_cabecalho.txt`).
+
+O registro anterior, mantido como estava:
+
 Único em disputa, e fica **como o arquivo o tem**:
 
 | a favor de ser IDR | contra |
@@ -181,9 +196,9 @@ bits sabidamente errados.
 | que não analisam | **73** |
 | que decodificam limpo **e com imagem** (critério rigoroso) | **7** — 1683, 2333, 3319, 3348, 3368, 3397, 3426. **O 1683 é listrado da metade para baixo** (armadilha 56): imagem boa de verdade são 6 |
 | cabeçalhos fechados | **130 de 131** |
-| `patches.txt` | **2.623** linhas (1.832 + 791 de cabeçalho de slice, 2026-09-18) |
+| `patches.txt` | **2.613** linhas (1.832 + 781 de cabeçalho de slice, 2026-09-18) |
 | `deterministicos.txt` | **479** |
-| `verify` com `BASE_N=1338` | **5 válidos, 10 falsos, 1.270 pulados** (479 determinísticos + 791 de cabeçalho) — os 10 estão explicados no `AGENTS.md` |
+| `verify` com `BASE_N=1338` | **3 válidos, 10 falsos, 1.262 pulados** (479 determinísticos + 783 de cabeçalho) — os 10 estão explicados no `AGENTS.md` |
 
 **"Analisa 100%" não é "tem imagem".** Dos 132 IDRs, 59 percorrem os 8.160
 macroblocos sem erro, mas só 7 produzem quadro que passa no critério rigoroso.

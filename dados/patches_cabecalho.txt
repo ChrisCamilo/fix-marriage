@@ -17,6 +17,13 @@
 #   10 quadros ambiguos (2+ solucoes): 15 79 232 858 1009 1871 (A), 1630 1772
 #         2021 (C). O frame 11 era ambiguo e entrou porque o pixel decidiu.
 #
+# REMOVIDAS em 2026-09-18, com aprovacao do usuario: 12 linhas de 6 quadros do
+# grupo B (1599, 1601, 1602, 1603, 1604, 1606). A ferramenta reconhecia IDR pelo
+# byte NAL e tratou o 1595 como IDR -- ele nao e: os 9 cabecalhos legiveis de
+# 1596-1610 continuam a sequencia do IDR 1582, nenhum reinicia. Essas 6
+# "correcoes" trocavam frame_num/POC certos por valores contados a partir do IDR
+# falso. A verificacao dos 167 nao pegou porque o trecho fica fora das ilhas.
+#
 # colunas: offset bit | quadro | grupo | o que o cabecalho tinha
 147709 7 | 11 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0 (2 solucoes; a escolhida prediz a tarja em 16 exato)
 147712 1 | 11 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0 (2 solucoes; a escolhida prediz a tarja em 16 exato)
@@ -398,18 +405,6 @@
 52342966 2 | 1587 | A cabecalho invalido | invalido: chroma_log2_weight_denom=70 fora de [0,7]
 52531503 7 | 1594 | B frame_num/POC/tipo errado | valido, desvia 1/0
 52531503 1 | 1594 | B frame_num/POC/tipo errado | valido, desvia 1/0
-52662196 3 | 1599 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52662197 6 | 1599 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52755234 3 | 1601 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52755235 6 | 1601 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52774411 3 | 1602 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52774412 6 | 1602 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52794779 3 | 1603 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52794780 6 | 1603 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52858388 3 | 1604 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52858389 6 | 1604 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52911491 3 | 1606 | B frame_num/POC/tipo errado | valido, desvia 2/0
-52911492 6 | 1606 | B frame_num/POC/tipo errado | valido, desvia 2/0
 53376582 1 | 1617 | B frame_num/POC/tipo errado | valido, desvia 1/1
 53376584 3 | 1617 | B frame_num/POC/tipo errado | valido, desvia 1/1
 53517212 3 | 1624 | A cabecalho invalido | invalido: mmco=148204 fora de [0,6]
@@ -809,3 +804,7 @@
 110807411 6 | 3303 | A cabecalho invalido | invalido: cabac_init_idc=10 fora de [0,2]
 110807411 3 | 3303 | A cabecalho invalido | invalido: cabac_init_idc=10 fora de [0,2]
 110896578 0 | 3307 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+52638174 1 | 1597 | B frame_num/POC/tipo errado | valido, desvia 1/0 (frame_num 4, esperado 5 -- achado depois de o 1595 deixar de contar como IDR; aprovado pelo usuario)
+53079142 4 | 1610 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2 (achado depois de o 1595 deixar de contar como IDR; aprovado pelo usuario)
+77528966 4 | 2361 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0. Junto com a REMOCAO da linha "77528965 2" do reparo antigo (aprovado pelo usuario): o deblocking saia 1 e o cabecalho terminava cedo; o B decodificava "tudo skip" em 8 bytes, uma interpolacao, ignorando 30 KB
+77528961 0 | 2361 | reclassificado | o outro bit do reparo antigo e o frame_num (sem ele, 136; esperado 8). Ja estava no patches.txt desde o reparo; listado aqui so para o verify pula-lo

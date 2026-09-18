@@ -1054,3 +1054,32 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     frames 960 e 961 entraram no critério rigoroso — 209 → 211. A imagem dos
     dois é listrada. **Ganho no critério não é ganho de imagem enquanto o
     critério não olha a cadeia de referência.** Olhar o quadro é o que decide.
+
+57. **Proteger os quadros bons não valida o resto do lote.** O lote de
+    cabeçalhos entrou com uma condição: as imagens dos 167 quadros bons byte a
+    byte iguais. Passou — e 6 correções dele estavam erradas, porque o trecho
+    fica fora das ilhas. A ferramenta reconhecia IDR pelo byte NAL, o byte do
+    1595 diz IDR sem ser, e os `frame_num`/POC esperados de 1596–1610 foram
+    contados a partir dele. As 6 "correções" trocaram valores certos por errados,
+    e os 6 quadros **perderam a imagem**.
+
+    O sinal estava na minha própria tabela de avaliação do grupo B:
+    "inteiro → sem imagem: 4" e "quebrado → sem imagem: 2". Vi e não investiguei.
+    Essa é a verificação que faltava — e a primeira versão dela também estava
+    errada. "Nenhum quadro pode perder a imagem no `mapa`" acusou mais 6 depois
+    da remoção (48, 1516, 1690, 2412, 2466, 2717), e **nenhum tinha correção no
+    próprio quadro**. O parse deles é idêntico antes e depois; o que mudou foi a
+    EMISSÃO: com um decodificador para o filme inteiro e o SPS sem profundidade
+    de reordenação declarada, corrigir POCs em qualquer lugar muda quais quadros
+    o h264 descarta na saída (3.107 emitidos antes, 3.286 depois).
+
+    A regra certa tem duas partes: **o parse (macrobloco alcançado) não pode
+    piorar**, e quando piora por correção no próprio quadro, **olhar a imagem de
+    antes**. Se era imagem real, a correção está errada. Se era borrão — como nos
+    8 do alinhamento CABAC e nos 3 do grupo C que passaram de 8.160 a poucos
+    macroblocos —, o 8.160 era falsa completude e a correção só tornou o ponto
+    de quebra honesto.
+
+    E a lição de fundo, a mesma da armadilha 49 em outra roupa: o byte NAL também
+    sofre bit-rot. Quem é IDR se decide pelo que os quadros seguintes fazem —
+    reiniciam a sequência ou continuam a anterior —, não pelo byte.

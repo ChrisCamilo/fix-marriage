@@ -89,14 +89,14 @@ pessoal de família: não publicar em lugar nenhum. O `.mp4` e o binário compil
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 2.623 linhas:**
+**Composição do `patches.txt` — 2.613 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
 | 1–1338 | 1.338 | base determinística (prefixos de NAL e cabeçalhos). Reconferido: regerar com `base` reproduz os mesmos 1338 byte a byte |
-| 1339–1832 | 494 | destas, **479** também estão em `dados/deterministicos.txt` |
-| | **15** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` |
-| 1833–2623 | 791 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 573 quadros — linha a linha em `dados/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
+| 1339–1831 | 493 | destas, **479** também estão em `dados/deterministicos.txt` (a linha `77528965 2` do reparo antigo do 2361 saiu em 2026-09-18) |
+| | **13** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` (eram 15: o par do 2361 virou um bit removido e um de cabeçalho) |
+| 1832–2613 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `dados/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a
@@ -161,7 +161,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 |---|---|
 | [`RESULTADOS.md`](docs/RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
 | [`CRITERIOS.md`](docs/CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
-| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **56 maneiras de medir errado** que já produziram conclusão falsa aqui |
+| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **57 maneiras de medir errado** que já produziram conclusão falsa aqui |
 | [`CABAC.md`](docs/CABAC.md) | **por que não existe ressincronização dentro do slice**, e o que dá para explorar |
 | [`INVESTIGACOES.md`](docs/INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
 | [`IDRS.md`](docs/IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |
