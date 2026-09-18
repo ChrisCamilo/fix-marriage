@@ -1083,3 +1083,23 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     E a lição de fundo, a mesma da armadilha 49 em outra roupa: o byte NAL também
     sofre bit-rot. Quem é IDR se decide pelo que os quadros seguintes fazem —
     reiniciam a sequência ou continuam a anterior —, não pelo byte.
+
+58. **O arnes de regressão escrevia na fonte de verdade — e media saída
+    cortada.** Dois defeitos no `ferramentas/regressao.sh`, achados no mesmo dia:
+
+    - O caso `repair 2360 2361 256` recebia o `patches.txt` VERDADEIRO, e o modo
+      `repair` **grava** o que acha. Enquanto o 2361 decodificava "limpo", nunca
+      achava nada. Quando o 2361 passou a quebrar (cabeçalho corrigido), uma
+      regravação achou `77529030 2` e o escreveu no `patches.txt` — e a linha
+      entrou num commit sem aprovação, porque o commit veio logo depois. Removida
+      no mesmo dia. Agora cada caso recebe uma cópia, e o arnes aborta se o
+      `patches.txt` mudar durante a corrida.
+    - Quatro casos (`varrek`, `vizinho`, `varre2`, `report`) passavam dos 300 s
+      do tempo-limite. O `timeout` cortava a saída e o hash era do pedaço que
+      tinha saído — estável enquanto o corte caía no mesmo lugar, instável com a
+      máquina carregada. Três deles **nunca** foram testados de verdade. Agora
+      estouro de tempo é falha explícita; `varrek` e `vizinho` ganharam casos
+      pequenos, `varre2` e `report` saíram (não há caso pequeno que os exercite).
+
+    Lição: ferramenta de verificação também precisa ser verificada — conferir o
+    código de retorno, e nunca dar a ela escrita sobre o que ela verifica.

@@ -25,8 +25,14 @@ cd "$(dirname "$0")/.."
 
 MP4="Caio & Lizandra - Making- Caio-Balu.mp4"
 IX=index.txt
-PT=patches.txt
 EXE=./reparador.exe
+# NUNCA o patches.txt verdadeiro. O modo `repair` GRAVA no arquivo de patches
+# que recebe, e o caso dele recebia a fonte de verdade: em 2026-09-18, quando o
+# frame 2361 passou a quebrar, uma regravacao achou um bit para ele e o escreveu
+# no patches.txt -- e ele entrou num commit sem aprovacao. Agora cada caso
+# recebe uma copia recem-feita, e o fim do script confere o original intacto.
+PT_REAL=patches.txt
+PT_ANTES=$(sha256sum "$PT_REAL" | cut -c1-64)
 
 acao=${1:-confere}
 dir=${2:-dados/regressao}
@@ -37,6 +43,7 @@ dir=${2:-dados/regressao}
 # resolve na origem, sem filtro.
 tmp=logs/.regressao
 rm -rf "$tmp"; mkdir -p "$tmp"
+PT="$tmp/patches.txt"
 
 # Listas auxiliares que alguns modos exigem como argumento.
 printf '147697 5\n147699 4\n' > "$tmp/lista.txt"
@@ -49,12 +56,19 @@ casos=(
   "idr|idr 512 16 2|"
   "unico|unico 8 4 3|"
   "oraculo|oraculo 2 8|"
-  "vizinho|vizinho 2361 2361|"
+  # Alvo colado no IDR e janela pequena: com 2361/2361 o modo varria o NAL inteiro
+  # com a cadeia de 28 quadros e estourava os 300 s -- o hash era da saida cortada.
+  "vizinho|vizinho 3320 3319 64 1|"
   "recupera|recupera 2361 2361|"
   "ranking|ranking|"
   "varre1|varre1 11 0 5 30|"
-  "varre2|varre2 11 5 24|"
-  "varrek|varrek 11 2 5 24|"
+  # SEM varre2: ele varre TODOS os pares de bits do quadro inteiro (o menor quadro
+  # do filme da 2 milhoes) e o uso e `<alvo> [saida]` -- o "5" deste caso virava
+  # arquivo de saida, e um `5` vazio chegou a ser commitado. Nunca coube nos 300 s:
+  # o hash sempre foi so da primeira linha. Nao ha caso pequeno que o exercite.
+  # Janela [5,16): 3.828 combinacoes. A [5,24) tinha 11.476 e ficava no limite
+  # dos 300 s com THREADS=1 -- dependia da carga da maquina.
+  "varrek|varrek 11 2 5 16|"
   "cresce|cresce 11 5 24|"
   "avanco_mb|avanco 11 1 5 40|"
   "avanco_consumo|avanco 11 1 5 40|PONTUA_CONSUMO=1"
@@ -79,7 +93,8 @@ casos=(
   # numa ilha, onde a cadeia inteira e boa, e nao exercita a regra.
   "serie_cadeia|serie 953 962 SAIDA.yuv SAIDA.txt|"
   "verify|verify|BASE_N=1830"
-  "report|report|"
+  # SEM report: decodifica o filme inteiro quadro a quadro e nao aceita faixa.
+  # Estourava os 300 s em toda corrida; o hash era de saida parcial.
 )
 
 mkdir -p "$dir"
@@ -103,8 +118,17 @@ for caso in "${casos[@]}"; do
   #
   # Sem os dois filtros, `idr`, `dump`, `dumpyuv` e `serie` acusam mudanca em
   # toda conferencia -- e alarme que sempre toca nao alarma.
-  h=$(env THREADS=1 $env timeout 300 $EXE "$MP4" $IX $PT $args 2>/dev/null \
-      | sed -E "s|$tmp|TMP|g; s/ *\[[0-9.]+s\]//g" | sha256sum | cut -c1-16)
+  # A saida vai para arquivo ANTES do hash para o codigo de retorno do timeout
+  # nao se perder no pipe. Caso morto pelo tempo-limite (124) tem saida
+  # PARCIAL, e o hash dela muda com a carga da maquina: o `varrek` ficou no
+  # limite dos 300 s, uma regravacao gravou a saida cortada e a conferencia
+  # seguinte acusaria mudanca sem mudanca nenhuma. Estouro de tempo e falha.
+  cp "$PT_REAL" "$PT"                    # copia nova: o que o caso gravar se perde
+  env THREADS=1 $env timeout 300 $EXE "$MP4" $IX $PT $args > "$tmp/$nome.out" 2>/dev/null
+  if [ $? -eq 124 ]; then
+    echo "  $nome: TEMPO ESGOTADO -- saida parcial, caso invalido"; falhas=$((falhas+1)); continue
+  fi
+  h=$(sed -E "s|$tmp|TMP|g; s/ *\[[0-9.]+s\]//g" "$tmp/$nome.out" | sha256sum | cut -c1-16)
   dt=$(( $(date +%s) - t0 ))
   # Modo que escreve arquivo: o conteudo dele entra no hash tambem.
   for extra in "$tmp/$nome.pgm" "$tmp/$nome.yuv" "$tmp/$nome.txt"; do
@@ -124,6 +148,11 @@ for caso in "${casos[@]}"; do
     else printf '  %-16s MUDOU: %s -> %s\n' "$nome" "$ref" "$h"; falhas=$((falhas+1)); fi
   fi
 done
+
+if [ "$(sha256sum "$PT_REAL" | cut -c1-64)" != "$PT_ANTES" ]; then
+  echo "[!!] O patches.txt MUDOU durante o arnes -- nada disto vale; conferir com git diff"
+  exit 2
+fi
 
 if [ "$acao" != grava ]; then
   echo

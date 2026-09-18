@@ -368,6 +368,13 @@ de índice sem ganho no relógio).
 `ferramentas/regressao.sh` roda um caso de cada um dos 27 modos e compara o
 SHA-256 da saída. É ele que dá sentido a "saída byte a byte idêntica".
 
+> **Revisto em 2026-09-18 (armadilha 58).** Dois modos, `varre2` e `report`,
+> saíram: nunca couberam no tempo-limite de 300 s e o hash deles sempre foi de
+> saída cortada. `varrek` e `vizinho` ganharam casos pequenos pelo mesmo motivo.
+> Entraram `serie_cadeia` e `trinca_tol0`. Hoje são **27 casos, cobrindo 25
+> modos**. O arnês também passou a dar a cada caso uma CÓPIA do `patches.txt` —
+> o `repair` grava no arquivo que recebe e chegou a escrever na fonte de verdade.
+
 **Seis defeitos apareceram montando o arnês, nenhum no código que ele protege**
 — e cada um teria produzido um falso "tudo ok":
 
