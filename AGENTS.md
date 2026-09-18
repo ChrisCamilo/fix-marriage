@@ -83,17 +83,19 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`3 válidos, 10 falsos, 1262 determinísticos pulados`** (os 479 de
-`dados/deterministicos.txt` mais os 783 de `dados/patches_cabecalho.txt`), e os 10 falsos são
+hoje **`0 válidos, 12 falsos, 1263 determinísticos pulados`** (os 480 de
+`dados/deterministicos.txt` mais os 783 de `dados/patches_cabecalho.txt`), e os 12 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |
 |---|---|---|
-| 4 | 2362, 2364, 2365, 2366 | `com=1 sem=1` — insuficientes, não errados (`docs/INVESTIGACOES.md`) |
+| 6 | 2360, 2362, 2363, 2364, 2365, 2366 | `com=1 sem=1` — insuficientes, não errados: o quadro segue com dano adiante. 2360 e 2363 contavam como "válidos" até 2026-09-18 só porque o critério antigo aceitava slice encerrado cedo (armadilha 59) |
 | 2 | 12 | `com=1 sem=1` — a cadeia do GOP 0 sempre erra por causa do frame 11; o `verify` não usa `ERROS_BASE` |
-| 4 | 3435, 3439 | `com=1 sem=0` — pares **cancelados de propósito**; o `verify` testa cada ocorrência e não entende cancelamento |
+| 4 | 3435, 3439 | `com=1 sem=1` — pares **cancelados de propósito**; o `verify` testa cada ocorrência e não entende cancelamento |
 
-**Qualquer falso além desses 10 é problema.** Rodar `verify` **sem** `BASE_N`
+**Nenhum reparo hoje faz um quadro fechar sozinho pelo critério honesto** — o
+último que fazia, o do 3442, era ele mesmo o defeito e saiu. **Qualquer falso
+além desses 12 é problema.** Rodar `verify` **sem** `BASE_N`
 acusa ~1328 falsos por construção, o que é esperado e não é bug.
 
 ## 4. Manter a documentação viva

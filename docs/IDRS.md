@@ -198,7 +198,7 @@ bits sabidamente errados.
 | cabeçalhos fechados | **130 de 131** |
 | `patches.txt` | **2.613** linhas (1.832 + 781 de cabeçalho de slice, 2026-09-18) |
 | `deterministicos.txt` | **479** |
-| `verify` com `BASE_N=1338` | **3 válidos, 10 falsos, 1.262 pulados** (479 determinísticos + 783 de cabeçalho) — os 10 estão explicados no `AGENTS.md` |
+| `verify` com `BASE_N=1338` | **0 válidos, 12 falsos, 1.263 pulados** (480 determinísticos + 783 de cabeçalho) — ver o `AGENTS.md` — os 10 estão explicados no `AGENTS.md` |
 
 **"Analisa 100%" não é "tem imagem".** Dos 132 IDRs, 59 percorrem os 8.160
 macroblocos sem erro, mas só 7 produzem quadro que passa no critério rigoroso.

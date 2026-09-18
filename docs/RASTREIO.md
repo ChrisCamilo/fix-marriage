@@ -392,7 +392,7 @@ estava errada: aquele `MB 15 0, bytestream 2778` é do frame **11**
 | ~~3435~~ | 3426 | 963 | NAL inteiro | 7.664 | 28 s | 14 | **DESFEITO** — `114237506 4` estragava a tarja; ver o fim deste arquivo |
 | ~~3439~~ | 3426 | 988 | NAL inteiro | 7.864 | 36 s | 349 | **DESFEITO** — `114244542 6` estragava a tarja; ver o fim deste arquivo |
 | 3441 | 3426 | 940 | NAL inteiro | 7.480 | 38 s | 1 | reprovado — campo 16–19, devia ser 21 |
-| **3442** | 3426 | 2.939 | NAL inteiro | 23.472 | 125 s | 959 | **reparado** — `114260576 3`, erra 6 linhas na borda |
+| **3442** | 3426 | 2.939 | NAL inteiro | 23.472 | 125 s | 959 | ~~reparado — `114260576 3`, erra 6 linhas na borda~~ **REMOVIDO em 2026-09-18**: com esse bit o slice acabava cedo e 1.037 MBs eram ocultados (as "6 linhas na borda"). Sem ele o quadro decodifica inteiro, zero ocultados, usando todo o dado (`dados/alvos_ocultos.txt`) |
 | 3443 | 3426 | 261 | NAL inteiro | 2.048 | 12 s | **0** | sem solução |
 | 3444 | 3426 | 266 | NAL inteiro | 2.088 | 12 s | 2 | reprovado — campo 19–21, não uniforme |
 

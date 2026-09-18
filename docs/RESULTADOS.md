@@ -6,7 +6,10 @@
 3319–3444, somando 166) mais o frame 12. São **5,57 s** de 114,95 s, em 4
 trechos.
 
-**Destes, 4 não são o quadro inteiro** (armadilha 59): 2359, 2360, 2361 e 3442
+**3442 consertado no mesmo dia**: o patch antigo `114260576 3` era o que
+encerrava o slice cedo; removido, o quadro decodifica inteiro. Restam 3.
+
+**Destes, 4 não eram o quadro inteiro** (armadilha 59): 2359, 2360, 2361 e 3442
 têm o slice encerrado cedo e o resto ocultado — 3.339, 7.650, 7.220 e 1.037
 macroblocos. Visualmente seguem bons, porque a ocultação copia de vizinhos bons.
 **Decodificados por inteiro: 163.** Os 4 são alvos de reparo com critério
@@ -37,7 +40,7 @@ Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 | `serie 0 3444` com a cadeia de referência (`TARJA=1`) | **167** — idêntico antes e depois do lote. O conjunto é as três ilhas + o 1683 (listrado, falso positivo); o 12 fica de fora por depender do frame 11 |
 | imagens dos 167 bons | **byte a byte iguais** antes e depois do lote |
 | `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **159 / 2.133 / 1.153** (com as 12 linhas erradas eram 165: elas tiravam a imagem de 6 quadros) |
-| `verify` com `BASE_N=1338` | 3 válidos, os mesmos 10 falsos explicados, 1.262 pulados (o par do 2361 saiu dos válidos — ver abaixo) |
+| `verify` com `BASE_N=1338` | **0 válidos, 12 falsos** explicados, 1.263 pulados — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
 
 **Frame 2361 (aprovado pelo usuário):** o reparo antigo (`77528961 0` +
 `77528965 2`) dava cabeçalho inválido e o B decodificava "tudo skip" em 8 bytes —

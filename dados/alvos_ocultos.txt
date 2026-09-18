@@ -1,13 +1,22 @@
 # alvos_ocultos.txt -- os 4 quadros "bons" com slice encerrado cedo (armadilha 59)
 # Buscas de 2026-09-18 com o criterio novo: zero MBs ocultados, MB alcancado =
-# 8160 - ocultados. NADA disto esta no patches.txt; aguarda o usuario.
+# 8160 - ocultados.
+#
+# APLICADO (aprovado pelo usuario, 2026-09-18):
+#   3442: REMOVIDA a linha "114260576 3" do patches.txt. O "candidato" da busca
+#         era desfazer esse patch antigo (commit 66c6ec0, "escolhido pela
+#         imagem", que o RASTREIO dava como "erra 6 linhas na borda"). Com ele,
+#         1.037 MBs ocultados; sem ele, o quadro inteiro.
+#   2360: "77496469 0" (00 00 02 -> 00 00 03 no byte 10). Tambem listado em
+#         dados/deterministicos.txt, para o verify pular: e prova de norma, nao
+#         faz o quadro fechar sozinho (erro seguinte no MB 959).
 #
 # Teste obrigatorio de cada candidato, alem do parse: a CURVA DE TRUNCAMENTO
 # (modo corta). Reparo real usa todo o dado do quadro; falsa completude chega a
 # 8160 com poucos bytes. Tres candidatos que "completavam" foram pegos por ela.
 #
 # ---------------------------------------------------------------------------
-# 3442 (2.939 B, fade final) -- CANDIDATO BOM, 1 bit
+# 3442 (2.939 B, fade final) -- 1 bit (era um patch ANTIGO a desfazer)
 #   114260576 3   (byte 1.118 do NAL, fim do dado real, antes da regiao de zeros)
 #   - parse 7.123 -> 8.160, zero ocultados; so o 3442 muda no filme inteiro
 #   - curva de truncamento IDENTICA a base ate o byte 1.100; so completa em ~1.173
