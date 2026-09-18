@@ -3,7 +3,7 @@
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
 comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
-qualquer coisa — são **53** maneiras de medir errado que já custaram horas aqui.
+qualquer coisa — são **54** maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
 
@@ -39,7 +39,7 @@ piora o filme. Não "limpar" duplicata sem medir os dois estados.
 O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
 com zero linhas de log**. Nada mais conta.
 
-A `docs/ARMADILHAS.md` lista **53** maneiras de medir errado que já produziram
+A `docs/ARMADILHAS.md` lista **54** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de

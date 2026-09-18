@@ -408,3 +408,33 @@ libera são listras pálidas, não mais cena. A barra do usuário é "a faixa
 liberada precisa destravar a imagem real"; o juiz hoje sabe **reprovar o que o
 olho reprova** e **ordenar como o olho ordena**, e isso não é a mesma coisa que
 achar o conserto.
+
+## Os nomes das funções mudaram — mapa para os documentos antigos
+
+Item 3 do `docs/REFATORACAO.md`. Os documentos deste projeto citam os nomes
+antigos e **não foram reescritos**: eles registram o que a função se chamava
+quando aquela medida foi feita, e falsificar isso custaria mais do que ganharia.
+
+Este é o mapa.
+
+| nome antigo | nome novo | o que mede |
+|---|---|---|
+| `croma_respingo` | `croma_salto_p99` | p99 do salto de croma entre pixels **vizinhos** |
+| `croma_dp` | `croma_desvio_plano` | desvio padrão dos planos U e V |
+| `croma_stat` | `croma_media_desvio` | média **e** desvio de U e V, passo 2 |
+| `tarja_des` | `tarja_baixo_desvio` | desvio da tarja de baixo |
+| `croma_real` | `croma_mb_na_faixa` | **predicado**: variação por macrobloco dentro da faixa calibrada |
+| `croma_sao` | `croma_bate_referencia` | **predicado**: bate com a referência do próprio trecho |
+| `tarja_perfeita` | `tarja_baixo_e_16` | **predicado**: uniforme **e** igual a 16 |
+| `base_uniforme` | `tarja_baixo_uniforme` | **predicado**: uniforme, valor livre |
+| `topo_uniforme` | `tarja_topo_uniforme` | **predicado**: uniforme, valor conforme `piso_topo` |
+
+O critério do nome é a distinção que mais me confundiu nesta sessão: **medida
+devolve número, predicado devolve sim ou não.** `croma_real` soava como "o croma
+verdadeiro" e é um predicado sobre uma faixa calibrada; `croma_dp` não dizia de
+quê era o desvio. Os dois me levaram a comparar grandezas diferentes achando que
+eram a mesma.
+
+E os dois nomes quase iguais agora dizem em que diferem: `tarja_baixo_uniforme`
+aceita qualquer valor, `tarja_baixo_e_16` exige o 16. Eram a mesma função com
+uma constante trocada, e o nome não dava pista disso.

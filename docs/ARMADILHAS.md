@@ -982,3 +982,26 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     macroblocos) do outro. Critério de progresso e critério de sanidade não são
     intercambiáveis, e trocar um pelo outro produz exatamente o artefato que o
     outro existia para barrar.
+
+54. **`\b` protege identificador de identificador, não código de string.**
+    Renomeando as famílias do croma e da tarja (item 3 do `REFATORACAO.md`),
+    usei `\btarja_des\b` — que é o cuidado certo contra casar `base_tarja_des`
+    por acidente, e funcionou para isso. Mas a mesma expressão trocou o nome
+    dentro de **duas strings de cabeçalho de coluna**, no `panorama` e no
+    `trinca`:
+
+    ```
+    printf("frame campo_med campo_des tarja_med tarja_des listra vh\n")
+    ```
+
+    A coluna passou a se chamar `tarja_baixo_desvio` na saída. Qualquer script
+    que leia a coluna pelo nome quebraria em silêncio — e eu tinha acabado de
+    classificar a renomeação como "risco baixo, não mexe em lógica".
+
+    **O arnês de regressão pegou:** 2 de 27 modos mudaram. Sem ele a mudança
+    teria entrado com a justificativa de que renomear não altera comportamento.
+
+    Renomeação por expressão regular exige uma passada separada pelas strings
+    literais antes de ser considerada segura. E a lição maior: **"não mexe em
+    lógica" não é o mesmo que "não muda a saída"** — o nome de uma coluna é
+    contrato com quem lê.

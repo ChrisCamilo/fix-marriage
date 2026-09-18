@@ -768,7 +768,7 @@ static long  achk_cap = 0;
 static _Atomic int n_achk;
 
 static int *placar = NULL;      /* pontuacao por combinacao, modo avanco */
-static int tarja_perfeita(const uint8_t *Y, int w, int h);
+static int tarja_baixo_e_16(const uint8_t *Y, int w, int h);
 static int piso_tarja = 0;      /* PISO_TARJA=1: sem tarja 16 nao ha pontuacao */
 static int piso_topo  = 0;      /* PISO_TOPO=1: tarja de CIMA uniforme */
 static int piso_base  = 0;      /* PISO_BASE=1: tarja de BAIXO uniforme, valor livre */
@@ -890,7 +890,7 @@ static void estrutura_borrao(const uint8_t *Y, int w, int h, int y0,
  * O teto de 8 e o dobro do pior quadro INTACTO medido (p99U ate 6, p99V ate 3,
  * em 20 faixas de 5 quadros). Isso quer dizer que nem o melhor candidato chega
  * a ter faixa liberada com cara de imagem: ele e o menos ruim, nao um acerto. */
-static int croma_respingo(int y0, int y1) {
+static int croma_salto_p99(int y0, int y1) {
     if (!cap_u || !cap_v || cap_w <= 0 || y1 > cap_h || y1 - y0 < 8) return -1;
     int cw = cap_w / 2, h0 = y0 / 2, h1 = y1 / 2, pior = -1;
     for (int p = 0; p < 2; p++) {
@@ -917,9 +917,9 @@ static int croma_respingo(int y0, int y1) {
  *
  * Repetir linha ACHATA a cor, lixo a ESTOURA, e o alvo esta no meio -- por isso
  * e faixa e nao limiar. Estava calibrada desde a armadilha 39 e o juiz nao a
- * consultava: o `croma_real` mede outra coisa (variacao DENTRO do macrobloco e
+ * consultava: o `croma_mb_na_faixa` mede outra coisa (variacao DENTRO do macrobloco e
  * salto entre medias de macroblocos vizinhos), nao o desvio do plano. */
-static void croma_dp(int y0, int y1, double *du, double *dv) {
+static void croma_desvio_plano(int y0, int y1, double *du, double *dv) {
     *du = *dv = -1;
     if (!cap_u || !cap_v || cap_w <= 0 || y1 > cap_h || y1 - y0 < 8) return;
     int cw = cap_w / 2, h0 = y0 / 2, h1 = y1 / 2;
@@ -963,10 +963,10 @@ static double blocagem_faixa(const uint8_t *Y, int w, int y0, int y1) {
     return (bo / no) / (bi / ni);
 }
 
-static int croma_real(int y0, int y1);
-static int croma_respingo(int y0, int y1);
-static double tarja_des(const uint8_t *Y, int w, int h);
-static void croma_dp(int y0, int y1, double *du, double *dv);
+static int croma_mb_na_faixa(int y0, int y1);
+static int croma_salto_p99(int y0, int y1);
+static double tarja_baixo_desvio(const uint8_t *Y, int w, int h);
+static void croma_desvio_plano(int y0, int y1, double *du, double *dv);
 static _Thread_local int tri_front = -1, tri_nt = -1, tri_mx = -1, tri_ln = -1, tri_lg = -1, tri_resp = -1;
 static int teto_respingo = 8;   /* TETO_RESPINGO */
 static int croma_faixa  = 0;   /* CROMA_FAIXA */
@@ -974,7 +974,7 @@ static int intacto_ate  = 0;   /* INTACTO_ATE: linhas que tem que ficar identica
 static int sem_croma    = 0;   /* SEM_CROMA=1: quadro sem croma utilizavel */
 static int tarja_desce  = 0;   /* TARJA_DESCE=1: guiar pela tarja, nao pela fronteira */
 static int pontua_consumo = 0; /* PONTUA_CONSUMO=1: nota = bytes consumidos */
-static double base_tarja_des = -1;
+static double base_tarja_desvio = -1;
 static uint8_t *img_base = NULL;  /* luma da base, so leitura nos workers */
 static int janela_resp  = 64;  /* JANELA_RESP: linhas medidas a partir da base */
 static _Thread_local double tri_bloc = -1, tri_tarja = -1;
@@ -1002,12 +1002,12 @@ static int trinca_ok(void) {
         memcmp(cap_buf, img_base, (size_t)cap_w * intacto_ate) != 0) return 0;
     /* Guia alternativo: a TARJA em vez da fronteira. Em alvo com tarja o estado
      * de chegada e desvio zero, e o caminho ate la e monotono -- a fronteira
-     * nao e (ver o comentario do tarja_des). Com TARJA_DESCE=1 o criterio 1
+     * nao e (ver o comentario do tarja_baixo_desvio). Com TARJA_DESCE=1 o criterio 1
      * passa a ser "a tarja ficou mais uniforme", e a fronteira sai do juiz. */
     if (tarja_desce) {
-        double td = tarja_des(cap_buf, cap_w, cap_h);
+        double td = tarja_baixo_desvio(cap_buf, cap_w, cap_h);
         tri_tarja = td;
-        if (td < 0 || td >= base_tarja_des) return 0;
+        if (td < 0 || td >= base_tarja_desvio) return 0;
         if (intacto_ate > 0 && img_base) return 1;  /* a invariante exata ja julgou */
     }
     int f = fronteira_borrao(cap_buf, cap_w, cap_h, 160);
@@ -1031,7 +1031,7 @@ static int trinca_ok(void) {
     int jr = base_fronteira + janela_resp;
     if (jr > cap_h) jr = cap_h;
     if (teto_respingo > 0) {
-        tri_resp = croma_respingo(base_fronteira, jr);
+        tri_resp = croma_salto_p99(base_fronteira, jr);
         if (tri_resp < 0 || tri_resp > teto_respingo) return 0;
     }
     /* 2c. desvio dos planos de croma na MESMA janela, dentro da faixa dos
@@ -1043,7 +1043,7 @@ static int trinca_ok(void) {
      * planos. Serve para escolher entre sobreviventes e para saber quando
      * chegou, nao para filtrar cedo. CROMA_FAIXA=1 liga. */
     if (croma_faixa) {
-        double du, dv; croma_dp(base_fronteira, jr, &du, &dv);
+        double du, dv; croma_desvio_plano(base_fronteira, jr, &du, &dv);
         if (du < 5.99 || du > 8.52 || dv < 3.40 || dv > 7.42) return 0;
     }
     int nt, mx, ln, lg; estrutura_borrao(cap_buf, cap_w, cap_h, f, &nt, &mx, &ln, &lg);
@@ -1069,7 +1069,7 @@ static int trinca_ok(void) {
     /* area <= 64 e o desfecho: nao sobrou borrao. Nao ha o que exigir de
      * "intacto" -- quem julga ai sao a blocagem e o croma, ja medidos. */
     if (sem_croma) return 1;
-    return croma_real(160, 640);                    /* e o croma na faixa */
+    return croma_mb_na_faixa(160, 640);                    /* e o croma na faixa */
 }
 
 static int cmp_double(const void *a, const void *b) {
@@ -1095,7 +1095,7 @@ static int cmp_double(const void *a, const void *b) {
  *
  * CROMA_DEBUG=1 imprime os valores medidos, para conferir contra a medicao
  * feita por fora -- foi a falta disso que me deixou cego na primeira versao. */
-static int croma_real(int y0, int y1) {
+static int croma_mb_na_faixa(int y0, int y1) {
     if (!cap_u || !cap_v || cap_w <= 0 || cap_h < y1) return 0;
     int cw = cap_w / 2, nmx = cap_w / 16;
     int nmy = (y1 - y0) / 16;
@@ -1146,7 +1146,7 @@ static int croma_real(int y0, int y1) {
  * nenhum" -- tem desvio de tarja de 13 a 26, contra ~2,5 dos que avancam pouco.
  * Ali "liberar tudo" quer dizer transformar a tarja em ruido. Seguir a fronteira
  * neste alvo e subir no ramo errado. */
-static double tarja_des(const uint8_t *Y, int w, int h) {
+static double tarja_baixo_desvio(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return -1;
     double s = 0, s2 = 0; long n = 0;
     for (int y = 962; y < 1080; y++)
@@ -1154,7 +1154,7 @@ static double tarja_des(const uint8_t *Y, int w, int h) {
     double m = s / n, va = s2 / n - m * m;
     return va > 0 ? sqrt(va) : 0;
 }
-static int base_uniforme(const uint8_t *Y, int w, int h) {
+static int tarja_baixo_uniforme(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return 0;
     int v = Y[(size_t)962 * w];
     for (int y = 962; y < 1080; y++)
@@ -1172,7 +1172,7 @@ static int base_uniforme(const uint8_t *Y, int w, int h) {
  * tardio. Serve de piso sem estragar a medida. Nao fixa o valor em 16 de
  * proposito: o frame 13 sai com a de cima em 15,000 e desvio zero, herdando o
  * frame 11, e uniformidade e o que se sabe a priori -- o valor, nao. */
-static int topo_uniforme(const uint8_t *Y, int w, int h) {
+static int tarja_topo_uniforme(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return 0;
     int v = Y[0];
     /* PISO_TOPO=2 exige o VALOR, nao so a uniformidade. Medido nos quadros
@@ -1216,10 +1216,10 @@ static void *worker_avanco(void *p) {
          * separa e a tarja, que e conhecida a priori em todo quadro do filme.
          * Ver armadilha 33. */
         int mb = (cap_w <= 0) ? -1
-               : (piso_tarja && !tarja_perfeita(cap_buf, cap_w, cap_h)) ? -1
-               : (piso_topo  && !topo_uniforme(cap_buf, cap_w, cap_h)) ? -1
-               : (piso_base  && !base_uniforme(cap_buf, cap_w, cap_h)) ? -1
-               : (piso_croma && !croma_real(160, 640)) ? -1
+               : (piso_tarja && !tarja_baixo_e_16(cap_buf, cap_w, cap_h)) ? -1
+               : (piso_topo  && !tarja_topo_uniforme(cap_buf, cap_w, cap_h)) ? -1
+               : (piso_base  && !tarja_baixo_uniforme(cap_buf, cap_w, cap_h)) ? -1
+               : (piso_croma && !croma_mb_na_faixa(160, 640)) ? -1
                : (piso_trinca && !trinca_ok()) ? -1
                : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
 
@@ -1372,7 +1372,7 @@ static int linhas_identicas(const uint8_t *Y, int w, int h) {
  * listra pastel cabe dentro da faixa e passa; foi assim que o segundo candidato
  * do IDR 1683 escapou. O DESVIO separa: cena real fica em 4 a 8, e o lixo pastel
  * deu 10,1. */
-static void croma_stat(int y0, int y1, double *um, double *ud, double *vm, double *vd) {
+static void croma_media_desvio(int y0, int y1, double *um, double *ud, double *vm, double *vd) {
     int cw = cap_w / 2, ch = cap_h / 2;
     if (y1 / 2 > ch) y1 = ch * 2;
     double su = 0, sv = 0, qu = 0, qv = 0; long n = 0;
@@ -1393,10 +1393,10 @@ static void croma_stat(int y0, int y1, double *um, double *ud, double *vm, doubl
 static double gu_med, gu_des, gv_med, gv_des;
 static int gy0 = 581;
 
-static int croma_sao(void) {
+static int croma_bate_referencia(void) {
     if (!cap_u || !cap_v || cap_w <= 0) return 0;
     double um, ud, vm, vd;
-    croma_stat(gy0, 950, &um, &ud, &vm, &vd);
+    croma_media_desvio(gy0, 950, &um, &ud, &vm, &vd);
     return fabs(um - gu_med) <= 4.0 && fabs(vm - gv_med) <= 4.0
         && ud <= gu_des * 1.15 && vd <= gv_des * 1.15;
 }
@@ -1435,13 +1435,13 @@ static void *worker_cresce(void *p) {
         int nota = 1 << 20;
         int cru = cap_w > 0 ? linhas_identicas(cap_buf, cap_w, cap_h) : -1;
         double b = cap_w > 0 ? blocagem(cap_buf, cap_w, cap_h) : 0;
-        if (cap_w > 0 && croma_sao() && b > 0.4 && b < 2.0) nota = cru;
+        if (cap_w > 0 && croma_bate_referencia() && b > 0.4 && b < 2.0) nota = cru;
         if (medidas) {                     /* despejo, ANTES de qualquer guarda */
             Medida *m = &medidas[k];
             m->nota = cru; m->prim = -1;
             if (cap_w > 0) {
                 double um, ud, vm, vd;
-                croma_stat(gy0, 950, &um, &ud, &vm, &vd);
+                croma_media_desvio(gy0, 950, &um, &ud, &vm, &vd);
                 m->um = (unsigned char)(um > 255 ? 255 : um);
                 m->vm = (unsigned char)(vm > 255 ? 255 : vm);
                 m->ud = (unsigned char)(ud * 10 > 255 ? 255 : ud * 10);
@@ -1846,7 +1846,7 @@ static int repinta_tarja(int t) {
     return strstr(buf, alvo) != NULL;
 }
 
-static int tarja_perfeita(const uint8_t *Y, int w, int h) {
+static int tarja_baixo_e_16(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return 0;
     for (int y = 962; y < 1080; y++)
         for (int x = 0; x < w; x += 8)
@@ -2359,9 +2359,9 @@ static int modo_avanco(int argc, char **argv) {
                     memcpy(img_base, cap_buf, (size_t)cap_w * intacto_ate);
                     printf("[+] guardadas %d linhas da base que nao podem mudar\n", intacto_ate);
                 }
-                base_tarja_des = tarja_des(cap_buf, cap_w, cap_h);
+                base_tarja_desvio = tarja_baixo_desvio(cap_buf, cap_w, cap_h);
                 if (tarja_desce)
-                    printf("[+] tarja da base: desvio %.4f (alvo: zero)\n", base_tarja_des);
+                    printf("[+] tarja da base: desvio %.4f (alvo: zero)\n", base_tarja_desvio);
             }
             printf("[+] base da trinca: fronteira na linha %d, %d trechos cobrindo %d linhas "
                    "(densidade %.4f, media %.2f), maior de %d linhas\n",
@@ -2422,7 +2422,7 @@ static int modo_avanco(int argc, char **argv) {
                         cap_u ? cap_u[(size_t)201 * cw0 + 500] : -1,
                         cap_u ? cap_u[(size_t)200 * cw0 + 501] : -1);
             }
-            int ok = croma_real(160, 640);
+            int ok = croma_mb_na_faixa(160, 640);
             printf("[+] croma da base: %s a faixa calibrada\n",
                    ok ? "DENTRO de" : "FORA da");
         }
@@ -2550,7 +2550,7 @@ static int modo_cresce(int argc, char **argv) {
                 dd += abs((int)cap_buf[(size_t)y*cap_w+x] - (int)cap_buf[(size_t)(y-1)*cap_w+x]);
             if (dd == 0) { gy0 = y; break; }
         }
-        croma_stat(136, gy0, &gu_med, &gu_des, &gv_med, &gv_des);
+        croma_media_desvio(136, gy0, &gu_med, &gu_des, &gv_med, &gv_des);
         printf("  parte integra ate a linha %d | croma U %.1f+-%.1f  V %.1f+-%.1f\n",
                gy0, gu_med, gu_des, gv_med, gv_des);
         printf("  guarda: media a menos de 4,0 e desvio ate 1,15x disso, na faixa [%d,950)\n", gy0);
@@ -2901,7 +2901,7 @@ static int modo_serie(int argc, char **argv) {
                 fprintf(stderr, "[!] frame %d: tarja REPINTADA (ocultacao)\n", t);
             }
             int ok = tem && (r == 0 || pinta ||
-                     (aceita_tarja && tarja_perfeita(cap_buf, cap_w, cap_h)));
+                     (aceita_tarja && tarja_baixo_e_16(cap_buf, cap_w, cap_h)));
             if (ok) {
                 fwrite(cap_buf, 1, ny, g);
                 fwrite(cap_u ? cap_u : zero, 1, nc, g);
@@ -2945,7 +2945,7 @@ static int modo_trinca(int argc, char **argv) {
             memcpy(img_base, cap_buf, (size_t)cap_w * intacto_ate);
         }
         int base_mb = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
-        croma_real(160, 640);
+        croma_mb_na_faixa(160, 640);
         printf("# base: mb %d fronteira %d trechos %d maior %d linhas %d "
                "densidade %.4f media %.2f croma %.2f/%.2f\n",
                base_mb, base_fronteira, base_ntrechos, base_maior, base_linhas,
@@ -2972,12 +2972,12 @@ static int modo_trinca(int argc, char **argv) {
                 if (fr > base_fronteira)
                     bl = blocagem_faixa(cap_buf, cap_w, base_fronteira, fr);
                 estrutura_borrao(cap_buf, cap_w, cap_h, fr, &nt, &mx, &ln, &lg);
-                croma_real(160, 640);
+                croma_mb_na_faixa(160, 640);
             }
             int jr2 = base_fronteira + janela_resp; if (jr2 > cap_h) jr2 = cap_h;
-            int rp = (cap_w > 0 && fr > base_fronteira) ? croma_respingo(base_fronteira, jr2) : -1;
+            int rp = (cap_w > 0 && fr > base_fronteira) ? croma_salto_p99(base_fronteira, jr2) : -1;
             double du = -1, dv = -1;
-            if (cap_w > 0) croma_dp(base_fronteira, jr2, &du, &dv);
+            if (cap_w > 0) croma_desvio_plano(base_fronteira, jr2, &du, &dv);
             /* Tarja de baixo: media e desvio, e o VALOR sai junto. Pode ser 16
              * ou 15 -- o frame 11 deixa 15 no DPB e a tarja de cima do 13 sai
              * 15 -- entao o criterio de chegada e "uniforme", com o valor
