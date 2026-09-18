@@ -155,6 +155,13 @@ int linhas_reais(const uint8_t *Y, int w, int h) {
     return h - y0;
 }
 
+/* Diz se o quadro nao tem imagem nenhuma -- um unico valor em toda a area.
+ *
+ *   Y     plano de luma
+ *   w, h  dimensoes em pixels
+ *
+ * Devolve: 1 se chapado, 0 se ha qualquer variacao. Quadro de fade e
+ * legitimamente chapado, entao isto sozinho NAO e defeito. */
 int sem_imagem(const uint8_t *Y, int w, int h) {
     /* Amostra esparsa nao serve: o quadro de ocultacao com meia duzia de
      * macroblocos decodificados passa por ela e ainda e cinza. Usa o detector
@@ -162,6 +169,17 @@ int sem_imagem(const uint8_t *Y, int w, int h) {
     return linhas_identicas(Y, w, h) > 400;   /* metade das 813 linhas */
 }
 
+/* Diz se a linha `y` repete a de cima, dentro da tolerancia do modulo.
+ *
+ *   Y  plano de luma
+ *   w  largura, que e tambem o passo entre linhas
+ *   y  a linha a testar, contra y-1
+ *
+ * Devolve: 1 se todas as colunas amostradas ficam dentro da tolerancia.
+ *
+ * Amostra `x += 16`: uma coluna de cada macrobloco. E a tolerancia importa mais
+ * que a amostragem -- com zero isto mede coincidencia, nao borrao (armadilha
+ * 40). Ajustar com juizes_tolerancia(). */
 int linha_copia(const uint8_t *Y, int w, int y) {
     for (int x = 0; x < w; x += 16) {
         int d = (int)Y[(size_t)y * w + x] - (int)Y[(size_t)(y - 1) * w + x];
@@ -260,6 +278,17 @@ double tarja_baixo_desvio(const uint8_t *Y, int w, int h) {
     return va > 0 ? sqrt(va) : 0;
 }
 
+/* Diz se a tarja de BAIXO e uniforme, com o valor que for.
+ *
+ *   Y     plano de luma
+ *   w, h  dimensoes; abaixo de 1920x1080 devolve 0
+ *
+ * Devolve: 1 se todas as amostras das linhas 962 a 1079 sao iguais entre si.
+ *
+ * Amostra `x += 8`: SETE DE CADA OITO COLUNAS NAO SAO OLHADAS. Um pixel errado
+ * em x=7 passa; o mesmo em x=8 e pego. Esta em src/testes_juizes.c.
+ *
+ * A irma `tarja_baixo_e_16` e esta mesma funcao exigindo o valor 16. */
 int tarja_baixo_uniforme(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return 0;
     int v = Y[(size_t)962 * w];
@@ -316,6 +345,17 @@ int linhas_identicas(const uint8_t *Y, int w, int h) {
     return n;
 }
 
+/* Diz se a tarja de BAIXO e uniforme E vale exatamente 16.
+ *
+ *   Y     plano de luma
+ *   w, h  dimensoes; abaixo de 1920x1080 devolve 0
+ *
+ * Devolve: 1 so quando as linhas 962 a 1079 sao todas 16.
+ *
+ * O 16 nao e arbitrario: e o preto da faixa limitada (video_full_range_flag
+ * ausente no SPS), e os quadros verificados do filme dao 16,000 com desvio
+ * 0,000 sem excecao. Mesma amostragem e mesmo ponto cego da
+ * `tarja_baixo_uniforme`, da qual difere so por exigir o valor. */
 int tarja_baixo_e_16(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return 0;
     for (int y = 962; y < 1080; y++)

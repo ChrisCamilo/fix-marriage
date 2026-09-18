@@ -345,8 +345,8 @@ Da menor para a maior chance de quebrar coisa:
 | ~~1~~ | ~~tabela de modos e validação de `argc`~~ | **FEITO** | `main` de 1.212 para 117 linhas; 27/27 na regressão |
 | ~~2~~ | ~~documentar o contrato das duas `blocagem`~~ | **FEITO** | pré-processado idêntico ao `HEAD` |
 | ~~3~~ | ~~renomear as famílias do croma e da tarja~~ | **FEITO** | 37 ocorrências; o arnês pegou 2 strings trocadas por engano |
-| 4 | `src/juizes.c` com as 19, em duas camadas | **baixo** | 6 funções colapsam em 2 primitivas, e abre teste sem decodificador |
-| 5 | documentar as 26 funções sem comentário | **nenhum** | 9 workers, `main` e `grava_patch` hoje não têm contrato escrito |
+| ~~4~~ | ~~`src/juizes.c`~~ | **FEITO** | 13 medidas puras + `testes_juizes.c`; 28/28 |
+| ~~5~~ | ~~documentar as funções sem comentário~~ | **FEITO** | 26 blocos; pré-processado idêntico |
 | 6 | `nota_do_quadro()` fora do `worker_avanco` | médio | os pisos passam a valer em todo modo, não só no `avanco` |
 | 7 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
 

@@ -39,6 +39,18 @@ static _Thread_local long log_bytestream = -1;
 static _Thread_local int log_ocultados = -1;
 static _Thread_local int log_mbx = -1, log_mby = -1;
 
+/* Callback de log do libavcodec. E daqui que sai TODA a informacao de
+ * diagnostico: o decodificador escreve o macrobloco onde falhou e quantos bytes
+ * sobraram, e nao ha outra forma de saber isso de fora.
+ *
+ *   avcl   contexto, ignorado
+ *   nivel  severidade do libavcodec; acima de ERROR so passa com TRACO=1
+ *   fmt,vl a mensagem
+ *
+ * Nao devolve nada; preenche log_mbx, log_mby, log_bytestream, log_ocultados e
+ * conta log_erros. Todos sao _Thread_local, senao workers se atropelariam.
+ *
+ * `bytestream` e o gradiente barato: consumo = tamanho - bytestream. */
 static void meu_log(void *avcl, int nivel, const char *fmt, va_list vl) {
     /* TRACO=1 deixa passar o nivel de depuracao, que e onde o h264 do ffmpeg
      * imprime o mapa de tipos de macrobloco -- uma linha por fileira, um
@@ -72,6 +84,13 @@ static _Thread_local AVCodecContext *ctx = NULL;
 static uint8_t extradata[256];
 static int extradata_len = 0;
 
+/* Monta o extradata avcC a partir do SPS e do PPS em hexadecimal.
+ *
+ *   sps_hex, pps_hex  os parametros JA CORRIGIDOS, em hexa
+ *
+ * Nao devolve nada; preenche o buffer global que `abre_decoder` entrega ao
+ * libavcodec. Usa os corrigidos e nao os do arquivo de proposito: o SPS do MP4
+ * tem 4 bits errados e o PPS 2, e sem isso nada decodifica. Ver ESTADO.md. */
 static void monta_avcc(const char *sps_hex, const char *pps_hex) {
     uint8_t sps[64], pps[64]; int ls = 0, lp = 0;
     for (const char *p = sps_hex; p[0] && p[1]; p += 2)
@@ -88,6 +107,14 @@ static void monta_avcc(const char *sps_hex, const char *pps_hex) {
     extradata_len = k;
 }
 
+/* Cria o AVCodecContext da thread, ou reaproveita o que ja existe.
+ *
+ * O contexto e _Thread_local: cada worker tem o seu, e por isso a varredura
+ * paralela nao compartilha estado de decodificacao.
+ *
+ * Nao recebe nem devolve nada. Duas escolhas que nao se mexem:
+ *   thread_count = 1  determinismo acima de velocidade. Ver PARALELIZACAO.md.
+ *   extradata         o avcC montado do SPS/PPS corrigidos, nao o do arquivo. */
 static void abre_decoder(void) {
     if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
     const AVCodec *c = avcodec_find_decoder(AV_CODEC_ID_H264);
@@ -158,6 +185,12 @@ static _Thread_local int cap_qualquer = 0;
  * inteiro -- pode haver muito mais assistivel do que a contagem diz. */
 static int panorama = 0;
 
+/* Mede um quadro e imprime a linha do `panorama`, sem guardar nada.
+ *
+ *   fr  o AVFrame recem-decodificado
+ *
+ * Nao devolve nada. Existe para o panorama percorrer o filme inteiro numa
+ * passada: medir e imprimir na hora custa menos que capturar 3.445 quadros. */
 static void mede_e_imprime(const AVFrame *fr) {
     int w = fr->width, h = fr->height, ls = fr->linesize[0];
     const uint8_t *Y = fr->data[0];
@@ -192,6 +225,16 @@ static void mede_e_imprime(const AVFrame *fr) {
            listra * 100.0 / 819.0, gh > 0 ? gv / gh : -1.0);
 }
 
+/* Guarda o quadro decodificado nos buffers da thread, se for o quadro pedido.
+ *
+ *   fr  o AVFrame que o decodificador acabou de entregar
+ *
+ * Nao devolve nada; preenche cap_buf, cap_w, cap_h, cap_hash e, quando
+ * `guardar_croma`, tambem cap_u e cap_v.
+ *
+ * Casa por pts: quadro cujo pts nao e o alvo e IGNORADO, senao a medida sairia
+ * do quadro errado numa cadeia de doze. `cap_qualquer` desliga esse casamento,
+ * e ai o que se captura e ocultacao -- util para inspecao, nunca para julgar. */
 static void captura_frame(AVFrame *fr) {
     if (panorama) { mede_e_imprime(fr); return; }
     if (!cap_buf || fr->width <= 0) return;
@@ -285,6 +328,13 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     return ok ? 0 : 1;
 }
 
+/* Acha o IDR que ancora um quadro: o ultimo quadro-chave em `alvo` ou antes.
+ *
+ *   alvo  indice do quadro no index.txt
+ *
+ * Devolve: o indice do IDR, ou 0 se nao houver nenhum antes. Toda decodificacao
+ * comeca aqui, porque quadro comum nao decodifica sozinho -- e por isso GOP com
+ * IDR quebrado esta bloqueado por dependencia, nao por dano proprio. */
 static int ancora_de(int alvo) {
     for (int i = alvo; i >= 0; i--) if (ix[i].idr) return i;
     return 0;
@@ -459,6 +509,35 @@ static _Atomic int prox_cand;
 static _Atomic int menor_aceito;
 static int n_cand;
 
+/* ============================ OS WORKERS ============================
+ *
+ * Os nove seguem o mesmo esqueleto, e a reescrita do item 7 vai unifica-lo:
+ *
+ *   1. aloca buffers PROPRIOS -- copia do NAL e cap_buf. Nada compartilhado.
+ *   2. puxa o proximo indice de um contador atomico, ate acabar.
+ *   3. aplica o flip na copia, decodifica a cadeia desde a ancora, pontua,
+ *      e devolve a copia ao estado anterior.
+ *
+ * Todos recebem `void *p` e devolvem NULL: a assinatura e imposta pelo
+ * pthread_create, nao pelo problema. Alguns leem a tarefa de uma struct em `p`,
+ * outros de variaveis globais preenchidas antes do disparo -- a diferenca esta
+ * anotada em cada um.
+ *
+ * O determinismo NAO vem de sorte de escalonamento: os candidatos sao numerados
+ * na ordem sequencial, distribuidos por contador atomico e a saida e ordenada
+ * pelo indice no fim. Ver a secao 7 do AGENTS.md, e nao mexer nisso sem provar
+ * com THREADS=1.
+ * ==================================================================== */
+
+/* Varre 1 bit por candidato numa faixa, para o modo `unico` e o `varre_par`.
+ *
+ *   p  ignorado; a tarefa vem de `prox_cand` e das globais da varredura
+ *
+ * Pontua: aceita ou rejeita segundo o criterio de `decodifica`, e opcionalmente
+ * mede a blocagem. Suporta parada antecipada pela regra do menor indice --
+ * achar em k para de puxar indices >= k, mas termina os menores que ja estao em
+ * voo. Nunca "a primeira que chegar": ha quadros com milhares de solucoes e a
+ * escolha por chegada pegaria bit errado. */
 static void *worker_varre(void *p) {
     Worker *w = p;
     int len = ix[w->alvo].size;
@@ -496,6 +575,13 @@ static void *worker_varre(void *p) {
     return NULL;
 }
 
+/* Comparador do qsort: ordena solucoes pelo indice do candidato.
+ *
+ *   a, b  ponteiros para Sol
+ *
+ * Devolve: -1, 0 ou 1. A ordem do INDICE, e nao a de chegada, e o que torna a
+ * saida paralela identica a sequencial -- ver a regra do menor indice na secao
+ * 7 do AGENTS.md. */
 static int cmp_sol(const void *a, const void *b) {
     int x = ((const Sol *)a)->idx, y = ((const Sol *)b)->idx;
     return (x > y) - (x < y);
@@ -574,6 +660,12 @@ typedef struct { int a, b; } Par;
 static Par pares[4096];
 static _Atomic int n_pares_achados;
 
+/* Varre PARES de bits, para o modo `varre2`.
+ *
+ *   p  ignorado; a tarefa vem de `prox_par` e de `pares`
+ *
+ * Pontua: aceita ou rejeita. Os pares vem pre-gerados num vetor global de teto
+ * FIXO (4096) -- faixa maior que isso trunca em silencio. */
 static void *worker_par2(void *p) {
     (void)p;
     int alvo = alvo2, len = ix[alvo].size, anc = ancora_de(alvo);
@@ -863,6 +955,11 @@ static int trinca_ok(void) {
     return croma_mb_na_faixa(160, 640);                    /* e o croma na faixa */
 }
 
+/* Comparador do qsort para double, usado no percentil do croma.
+ *
+ *   a, b  ponteiros para double
+ *
+ * Devolve: -1, 0 ou 1. */
 static int cmp_double(const void *a, const void *b) {
     double x = *(const double *)a, y = *(const double *)b;
     return x < y ? -1 : x > y ? 1 : 0;
@@ -924,6 +1021,17 @@ static int croma_mb_na_faixa(int y0, int y1) {
 
 
 
+/* Varre combinacoes de k bits e pontua por PROGRESSO, para o modo `avanco`.
+ *
+ *   p  ignorado; a tarefa vem de `prox_combo` e de `combos_k`
+ *
+ * Pontua, em `placar[indice]`: por padrao o macrobloco alcancado, 8160 quando
+ * nao ha erro, -1 quando reprova num piso. Com PONTUA_CONSUMO=1 a nota vira
+ * bytes consumidos antes do erro.
+ *
+ * E aqui que moram os pisos -- e SO aqui, o que nao esta obvio: passar
+ * PISO_TARJA para o `varrek` ou o `cresce` nao da erro, da silencio. O item 6
+ * do REFATORACAO.md tira essa linha daqui para valer em todo modo. */
 static void *worker_avanco(void *p) {
     (void)p;
     int alvo = alvok, len = ix[alvo].size, anc = ancora_de(alvo);
@@ -1015,6 +1123,12 @@ static void *worker_avanco(void *p) {
     return NULL;
 }
 
+/* Varre combinacoes de k bits pontuando por aceita/rejeita, para o `varrek`.
+ *
+ *   p  ignorado; a tarefa vem de `prox_combo` e de `combos_k`
+ *
+ * Pontua: binario, sem os pisos do `avanco`. A diferenca entre os dois e
+ * justamente essa -- aqui nao ha nota de progresso nem piso. */
 static void *worker_varrek(void *p) {
     (void)p;
     int alvo = alvok, len = ix[alvo].size, anc = ancora_de(alvo);
@@ -1113,6 +1227,17 @@ static void croma_media_desvio(int y0, int y1, double *um, double *ud, double *v
 static double gu_med, gu_des, gv_med, gv_des;
 static int gy0 = 581;
 
+/* Diz se o croma do quadro bate com a referencia medida do proprio trecho.
+ *
+ * Sem argumentos: le a captura da thread e as globais gu_med/gv_med/gu_des/
+ * gv_des, preenchidas antes da varredura a partir de quadros integros vizinhos.
+ *
+ * Devolve: 1 quando as medias ficam a 4 niveis da referencia e os desvios
+ * dentro de 15% dela; 0 caso contrario, inclusive sem captura.
+ *
+ * A referencia e do TRECHO, nao do filme: faixa calibrada em quadro claro
+ * reprova quadro escuro de fade, e foi assim que uma varredura do frame 13 deu
+ * zero sem testar nada (armadilha 45). */
 static int croma_bate_referencia(void) {
     if (!cap_u || !cap_v || cap_w <= 0) return 0;
     double um, ud, vm, vd;
@@ -1139,6 +1264,13 @@ static Medida *medidas = NULL;
 
 typedef struct { int alvo, ancora, ini; int nota, off, bit, idx; } WorkerC;
 
+/* Cresce uma solucao bit a bit a partir de uma base, para o modo `cresce`.
+ *
+ *   p  ponteiro para WorkerC, com o alvo e a faixa da tarefa
+ *
+ * Pontua: mede a imagem resultante e guarda as que melhoram, com guardas de
+ * media e desvio calibradas pela metade integra do proprio quadro -- sem elas a
+ * busca sobe em lixo colorido saturado. */
 static void *worker_cresce(void *p) {
     WorkerC *w = p;
     int len = ix[w->alvo].size;
@@ -1214,6 +1346,13 @@ static int campo_alvo = 0;
 static uint8_t *alvo_img = NULL;
 static int alvo_w = 0, alvo_h = 0;
 
+/* Mede o CAMPO e as tarjas de uma lista de candidatos, para o modo `campo`.
+ *
+ *   p  ignorado; a tarefa vem de `prox_cand` e de `campos`
+ *
+ * Pontua: nao aceita nem rejeita -- preenche, para cada candidato, vinte
+ * medidas do quadro resultante. E modo de MEDICAO, nao de busca: quem decide e
+ * quem le a tabela. */
 static void *worker_campo(void *p) {
     (void)p;
     cap_buf = malloc((size_t)1920 * 1088);
@@ -1339,6 +1478,12 @@ typedef struct { int alvo; long off; int bit; int ok; } Cand;
 static Cand *cands = NULL;
 static int n_cands = 0;
 
+/* Reconfere candidatos ja achados, para o modo `testa`.
+ *
+ *   p  ignorado; a tarefa vem de `prox_cand` e de `cands`
+ *
+ * Pontua: marca `ok` em cada candidato que faz o quadro decodificar limpo.
+ * Serve para revalidar uma lista vinda de outra corrida, sem refazer a busca. */
 static void *worker_testa(void *p) {
     (void)p;
     cap_buf = malloc((size_t)1920 * 1088);
@@ -1377,6 +1522,14 @@ static void *worker_testa(void *p) {
 static uint8_t *ref_img = NULL;          /* so-leitura nos workers */
 static int ref_w = 0, ref_h = 0;
 
+/* Diferenca media absoluta entre o quadro e a imagem de referencia carregada.
+ *
+ *   Y     plano de luma do candidato
+ *   w, h  dimensoes, que precisam bater com as da referencia
+ *
+ * Devolve: a media das diferencas por pixel, ou -1 se nao houver referencia
+ * carregada ou as dimensoes nao baterem. Serve para comparar contra um quadro
+ * bom conhecido; sem referencia nao ha o que medir. */
 static double mad_ref(const uint8_t *Y, int w, int h) {
     if (!ref_img || w != ref_w || h != ref_h) return 1e9;
     double s = 0; size_t n = 0;
@@ -1389,6 +1542,12 @@ typedef struct {
     double mad; int off, bit, idx;
 } WorkerR;
 
+/* Varre comparando contra uma imagem de REFERENCIA, para o modo `vizinho`.
+ *
+ *   p  ponteiro para WorkerR, com o alvo e a faixa da tarefa
+ *
+ * Pontua: pela diferenca media absoluta contra a referencia (`mad_ref`), o que
+ * so vale quando existe um quadro bom conhecido para comparar. */
 static void *worker_ref(void *p) {
     WorkerR *w = p;
     int len = ix[w->alvo].size;
@@ -1447,6 +1606,12 @@ typedef struct {
     int lin, off, bit, idx;
 } WorkerL;
 
+/* Varre pontuando por LINHAS REAIS de imagem, para o modo `recupera`.
+ *
+ *   p  ponteiro para WorkerL, com o alvo e a faixa da tarefa
+ *
+ * Pontua: quantas linhas do quadro tem conteudo de verdade, em vez de listra
+ * propagada. Criterio de imagem, nao sintatico. */
 static void *worker_linhas(void *p) {
     WorkerL *w = p;
     int len = ix[w->alvo].size;
@@ -1524,6 +1689,17 @@ static Patch patches[200000];
 static const char *arq_patches = NULL;
 static int n_patch = 0;
 
+/* Le o patches.txt e aplica cada linha ao buffer do MP4 em memoria, por XOR.
+ * O arquivo em disco nunca e tocado.
+ *
+ *   fn  caminho do patches.txt
+ *
+ * Nao devolve nada; preenche o vetor global `patches` e `n_patch`. Arquivo
+ * ausente e silencioso, o que e proposital: varredura em MP4 cru tem que rodar.
+ *
+ * ATENCAO: toda medida sobre bytes tem que sair DESTE buffer, nunca do arquivo
+ * lido direto. Script que abre o MP4 por fora enxerga dano ja consertado -- ver
+ * armadilha 49, que custou uma sessao. */
 static void carrega_patches(const char *fn) {
     FILE *f = fopen(fn, "r");
     if (!f) return;
@@ -1535,6 +1711,17 @@ static void carrega_patches(const char *fn) {
     fclose(f);
     fprintf(stderr, "[+] %d patches carregados de %s\n", n_patch, fn);
 }
+/* Acrescenta uma linha ao patches.txt. E a UNICA funcao do programa que
+ * escreve numa fonte de verdade, e por isso abre em modo "ab": nunca reescreve
+ * o arquivo, so acrescenta.
+ *
+ *   fn    caminho do patches.txt, vindo do argv via `arq_patches`
+ *   off   deslocamento absoluto no MP4, em bytes
+ *   bit   qual bit do byte inverter, de 0 a 7
+ *
+ * Nao devolve nada e nao confere nada: quem chama ja decidiu que o patch passa
+ * no criterio. Linha repetida se CANCELA -- XOR duas vezes e identidade -- e
+ * isso e usado de proposito para desfazer reparo aceito por engano. */
 static void grava_patch(const char *fn, long off, int bit) {
     FILE *f = fopen(fn, "ab");   /* binario: mantem LF tambem no Windows */
     fprintf(f, "%ld %d\n", off, bit);
@@ -1566,6 +1753,22 @@ static int repinta_tarja(int t) {
     return strstr(buf, alvo) != NULL;
 }
 
+
+/* =========================== OS MODOS ==============================
+ *
+ * Uma funcao por modo, todas com a mesma assinatura (argc, argv) e devolvendo
+ * 0 no sucesso ou 1 em erro. O CONTRATO de cada uma -- nome, argumentos
+ * obrigatorios e texto de uso -- nao esta repetido aqui: mora na tabela MODOS,
+ * logo abaixo, que e o unico lugar onde a validacao acontece.
+ *
+ * Deixar o contrato em um lugar so foi deliberado. Antes ele estava em dois --
+ * uma string de uso no comeco do main e a leitura de argv espalhada em cada
+ * bloco -- e os dois dessincronizaram: a string documentava cinco modos de
+ * vinte e cinco, e citava um `report` que nao existia como entrada propria.
+ *
+ * Os corpos vieram da cadeia de else-if do main sem uma linha alterada. Ver
+ * docs/REFATORACAO.md, secao 3, e a prova de 27 modos identicos no arnes.
+ * ==================================================================== */
 
 static int modo_repair(int argc, char **argv) {
     (void)argc; (void)argv;
@@ -2799,6 +3002,17 @@ static int modo_report(int argc, char **argv) {
     return 0;
 }
 
+/* Le o MP4 e o indice, aplica os patches em memoria, interpreta as variaveis de
+ * ambiente e despacha para o modo pedido.
+ *
+ *   argc, argv  <mp4> <index.txt> <patches.txt> <modo> [args do modo]
+ *
+ * Devolve: 0 no sucesso, 1 em erro de uso ou de abertura. O modo em si e uma
+ * entrada da tabela MODOS, que valida o argc ANTES de chamar -- nome
+ * desconhecido lista os modos em vez de rodar um relatorio em silencio.
+ *
+ * O MP4 NUNCA e reaberto para escrita: os patches sao aplicados por XOR sobre a
+ * copia em memoria, e so o `repair` escreve, no patches.txt. */
 int main(int argc, char **argv) {
     if (argc < 4) {
         fprintf(stderr,
