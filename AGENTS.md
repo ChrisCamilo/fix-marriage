@@ -39,6 +39,21 @@ piora o filme. Não "limpar" duplicata sem medir os dois estados.
 O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
 com zero linhas de log**. Nada mais conta.
 
+Desde 2026-09-18 o `serie` também exige a **cadeia de referência boa**: quadro
+sem erro sobre referência borrada não conta (armadilha 56). Com isso ele dá 167,
+mas não o mesmo conjunto dos visualmente bons: entra o IDR 1683 (listrado por
+dessincronização silenciosa dentro do próprio quadro) e sai o frame 12 (imagem
+boa, mas a referência dele é o frame 11, quebrado).
+
+**A outra via é a do cabeçalho provado.** Patch que prova o cabeçalho não faz o
+quadro passar — o dano segue no corpo — e por isso não passa pelo critério
+acima. Entra por invariante: os determinísticos (`dados/deterministicos.txt`) e,
+desde 2026-09-18, os cabeçalhos de slice consertados por coerência
+(`dados/patches_cabecalho.txt`, gerados pelo `ferramentas/cabecalho_slice.py`).
+Condição de entrada deste segundo lote, aprovada pelo usuário: solução **única**
+de 1 ou 2 bits, e as imagens dos 167 quadros bons **byte a byte iguais** com o
+lote aplicado. O `verify` pula os dois arquivos.
+
 A `docs/ARMADILHAS.md` lista **56** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
@@ -57,7 +72,8 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`5 válidos, 10 falsos, 479 determinísticos pulados`**, e os 10 falsos são
+hoje **`5 válidos, 10 falsos, 1270 determinísticos pulados`** (os 479 de
+`dados/deterministicos.txt` mais os 791 de `dados/patches_cabecalho.txt`), e os 10 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |

@@ -1936,16 +1936,24 @@ static int modo_verify(int argc, char **argv) {
         int bons = 0, falsos = 0, pulados = 0;
         int base_n = getenv("BASE_N") ? atoi(getenv("BASE_N")) : 0;
         static long det_off[4096]; static int det_bit[4096]; int n_det = 0;
-        {
-            FILE *fd = fopen(getenv("DET") ? getenv("DET") : "dados/deterministicos.txt", "r");
-            if (fd) {
-                long o; int b;
-                while (n_det < 4096 && fscanf(fd, "%ld %d", &o, &b) == 2) {
+        /* Os cabecalhos de slice consertados por coerencia (patches_cabecalho,
+         * ferramentas/cabecalho_slice.py) sao do mesmo tipo: provam o
+         * cabecalho, nao fazem o quadro fechar -- o dano segue no corpo. Sem
+         * pula-los, 791 linhas viram "falsos" e afogam o sinal. O arquivo tem
+         * comentarios e texto depois do bit, entao a leitura e por linha. */
+        const char *listas[2] = {
+            getenv("DET") ? getenv("DET") : "dados/deterministicos.txt",
+            "dados/patches_cabecalho.txt" };
+        for (int f = 0; f < 2; f++) {
+            FILE *fd = fopen(listas[f], "r");
+            if (!fd) continue;
+            char linha[512]; long o; int b, n0 = n_det;
+            while (n_det < 4096 && fgets(linha, sizeof linha, fd))
+                if (linha[0] != '#' && sscanf(linha, "%ld %d", &o, &b) == 2) {
                     det_off[n_det] = o; det_bit[n_det] = b; n_det++;
                 }
-                fclose(fd);
-                fprintf(stderr, "[+] %d patches deterministicos serao pulados\n", n_det);
-            }
+            fclose(fd);
+            fprintf(stderr, "[+] %d patches de %s serao pulados\n", n_det - n0, listas[f]);
         }
         for (int k = base_n; k < n_patch; k++) {
             long o = patches[k].off;
