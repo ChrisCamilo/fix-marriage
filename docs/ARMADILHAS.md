@@ -1128,3 +1128,20 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     Busca de reparo que aceita "decodifica limpo" vai achar esse atalho — foi o
     que o reparo antigo do 2361 achou, e o `repair` achou de novo. O critério
     certo é **zero macroblocos ocultados**.
+
+    **Implementado no `reparador.c` no mesmo dia.** A raiz: o `meu_log`
+    descartava tudo acima do nível ERROR, e o `concealing N DC` sai em INFO — o
+    reparador nunca viu ocultação (o `log_ocultados` do `acha_consumo` sempre
+    valeu −1, inclusive com `TRACO=1`). Agora o `decodifica` guarda os MBs
+    ocultados do alvo e exige zero; `ACEITA_OCULTO=1` volta ao critério antigo.
+    As exceções do `serie` (tarja 16, repintura) também exigem zero. E o
+    "macrobloco alcançado" das buscas (`avanco`, `trinca`, `corta`) passou a ser
+    `8160 − ocultados` quando o slice acaba cedo sem erro — antes era 8.160, nota
+    máxima para o atalho.
+
+    Efeito medido: o `serie` passa a dar **162**, subconjunto exato dos 167
+    visualmente bons (saem 12, 2359, 2360, 2361, 3442 — e o **1683**, o IDR
+    listrado que era o último falso positivo). No modo `idr`, as "soluções" de
+    1 bit dos IDRs 0 e 29 somem: eram o mesmo atalho, e a do IDR 0 o RASTREIO já
+    dava como reprovada pela tarja. A regressão com `ACEITA_OCULTO=1` bate com a
+    referência antiga em todos os casos que não usam a contagem nova.

@@ -12,6 +12,11 @@ macroblocos. Visualmente seguem bons, porque a ocultação copia de vizinhos bon
 **Decodificados por inteiro: 163.** Os 4 são alvos de reparo com critério
 "zero ocultados", e têm as referências intactas.
 
+Com o critério de ocultação implementado no `reparador.c`, o `serie 0 3444`
+(`TARJA=1`) dá **162**: os 163 menos o 1683, IDR listrado que só passava porque o
+slice acabava cedo sem erro. É o primeiro número automático do projeto que é
+subconjunto exato dos visualmente bons.
+
 O critério rigoroso dava 209, e **42 deles são imagem listrada** (armadilha 56).
 O `serie` julga cada quadro sozinho: um P ou B decodificado sem erro sobre uma
 referência borrada herda o borrão, e o teste de propagação não o pega porque o

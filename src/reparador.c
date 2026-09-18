@@ -38,6 +38,14 @@ static int erros_base = 0;      /* erros que o caminho ja tem sem nenhum flip */
 static _Thread_local long log_bytestream = -1;
 static _Thread_local int log_ocultados = -1;
 static _Thread_local int log_mbx = -1, log_mby = -1;
+/* Macroblocos que o ffmpeg OCULTOU no quadro cujo pacote acabou de ser enviado.
+ * A mensagem "concealing N DC" sai no nivel INFO, e o filtro abaixo descartava
+ * tudo acima de ERROR: o reparador nunca viu ocultacao -- nem o `log_ocultados`,
+ * que so era preenchido depois do filtro e por isso sempre valeu -1. Slice que
+ * acaba cedo (end_of_slice antes do ultimo MB) nao gera erro nenhum; so esta
+ * mensagem o denuncia (armadilha 59). Sem CHUNKS, o h264 fecha cada quadro no
+ * fim do proprio pacote, entao a mensagem chega durante o envio dele. */
+static _Thread_local int log_ocultados_quadro = -1;
 
 /* Callback de log do libavcodec. E daqui que sai TODA a informacao de
  * diagnostico: o decodificador escreve o macrobloco onde falhou e quantos bytes
@@ -56,12 +64,15 @@ static void meu_log(void *avcl, int nivel, const char *fmt, va_list vl) {
      * imprime o mapa de tipos de macrobloco -- uma linha por fileira, um
      * caractere por macrobloco. E o unico jeito de ver ONDE o CABAC saiu do
      * lugar em vez de so onde o erro apareceu. */
-    if (nivel > (traco ? AV_LOG_DEBUG : AV_LOG_ERROR)) return;
-    if (traco && nivel > AV_LOG_ERROR) { char b2[1024];
-        vsnprintf(b2, sizeof(b2), fmt, vl); fputs(b2, stderr); return; }
+    if (nivel > (traco ? AV_LOG_DEBUG : AV_LOG_INFO)) return;
     char buf[1024];
     vsnprintf(buf, sizeof(buf), fmt, vl);
     long bs; int mb1, mb2, oc;
+    if (sscanf(buf, "concealing %d DC", &oc) == 1) log_ocultados_quadro = oc;
+    if (nivel > AV_LOG_ERROR) {           /* INFO e DEBUG: nao contam como erro */
+        if (traco) fputs(buf, stderr);
+        return;
+    }
     if (sscanf(buf, "error while decoding MB %d %d, bytestream %ld",
                &mb1, &mb2, &bs) == 3) {
         log_bytestream = bs;
@@ -162,6 +173,8 @@ static int exigir_imagem = 1;
  * estende o alcance, limitado ao fim do GOP -- estender alem dele traria os
  * erros de outros frames quebrados para dentro do log e reprovaria tudo. */
 static int folga_lookahead = 0;
+static int aceita_oculto = 0;          /* ACEITA_OCULTO=1: criterio sem a parte da ocultacao */
+static _Thread_local int ocultados_alvo = -1;  /* MBs ocultados no alvo da ultima decodifica() */
 
 static _Thread_local uint64_t cap_hash = 0;
 
@@ -302,12 +315,14 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
          * de mandar o alvo e o erro DO ALVO -- e -1 quer dizer que ele nao
          * errou, mesmo que quadros anteriores da cadeia tenham errado. */
         if (i == alvo) { log_mbx = -1; log_mby = -1; log_bytestream = -1; }
+        log_ocultados_quadro = -1;
         av_new_packet(pkt, len);
         memcpy(pkt->data, src, len);
         pkt->pts = i;                  /* casa o quadro de saida com o frame pedido */
         if (avcodec_send_packet(ctx, pkt) == 0) enviados++;
         av_packet_unref(pkt);
         while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; captura_frame(fr); av_frame_unref(fr); }
+        if (i == alvo) ocultados_alvo = log_ocultados_quadro;
     }
     avcodec_send_packet(ctx, NULL);
     while (avcodec_receive_frame(ctx, fr) == 0) { quadros++; captura_frame(fr); av_frame_unref(fr); }
@@ -321,11 +336,31 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
      * devolveu 0 solucoes sem ter testado nada de verdade.
      * Medir a base antes de varrer, e passar aqui. */
     int ok = (log_erros <= erros_base && quadros == esperado);
+    /* Terceira parte: o alvo nao pode ter macrobloco OCULTADO. Slice que acaba
+     * cedo passa nas duas partes acima -- sem erro, quadro emitido -- e a imagem
+     * vira ocultacao de vizinhos bons, que parece certa. Foi assim que o reparo
+     * antigo do 2361 "passou em tudo" e que o `repair` achou outro atalho igual
+     * (armadilha 59). ACEITA_OCULTO=1 volta ao criterio antigo, para comparar. */
+    if (ok && !aceita_oculto) ok = (ocultados_alvo <= 0);
     /* Segunda parte do criterio: a imagem tem que existir. Sem isto passa
      * slice que termina cedo e vira listra -- armadilha 7 do ARMADILHAS.md. */
     if (ok && exigir_imagem)
         ok = (cap_w > 0 && propagacao(cap_buf, cap_w, cap_h) < 0.995);
     return ok ? 0 : 1;
+}
+
+/* Quantos macroblocos do alvo da ultima decodifica() foram decodificados DE FATO.
+ *
+ * Sem argumentos: le log_mbx/log_mby e ocultados_alvo da thread.
+ *
+ * Devolve: o endereco do MB do erro quando houve erro; 8160 - ocultados quando
+ * o slice acabou cedo SEM erro; 8160 quando o quadro saiu inteiro. Antes o
+ * segundo caso valia 8160 -- nota maxima para o atalho do end_of_slice que o
+ * `repair` e o reparo antigo do 2361 acharam (armadilha 59). */
+static int mb_alcancado(void) {
+    if (log_mbx >= 0) return log_mby * 120 + log_mbx;
+    if (ocultados_alvo > 0) return 8160 - ocultados_alvo;
+    return 8160;
 }
 
 /* Acha o IDR que ancora um quadro: o ultimo quadro-chave em `alvo` ou antes.
@@ -1135,7 +1170,7 @@ static void *worker_avanco(void *p) {
                : (piso_base  && !tarja_baixo_uniforme(cap_buf, cap_w, cap_h)) ? -1
                : (piso_croma && !croma_mb_na_faixa(160, 640)) ? -1
                : (piso_trinca && !trinca_ok()) ? -1
-               : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+               : mb_alcancado();
 
         /* PONTUA_CONSUMO=1: a nota passa a ser BYTES CONSUMIDOS antes do erro,
          * nao o macrobloco alcancado.
@@ -1183,7 +1218,7 @@ static void *worker_avanco(void *p) {
             int n = consumo_t - 4;
             corte[0] = n >> 24; corte[1] = n >> 16; corte[2] = n >> 8; corte[3] = n;
             decodifica(anc, alvo, corte, consumo_t, NULL);
-            int mb2 = (cap_w <= 0) ? -1 : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+            int mb2 = (cap_w <= 0) ? -1 : mb_alcancado();
             if (mb2 >= 8160) mb = -1;        /* fechou sem o pedaco: atalho */
         }
         placar[c] = mb;
@@ -2347,7 +2382,7 @@ static int modo_corta(int argc, char **argv) {
              * o modo ficava cego justamente no caso em que mais interessa.
              * O macrobloco do log diz ate onde a analise sintatica chegou,
              * exista quadro ou nao; a coluna "quadro" registra se saiu. */
-            int mb = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+            int mb = mb_alcancado();
             printf("  corte %6d -> macrobloco %5d   fileira %3d   quadro %s\n",
                    k, mb, mb >= 8160 ? -1 : mb / 120, cap_w > 0 ? "sim" : "nao");
         }
@@ -2428,7 +2463,7 @@ static int modo_avanco(int argc, char **argv) {
         cap_buf = malloc((size_t)1920 * 1088);
         decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
         int base = (cap_w <= 0) ? -1
-                 : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+                 : mb_alcancado();
         /* A base tem que ser lida na MESMA escala dos candidatos. Sem isto a
          * linha imprime macrobloco enquanto o placar guarda consumo, e comparar
          * os dois numeros leva a conclusao errada. */
@@ -2760,13 +2795,18 @@ static int modo_mapa(int argc, char **argv) {
             memcpy(pkt->data, arq + ix[i].off, ix[i].size);
             pkt->pts = i;
             log_zerar();
+            log_ocultados_quadro = -1;
             if (avcodec_send_packet(ctx, pkt) == 0) { }
             av_packet_unref(pkt);
             while (avcodec_receive_frame(ctx, fr) == 0) {
                 if (fr->pts >= 0 && fr->pts < n_ix) emitiu[fr->pts] = 1;
                 av_frame_unref(fr);
             }
-            mbs[i] = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+            /* Sem erro de MB mas com ocultacao: o slice acabou cedo e o resto
+             * foi preenchido. O que se decodificou de fato e 8160 - ocultados
+             * (armadilha 59); antes isto saia 8160. */
+            mbs[i] = (log_mbx >= 0) ? log_mby * 120 + log_mbx
+                   : (log_ocultados_quadro > 0) ? 8160 - log_ocultados_quadro : 8160;
         }
         avcodec_send_packet(ctx, NULL);
         while (avcodec_receive_frame(ctx, fr) == 0) {
@@ -2978,8 +3018,13 @@ static int modo_serie(int argc, char **argv) {
                 }
                 fprintf(stderr, "[!] frame %d: tarja REPINTADA (ocultacao)\n", t);
             }
-            int ok = tem && !ref_quebrada && (r == 0 || pinta ||
-                     (aceita_tarja && tarja_baixo_e_16(cap_buf, cap_w, cap_h)));
+            /* As excecoes (tarja 16, repintura) sao para quadro de IMAGEM CERTA
+             * que o teste de propagacao rejeita -- os fades. Quadro com MB
+             * ocultado nao tem a imagem decodificada, entao nao se beneficia
+             * delas: 2359, 2360, 2361 e 3442 entravam por aqui (armadilha 59). */
+            int inteiro = aceita_oculto || ocultados_alvo <= 0;
+            int ok = tem && !ref_quebrada && (r == 0 || (inteiro && (pinta ||
+                     (aceita_tarja && tarja_baixo_e_16(cap_buf, cap_w, cap_h)))));
             if (!ok && ((arq[ix[t].off + 4] >> 5) & 3)) ref_quebrada = 1;
             if (t < ini) continue;               /* so alimentou a cadeia */
             if (ok) {
@@ -3024,7 +3069,7 @@ static int modo_trinca(int argc, char **argv) {
             img_base = malloc((size_t)cap_w * intacto_ate);
             memcpy(img_base, cap_buf, (size_t)cap_w * intacto_ate);
         }
-        int base_mb = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+        int base_mb = mb_alcancado();
         croma_mb_na_faixa(160, 640);
         printf("# base: mb %d fronteira %d trechos %d maior %d linhas %d "
                "densidade %.4f media %.2f croma %.2f/%.2f\n",
@@ -3044,7 +3089,7 @@ static int modo_trinca(int argc, char **argv) {
             arq[o] ^= (1 << b);
             cr_dentro = cr_p99 = -1;
             decodifica(ancora_de(alvo), alvo, NULL, 0, NULL);
-            int mb = (cap_w <= 0) ? -1 : (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
+            int mb = (cap_w <= 0) ? -1 : mb_alcancado();
             int ok = trinca_ok();
             int fr = -1, nt = -1, mx = -1, ln = -1, lg = -1; double bl = -1;
             if (cap_w > 0) {
@@ -3235,6 +3280,7 @@ int main(int argc, char **argv) {
     if (getenv("PISO_TRINCA")) { piso_trinca = atoi(getenv("PISO_TRINCA")); if (piso_trinca) guardar_croma = 1; }
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
+    if (getenv("ACEITA_OCULTO")) aceita_oculto = atoi(getenv("ACEITA_OCULTO"));
     fprintf(stderr, "[+] criterio: sintatico%s\n",
             exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");
     carrega_patches(f_pt);

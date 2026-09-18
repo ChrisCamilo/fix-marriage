@@ -46,11 +46,12 @@ piora o filme. Não "limpar" duplicata sem medir os dois estados.
 O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
 com zero linhas de log**. Nada mais conta.
 
-Desde 2026-09-18 o `serie` também exige a **cadeia de referência boa**: quadro
-sem erro sobre referência borrada não conta (armadilha 56). Com isso ele dá 167,
-mas não o mesmo conjunto dos visualmente bons: entra o IDR 1683 (listrado por
-dessincronização silenciosa dentro do próprio quadro) e sai o frame 12 (imagem
-boa, mas a referência dele é o frame 11, quebrado).
+Desde 2026-09-18 o critério tem mais duas partes: a **cadeia de referência boa**
+(quadro sem erro sobre referência borrada não conta, armadilha 56) e **zero
+macroblocos ocultados** no alvo (slice que acaba cedo sem erro não conta,
+armadilha 59). Com as duas, o `serie` dá **162**, subconjunto exato dos 167
+visualmente bons: saem o 12 (referência quebrada) e 2359, 2360, 2361, 3442 e
+1683 (slice encerrado cedo). `ACEITA_OCULTO=1` desliga a parte da ocultação.
 
 **A outra via é a do cabeçalho provado.** Patch que prova o cabeçalho não faz o
 quadro passar — o dano segue no corpo — e por isso não passa pelo critério
