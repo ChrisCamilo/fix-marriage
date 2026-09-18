@@ -2732,27 +2732,46 @@ static int modo_mapa(int argc, char **argv) {
         fflush(stdout);
         AVPacket *pkt = av_packet_alloc();
         AVFrame *fr = av_frame_alloc();
-        for (int g = 0; g < n_ix; g++) {
-            if (!ix[g].idr) continue;
-            int fim = g + 1;
-            while (fim < n_ix && !ix[fim].idr) fim++;
-            abre_decoder();
-            for (int i = g; i < fim; i++) {
-                av_new_packet(pkt, ix[i].size);
-                memcpy(pkt->data, arq + ix[i].off, ix[i].size);
-                pkt->pts = i;
-                log_zerar();
-                if (avcodec_send_packet(ctx, pkt) == 0) { }
-                av_packet_unref(pkt);
-                while (avcodec_receive_frame(ctx, fr) == 0) av_frame_unref(fr);
-                int mb = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
-                printf("%d %d %d %d %.1f\n", i, ix[i].size, mb,
-                       mb >= 8160 ? -1 : mb / 120, 100.0 * mb / 8160.0);
+        /* Silencio de macrobloco nao e quadro inteiro: quando o ffmpeg rejeita o
+         * cabecalho do slice ele nao emite imagem nenhuma e tambem nao imprime
+         * erro de MB (armadilha 55). Cada pacote leva pts = i, entao o quadro
+         * que sai diz de qual pacote veio, e pacote sem imagem sai com
+         * mb_parada -1, a mesma convencao do avanco.
+         *
+         * UM decodificador para o filme inteiro, como o ffprobe. Reabrir a cada
+         * GOP -- como era antes -- faz o h264 reaprender a profundidade de
+         * reordenacao dos B em todo GOP e descartar quadros no caminho: 2.769
+         * imagens em vez de 3.107, e 338 quadros bons contados como sem imagem.
+         * Medido: com um so decodificador o conjunto sem imagem e EXATAMENTE o
+         * do ffprobe. A saida vem reordenada, entao imprime tudo no fim. */
+        int *mbs = malloc((size_t)n_ix * sizeof *mbs);
+        char *emitiu = calloc((size_t)n_ix, 1);
+        abre_decoder();
+        for (int i = 0; i < n_ix; i++) {
+            av_new_packet(pkt, ix[i].size);
+            memcpy(pkt->data, arq + ix[i].off, ix[i].size);
+            pkt->pts = i;
+            log_zerar();
+            if (avcodec_send_packet(ctx, pkt) == 0) { }
+            av_packet_unref(pkt);
+            while (avcodec_receive_frame(ctx, fr) == 0) {
+                if (fr->pts >= 0 && fr->pts < n_ix) emitiu[fr->pts] = 1;
+                av_frame_unref(fr);
             }
-            avcodec_send_packet(ctx, NULL);
-            while (avcodec_receive_frame(ctx, fr) == 0) av_frame_unref(fr);
-            fflush(stdout);
+            mbs[i] = (log_mbx < 0) ? 8160 : log_mby * 120 + log_mbx;
         }
+        avcodec_send_packet(ctx, NULL);
+        while (avcodec_receive_frame(ctx, fr) == 0) {
+            if (fr->pts >= 0 && fr->pts < n_ix) emitiu[fr->pts] = 1;
+            av_frame_unref(fr);
+        }
+        for (int i = 0; i < n_ix; i++) {
+            int mb = emitiu[i] ? mbs[i] : -1;
+            printf("%d %d %d %d %.1f\n", i, ix[i].size, mb,
+                   (mb < 0 || mb >= 8160) ? -1 : mb / 120,
+                   mb < 0 ? 0.0 : 100.0 * mb / 8160.0);
+        }
+        free(mbs); free(emitiu);
         av_frame_free(&fr); av_packet_free(&pkt);
         if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
         cap_qualquer = 0; free(cap_buf); cap_buf = NULL;

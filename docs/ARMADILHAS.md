@@ -1021,6 +1021,17 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
 
     Conferido em cada uso da expressão no `reparador.c`: o `worker_avanco`, a
     base do `avanco` e o `trinca` exigem `cap_w > 0` antes; o `corta` registra
-    numa coluna própria se saiu quadro. O `mapa` era o único sem a guarda. A régua certa
+    numa coluna própria se saiu quadro. O `mapa` era o único sem a guarda.
+
+    **E a guarda óbvia estava errada da primeira vez.** Marcar "emitiu imagem"
+    pelo `pts` de cada quadro recebido deu 676 sem imagem — o dobro do ffprobe.
+    O `mapa` reabria o decodificador a cada GOP, e o SPS deste filme não declara
+    a profundidade de reordenação (`bitstream_restriction_flag` = 0): o h264
+    reaprende o atraso dos B em todo GOP e **descarta quadros no caminho**
+    (2.769 imagens contra 3.107). Com um decodificador só para o filme inteiro,
+    como o ffprobe faz, o conjunto sem imagem fica idêntico ao do ffprobe, 338
+    de 338, e nenhum `mb_parada` de quadro com imagem muda. Quem abre o
+    decodificador por GOP e conta imagens está contando o descarte da
+    reordenação junto. A régua certa
     tem três partes: MB final, imagem emitida (ffprobe `frame=pkt_pos`) e
     cabeçalho válido pela norma (`-bsf:v trace_headers`).
