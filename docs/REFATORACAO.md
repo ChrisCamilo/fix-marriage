@@ -343,7 +343,7 @@ Da menor para a maior chance de quebrar coisa:
 | # | item | risco | ganho |
 |---|---|---|---|
 | ~~1~~ | ~~tabela de modos e validação de `argc`~~ | **FEITO** | `main` de 1.212 para 117 linhas; 27/27 na regressão |
-| 2 | documentar o contrato das duas `blocagem` | **nenhum** | tira a armadilha do 0 x 99 sem tocar em calibração |
+| ~~2~~ | ~~documentar o contrato das duas `blocagem`~~ | **FEITO** | pré-processado idêntico ao `HEAD` |
 | 3 | renomear as famílias do croma e da tarja | baixo | o nome passa a dizer o que mede |
 | 4 | `src/juizes.c` com as 19, em duas camadas | **baixo** | 6 funções colapsam em 2 primitivas, e abre teste sem decodificador |
 | 5 | documentar as 26 funções sem comentário | **nenhum** | 9 workers, `main` e `grava_patch` hoje não têm contrato escrito |
@@ -391,4 +391,15 @@ aplicar regras.
 **O arnês se prova antes de provar qualquer coisa:** `grava` seguido de
 `confere`, sem tocar no código, tem que dar 27 de 27. Ele também recusa gravar
 um caso cujo hash seja o da string vazia, que foi o defeito que eu cometi.
+
+### A compilação aqui não é reproduzível
+
+Testado: **dois builds da mesma fonte dão binários com hashes diferentes**, e
+mudar o nome do arquivo de saída muda o hash também. Eu ia usar "o binário saiu
+idêntico" como prova de que uma mudança era só comentário — não serve.
+
+O que serve é comparar o **pré-processado** (`gcc -E -P`) contra o `HEAD`: o
+pré-processador descarta comentários, então saída idêntica prova que a mudança
+não pode alterar comportamento. Custa segundos contra os minutos do arnês, e é
+a prova certa para os itens 2, 3 e 5, que não mexem em lógica.
 

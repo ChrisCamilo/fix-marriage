@@ -122,3 +122,17 @@ if [ "$acao" != grava ]; then
   if [ "$falhas" -eq 0 ]; then echo "[+] os $((${#casos[@]})) modos iguais a referencia"
   else echo "[!] $falhas modo(s) mudaram -- a refatoracao NAO entra"; exit 1; fi
 fi
+
+# --- prova rapida para mudanca que NAO deveria mexer em comportamento ---
+#
+# Para mudanca so de comentario ou de nome interno, comparar o PRE-PROCESSADO
+# contra o HEAD prova mais e custa segundos:
+#
+#   git show HEAD:src/reparador.c > /tmp/ant.c
+#   gcc -E -P $(pkg-config --cflags libavcodec libavutil) /tmp/ant.c > /tmp/ant.i
+#   gcc -E -P $(pkg-config --cflags libavcodec libavutil) src/reparador.c > /tmp/dep.i
+#   cmp /tmp/ant.i /tmp/dep.i
+#
+# NAO usar o hash do BINARIO para isso: a compilacao aqui nao e reproduzivel.
+# Medido -- dois builds da MESMA fonte dao hashes diferentes, e mudar o nome do
+# arquivo de saida muda o hash tambem. Binario diferente nao prova nada.

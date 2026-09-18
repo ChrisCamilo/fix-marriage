@@ -213,9 +213,26 @@ static void captura_frame(AVFrame *fr) {
     }
 }
 
-/* Blocagem: descontinuidade na grade 16x16 do macrobloco contra a do interior.
- * Num decode correto o deblocking deixa a razao perto de 1; residuo corrompido
- * cria degraus nas bordas e a razao sobe. Nao precisa de imagem de referencia. */
+/* Blocagem do QUADRO INTEIRO: descontinuidade na grade 16x16 do macrobloco
+ * contra a do interior. Num decode correto o deblocking deixa a razao perto de
+ * 1; residuo corrompido cria degraus nas bordas e a razao sobe. Nao precisa de
+ * imagem de referencia.
+ *
+ *   Y     plano de luma, empacotado com passo w
+ *   w, h  largura e altura em pixels
+ *
+ * Devolve: razao borda/interior, tipicamente entre 0,8 e 1,5. **ZERO quando nao
+ *          da para medir** -- e o valor de "tudo bem" nesta escala, entao um 0
+ *          lido sem contexto passa por quadro perfeito.
+ *
+ * NAO CONFUNDIR com `blocagem_faixa`, que mede outra coisa, amostra diferente e
+ * devolve 99,0 no caso de falha -- o veredicto OPOSTO. As duas convivem de
+ * proposito: cada uma tem calibracao propria e unifica-las invalidaria as duas.
+ * Aqui a calibracao e do quadro inteiro, com os valores 0,80 / 1,04 / 1,429
+ * registrados no docs/CRITERIOS.md. Ver docs/REFATORACAO.md, secao 2.
+ *
+ * Amostragem: TODO pixel, nos dois eixos. Borda e x%16==0 e y%16==0; interior e
+ * so x%16==8 e y%16==8. */
 static double blocagem(const uint8_t *Y, int w, int h) {
     double borda = 0, interior = 0; long nb = 0, ni = 0;
     for (int y = 0; y < h; y++)
@@ -916,6 +933,25 @@ static void croma_dp(int y0, int y1, double *du, double *dv) {
         *(p ? dv : du) = var > 0 ? sqrt(var) : 0;
     }
 }
+/* Blocagem de uma FAIXA, nao do quadro. Mesma ideia da `blocagem` -- degrau na
+ * grade 16x16 contra o interior -- com amostragem e convencao proprias.
+ *
+ *   Y       plano de luma, empacotado com passo w
+ *   w       largura em pixels
+ *   y0, y1  a faixa, [y0, y1), em linhas do quadro
+ *
+ * Devolve: razao borda/interior na faixa. **99,0 quando nao da para medir** --
+ *          valor ALTO, que reprova em qualquer piso. A `blocagem` devolve ZERO
+ *          no mesmo caso, que e o veredicto oposto.
+ *
+ * Calibracao propria, e por isso as duas nao se unificam: o limiar do juiz da
+ * trinca e 1,45 NESTA faixa e NESTA amostragem. Medido no IDR 3047, na faixa
+ * liberada: 0,97 em quadro bom, 1,34 no candidato aprovado pelo olho, 2,08 no
+ * reprovado. No quadro inteiro os mesmos tres dao 1,07 / 1,17 / 1,19 e nao
+ * separam nada -- era a medida certa no lugar errado (armadilha 41).
+ *
+ * Amostragem: 1 pixel em 4 no eixo X, linhas alternadas, so o eixo horizontal.
+ * Interior e tudo que nao e x%16==0, ao contrario da `blocagem`. */
 static double blocagem_faixa(const uint8_t *Y, int w, int y0, int y1) {
     double bo = 0, bi = 0; long no = 0, ni = 0;
     for (int y = y0 + 1; y < y1; y += 2)
