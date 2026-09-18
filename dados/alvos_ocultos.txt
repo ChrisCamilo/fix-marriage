@@ -1,0 +1,40 @@
+# alvos_ocultos.txt -- os 4 quadros "bons" com slice encerrado cedo (armadilha 59)
+# Buscas de 2026-09-18 com o criterio novo: zero MBs ocultados, MB alcancado =
+# 8160 - ocultados. NADA disto esta no patches.txt; aguarda o usuario.
+#
+# Teste obrigatorio de cada candidato, alem do parse: a CURVA DE TRUNCAMENTO
+# (modo corta). Reparo real usa todo o dado do quadro; falsa completude chega a
+# 8160 com poucos bytes. Tres candidatos que "completavam" foram pegos por ela.
+#
+# ---------------------------------------------------------------------------
+# 3442 (2.939 B, fade final) -- CANDIDATO BOM, 1 bit
+#   114260576 3   (byte 1.118 do NAL, fim do dado real, antes da regiao de zeros)
+#   - parse 7.123 -> 8.160, zero ocultados; so o 3442 muda no filme inteiro
+#   - curva de truncamento IDENTICA a base ate o byte 1.100; so completa em ~1.173
+#     -> usa todo o dado real
+#   - imagem muda so nas linhas 944-949 (0,36% dos pixels), tarjas seguem 16;
+#     media da faixa 18,82 -> 18,39, na direcao dos vizinhos (3441: 17,67; 3443: 16,00)
+#   - unico entre ~9.500 candidatos de 1 bit em [5,1200), descontado o abaixo
+#   REJEITADO: 114259470 0 (byte 12) -- chega a 8.160 com 78 bytes: cria um
+#   00 00 01 (codigo de inicio) que corta o NAL
+#
+# 2360 (32.501 B) -- o defeito e um 00 00 02 PROIBIDO no byte 10, que corta o NAL
+#   77496469 0 (02 -> 03, 1 bit): parse 510 -> 959, e ha mais dano adiante
+#   REJEITADO: o par 77496469 0 + 77496472 0 "completa" com 15 bytes -- cria
+#   outro 00 00 02 no byte 13 e o quadro vira B "tudo skip" (interpolacao)
+#
+# 2359 (34.402 B) -- slice acaba perto do byte 19.800 (MB 4.821)
+#   1 bit em [18000,19900): melhor 77467803 3 -> MB 6.205; 2.870 candidatos
+#   melhoram a base. Nao completa com 1 bit.
+#
+# 2361 (30.449 B) -- erro no MB 989. O bit do repair (77529030 2) foi rejeitado
+#   (fabrica end_of_slice). Sem busca nova ainda.
+#
+# ---------------------------------------------------------------------------
+# CLASSE: 00 00 0x (x<3) dentro do NAL -- 93 NALs no filme (82 com 02, 11 com 00)
+#   O leitor de NAL do ffmpeg trata a sequencia como FIM do NAL. Restaurar o 03
+#   na primeira de cada NAL: parse sobe em 15 quadros (~550 -> ~1.000, ate o
+#   proximo dano), cai em 14 -- 5 deles estavam em 8.160 porque o corte escondia
+#   o resto (10, 12, 59, 407, 1610). No frame 10 o corte provavelmente mostra a
+#   imagem VERDADEIRA (B "tudo skip"; os zeros cortados tem bits trocados).
+#   Nenhum quadro completa so com isso.
