@@ -347,11 +347,10 @@ Da menor para a maior chance de quebrar coisa:
 | ~~3~~ | ~~renomear as famílias do croma e da tarja~~ | **FEITO** | 37 ocorrências; o arnês pegou 2 strings trocadas por engano |
 | ~~4~~ | ~~`src/juizes.c`~~ | **FEITO** | 13 medidas puras + `testes_juizes.c`; 28/28 |
 | ~~5~~ | ~~documentar as funções no padrão~~ | **FEITO** | 46 de 46; conferido por `ferramentas/confere_doc.py` |
-| 6 | `nota_do_quadro()` fora do `worker_avanco` | médio | os pisos passam a valer em todo modo, não só no `avanco` |
-| 7 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
+| 6 | `nota_do_quadro()` fora do `worker_avanco` | **PARADO** | não é refatoração: fazer os pisos valerem em `varrek` e `cresce` **muda o que esses modos fazem** |
+| 7 | motor único de varredura em `src/workers.c` | **PARADO** | a premissa estava errada — ver abaixo |
 
-O item 7 é o que mais encolhe o arquivo e o que mais pode quebrar. Só entra com
-a prova de saída idêntica, modo a modo.
+Os itens 6 e 7 **pararam**, cada um por um motivo medido.
 
 **Descartados, e o registro fica para ninguém reabrir:** unificar as duas
 `blocagem` (invalidaria duas calibrações), analisador CABAC próprio (tiraria do
@@ -419,4 +418,49 @@ mecanicamente que o nome de cada parâmetro e o retorno aparecem no bloco. Ele
 não garante que o texto esteja **certo** — só que existe. Garantir que está
 certo é trabalho de quem lê, e o teste mecânico é o que impede a regressão
 silenciosa quando alguém acrescentar uma função.
+
+## 7. Por que os itens 6 e 7 não entraram
+
+### O item 6 não é refatoração
+
+Extrair a linha de pontuação para uma função é seguro. Mas o **ganho** que eu
+escrevi — "os pisos passam a valer em todo modo" — é mudança de comportamento:
+hoje `PISO_TARJA` no `varrek` ou no `cresce` é ignorado, e fazer valer muda o
+que esses modos produzem.
+
+Isso pode ser desejável, mas é decisão de função, não arrumação de código, e o
+arnês não a detectaria: os casos de `varrek` e `cresce` não ligam piso nenhum.
+Seria a armadilha do `TOL_COPIA` outra vez — caso que só exercita o default.
+
+### O item 7 tinha a premissa errada, e a medida é minha
+
+Escrevi "menos ~400 linhas". **410 é o tamanho total dos nove workers**, não a
+duplicação entre eles. Medido:
+
+| | linhas |
+|---|---|
+| total dos 9 workers | 410 |
+| prólogo repetido | 49 |
+| epílogo repetido | 36 |
+| **duplicação real** | **85, ou 20%** |
+
+E o esqueleto compartilhado é **parametrizado em cinco eixos**: de onde vem o
+alvo (struct ou global), se calcula a âncora, se pré-preenche a cópia, como
+aloca o `cap_buf` (sempre, condicional, ou só com métrica) e se aloca buffer
+extra. Só `worker_par2` e `worker_varrek` são realmente iguais.
+
+Um motor com cinco botões para remover 85 linhas de moldura, **na parte do
+código que produz todo resultado deste projeto**, é troca ruim. O que eu chamei
+de "o mesmo esqueleto" foi leitura superficial de semelhança: contei padrões
+presentes nos nove sem olhar se a estrutura em volta era a mesma.
+
+### O que fica no lugar
+
+Os nove workers estão documentados (item 5), com o esqueleto comum escrito uma
+vez e cada um dizendo o que tem de próprio. Isso resolve o problema real — "de
+onde começo a ler" — sem tocar no código que decide os resultados.
+
+**O plano fecha no item 5.** Os cinco itens feitos removeram dois bugs, criaram
+o arnês de 28 casos, isolaram a camada testável e puseram 46 funções no padrão.
+Os dois que sobraram custam mais do que rendem, e isso está medido, não achado.
 
