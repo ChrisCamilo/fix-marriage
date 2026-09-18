@@ -3,7 +3,7 @@
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
 comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
-qualquer coisa — são **55** maneiras de medir errado que já custaram horas aqui.
+qualquer coisa — são **56** maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
 
@@ -39,13 +39,14 @@ piora o filme. Não "limpar" duplicata sem medir os dois estados.
 O critério é o do `reparador.c`: **flush do decoder e exigir quadros == pacotes,
 com zero linhas de log**. Nada mais conta.
 
-A `docs/ARMADILHAS.md` lista **55** maneiras de medir errado que já produziram
+A `docs/ARMADILHAS.md` lista **56** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
   ocultação cinza e infla o número. Foi assim que "2808 de 3445" virou verdade
-  por um tempo. Hoje o filme emite ~3.100 quadros e **209 passam no critério
-  rigoroso**; os outros 3.236 são ocultação. Armadilhas 1 e 48.
+  por um tempo. Hoje o filme emite ~3.100 quadros; o critério rigoroso aprova
+  209, mas **só 167 são imagem boa** — os outros 42 decodificam sem erro sobre
+  referência borrada e herdam as listras. Armadilhas 1, 48 e 56.
 - **Toda medida sobre bytes sai do buffer remendado, nunca do MP4 cru.** Script
   em Python que abre o arquivo direto enxerga dano que já foi consertado há
   centenas de commits. Armadilha 49.

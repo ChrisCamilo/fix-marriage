@@ -1035,3 +1035,22 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     reordenação junto. A régua certa
     tem três partes: MB final, imagem emitida (ffprobe `frame=pkt_pos`) e
     cabeçalho válido pela norma (`-bsf:v trace_headers`).
+
+56. **Quadro sem erro sobre referência borrada é borrão.** O critério rigoroso
+    (`serie`) julga cada quadro sozinho: decodificou sem erro e a imagem não é
+    propagação vertical, passa. Mas um P ou B que decodifica perfeitamente em
+    cima de um IDR borrado **herda o borrão** — as listras verticais continuam
+    lá, e o movimento desenha figuras por cima. Com as figuras, nenhuma linha é
+    cópia exata da de cima, e o teste de propagação aprova.
+
+    Medido em 2026-09-18: 43 dos 209 "bons" vêm depois de alguma referência
+    quebrada no próprio GOP. Vistos um a um (`saidas/suspeitos_43.png`), **42
+    estão listrados**; só o frame 12 é bom, porque num fade escuro a ocultação
+    da referência quase não erra. Os quadros bons de verdade são 167: as três
+    ilhas e o frame 12. Todos os "trechos de 3 quadros" que o `RESULTADOS.md`
+    listava eram borrão.
+
+    Apareceu consertando cabeçalhos: o frame 958 passou a decodificar e os
+    frames 960 e 961 entraram no critério rigoroso — 209 → 211. A imagem dos
+    dois é listrada. **Ganho no critério não é ganho de imagem enquanto o
+    critério não olha a cadeia de referência.** Olhar o quadro é o que decide.

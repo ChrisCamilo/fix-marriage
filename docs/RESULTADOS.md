@@ -1,6 +1,24 @@
 # Resultados medidos
 
-## Estado de hoje — 2026-09-17
+## Estado de hoje — 2026-09-18
+
+**Quadros bons de verdade: 167** de 3.445 — as três ilhas (0–10, 2333–2361,
+3319–3444, somando 166) mais o frame 12. São **5,57 s** de 114,95 s, em 4
+trechos.
+
+O critério rigoroso dava 209, e **42 deles são imagem listrada** (armadilha 56).
+O `serie` julga cada quadro sozinho: um P ou B decodificado sem erro sobre uma
+referência borrada herda o borrão, e o teste de propagação não o pega porque o
+movimento desenha por cima das listras. Achados cruzando o `serie` com a cadeia
+de referência do GOP (IDR e P decodificados antes): 43 dos 209 têm alguma
+referência quebrada. Vistos um a um, 42 estão listrados; o único bom é o frame
+12, fade escuro onde a ocultação da referência quase não erra. A folha com os
+43 está em `saidas/suspeitos_43.png`.
+
+Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
+(1140–1142, 1583–1585, 1685–1687, 1979–1981, 2161–2163): nenhum é imagem boa.
+
+## Medida de 2026-09-17 (o 209 está inflado — ver acima)
 
 Medido com `TARJA=1 ./reparador.exe "$MP4" index.txt patches.txt serie 0 3444`,
 que é o critério rigoroso do projeto. **O `reparador` usa `thread_count = 1`,
@@ -8,7 +26,7 @@ então esta medida é determinística** — ver armadilha 47.
 
 | | |
 |---|---|
-| quadros que passam no critério rigoroso | **209** de 3.445 |
+| quadros que passam no critério rigoroso | **209** de 3.445 — **42 são falsos positivos**, ver acima |
 | quadros que analisam 100% dos macroblocos **e** emitem imagem **e** têm cabeçalho válido | **2.006** (medido em 2026-09-18) |
 | quadros com tarja 16,0000 / 0,0000 (`panorama`) | **166** |
 | tempo de vídeo bom | **6,97 s** de 114,95 s |

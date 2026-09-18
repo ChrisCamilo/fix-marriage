@@ -1,0 +1,902 @@
+# cabecalho_slice.txt -- saida de `python ferramentas/cabecalho_slice.py`, 2026-09-18.
+# NAO SAO PATCHES. Nada disto esta no patches.txt.
+#
+# Cada linha: quadro | estado do cabecalho hoje | solucoes de 1 ou 2 bits que
+# deixam o cabecalho valido pela norma E igual ao esperado (tipo, frame_num e
+# POC pelo ctts; constantes do filme). Formato das solucoes: offset bit.
+#
+# RESULTADO MEDIDO (mapa corrigido e serie, aplicando as solucoes UNICAS):
+#
+#   grupo                        quadros  unicas  efeito
+#   A cabecalho invalido            443     252   157 passam a emitir imagem;
+#                                                 mb sobe em 179, cai em 14
+#   B valido, frame_num/POC errado  267     226   parse quase nao muda
+#   C so campos incomuns            164     144   PIORA (cai 48, sobe 15) --
+#                                                 "incomum" e escolha do
+#                                                 codificador; controle negativo
+#
+#   Critério rigoroso: 209 -> 211 com o grupo A (frames 960 e 961, que dependem
+#   do 958, consertado por 1 bit em cabac_init_idc). A IMAGEM DOS DOIS E
+#   LISTRADA -- o GOP inteiro herda o IDR 953 borrado (armadilha 56). Ganho de
+#   imagem boa: zero, como o RASTREIO.md ja registrava para os 536 candidatos de
+#   frame_num/POC do cabecalhos.py.
+#
+# AMBIGUOS precisam do pixel: o frame 11 tem duas solucoes; a certa
+# (147709 7 + 147712 1) prediz a tarja em 16 exato no MB 0, a outra
+# (147707 0 + 147712 1) prediz 34 e croma 255.
+#
+# quadro | estado do cabecalho hoje | solucoes (offset bit [+ offset bit])
+11 | invalido: cabac_alignment_one_bit = 0 | 2 solucao(oes): 147707 0 + 147712 1 ; 147709 7 + 147712 1
+14 | invalido: modification_of_pic_nums_idc=16 fora de [0,3] | 0 solucao(oes): 
+15 | invalido: qp=70 fora de [0,51] | 2 solucao(oes): 194111 2 + 194126 7 ; 194111 2 + 194127 5
+17 | invalido: slice_type SP/SI | 1 solucao(oes): 297419 3 + 297435 7
+19 | valido, desvia 1/0 | 1 solucao(oes): 439003 0
+27 | valido, desvia 0/1 | 1 solucao(oes): 1079640 0
+28 | invalido: modification_of_pic_nums_idc=65535 fora de [0,3] | 1 solucao(oes): 1124879 1 + 1124880 5
+30 | valido, desvia 0/1 | 1 solucao(oes): 1466026 7
+37 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 1723117 4 + 1723120 4
+39 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 1838592 4 + 1838593 7
+47 | valido, desvia 1/1 | 0 solucao(oes): 
+49 | invalido: modification_of_pic_nums_idc=42 fora de [0,3] | 0 solucao(oes): 
+52 | valido, desvia 0/1 | 1 solucao(oes): 2503404 0
+57 | valido, desvia 1/0 | 1 solucao(oes): 2703749 3
+62 | invalido: num_ref_idx_l1=35 fora de [0,31] | 1 solucao(oes): 2989980 4 + 2989981 2
+63 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+64 | invalido: ue com zeros demais | 1 solucao(oes): 3035415 7 + 3035416 0
+65 | valido, desvia 1/0 | 1 solucao(oes): 3041206 6
+66 | valido, desvia 0/1 | 1 solucao(oes): 3047410 5 + 3047410 4
+76 | valido, desvia 1/0 | 1 solucao(oes): 3383411 4
+79 | invalido: cabac_alignment_one_bit = 0 | 4 solucao(oes): 3435301 2 + 3435301 0 ; 3435301 2 + 3435302 1 ; 3435302 2 + 3435302 1 ; 3435302 0 + 3435303 7
+80 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 0 solucao(oes): 
+83 | valido, desvia 1/0 | 0 solucao(oes): 
+92 | invalido: disable_deblocking_filter_idc=6 fora de [0,2] | 1 solucao(oes): 4020693 3 + 4020694 0
+102 | valido, desvia 1/2 | 0 solucao(oes): 
+107 | valido, desvia 0/2 | 1 solucao(oes): 4610621 1
+108 | valido, desvia 0/3 | 1 solucao(oes): 4620011 4
+112 | valido, desvia 1/0 | 1 solucao(oes): 4718399 3
+116 | valido, desvia 0/1 | 1 solucao(oes): 4809058 7
+127 | valido, desvia 1/2 | 1 solucao(oes): 5106436 6 + 5106438 0
+129 | valido, desvia 1/0 | 1 solucao(oes): 5307655 6
+132 | valido, desvia 0/1 | 1 solucao(oes): 5398569 3
+137 | invalido: luma_log2_weight_denom=68 fora de [0,7] | 1 solucao(oes): 5508100 0
+148 | valido, desvia 1/0 | 1 solucao(oes): 5844454 0
+150 | valido, desvia 1/0 | 1 solucao(oes): 5946002 5
+158 | valido, desvia 1/0 | 1 solucao(oes): 6336598 1
+159 | valido, desvia 1/1 | 1 solucao(oes): 6387281 4 + 6387283 2
+168 | valido, desvia 1/0 | 1 solucao(oes): 6578921 2
+169 | invalido: cabac_init_idc=6 fora de [0,2] | 1 solucao(oes): 6587593 6
+171 | valido, desvia 0/1 | 1 solucao(oes): 6673751 1
+183 | invalido: qp=542138721 fora de [0,51] | 0 solucao(oes): 
+190 | valido, desvia 1/0 | 1 solucao(oes): 7326703 6
+193 | valido, desvia 1/0 | 1 solucao(oes): 7412060 3
+194 | invalido: abs_diff_pic_num_minus1=8383 fora de [0,255] | 0 solucao(oes): 
+197 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 7513791 5 + 7513793 7
+201 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 7657289 1
+209 | valido, desvia 1/0 | 1 solucao(oes): 7861037 7
+214 | valido, desvia 2/0 | 1 solucao(oes): 8103996 0 + 8103998 3
+224 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 8554838 4 + 8554842 4
+227 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 8603865 2
+232 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 8 solucao(oes): 8691824 4 ; 8691825 4 ; 8691827 0 ; 8691828 2 ; 8691828 1 ; 8691829 2
+237 | invalido: ue com zeros demais | 0 solucao(oes): 
+239 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 8849530 1
+242 | invalido: mmco=141685 fora de [0,6] | 1 solucao(oes): 8893608 3
+251 | invalido: ue com zeros demais | 1 solucao(oes): 9181304 0 + 9181307 1
+252 | valido, desvia 0/1 | 1 solucao(oes): 9195252 3
+256 | valido, desvia 1/0 | 1 solucao(oes): 9279669 7
+257 | valido, desvia 0/4 | 1 solucao(oes): 9293129 5
+269 | valido, desvia 1/0 | 1 solucao(oes): 9630028 3
+271 | valido, desvia 1/0 | 1 solucao(oes): 9720616 5
+277 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 9873002 3
+286 | invalido: ue com zeros demais | 1 solucao(oes): 10220933 4 + 10220934 3
+287 | valido, desvia 1/1 | 1 solucao(oes): 10275625 4 + 10275626 0
+295 | valido, desvia 0/1 | 1 solucao(oes): 10558814 7
+301 | valido, desvia 1/1 | 1 solucao(oes): 10755696 1 + 10755700 3
+305 | valido, desvia 1/0 | 1 solucao(oes): 10901282 1
+310 | valido, desvia 0/1 | 1 solucao(oes): 11203968 6
+324 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 0 solucao(oes): 
+330 | valido, desvia 1/0 | 1 solucao(oes): 11794858 5
+335 | valido, desvia 1/0 | 1 solucao(oes): 11898708 7
+336 | valido, desvia 2/0 | 1 solucao(oes): 11948010 4 + 11948011 5
+339 | invalido: disable_deblocking_filter_idc=6 fora de [0,2] | 1 solucao(oes): 11991731 2
+342 | valido, desvia 1/2 | 1 solucao(oes): 12086738 1 + 12086740 3
+353 | valido, desvia 0/1 | 1 solucao(oes): 12479432 7
+354 | valido, desvia 1/0 | 1 solucao(oes): 12521611 4
+355 | valido, desvia 1/0 | 1 solucao(oes): 12530672 2
+359 | invalido: mmco=10 fora de [0,6] | 0 solucao(oes): 
+362 | invalido: num_ref_idx_l0=35 fora de [0,31] | 0 solucao(oes): 
+364 | valido, desvia 0/1 | 1 solucao(oes): 12767484 0
+369 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 12917212 2
+370 | invalido: disable_deblocking_filter_idc=7 fora de [0,2] | 1 solucao(oes): 13017072 5
+377 | valido, desvia 0/1 | 1 solucao(oes): 13262983 7
+378 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 13361256 4 + 13361258 3
+385 | valido, desvia 0/1 | 1 solucao(oes): 13704641 3
+386 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 13713458 3
+391 | valido, desvia 1/1 | 1 solucao(oes): 13908153 6 + 13908154 1
+394 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 13960762 2
+395 | valido, desvia 1/0 | 1 solucao(oes): 14054442 4
+397 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 14101790 0 + 14101794 3
+401 | invalido: cabac_init_idc=38 fora de [0,2] | 1 solucao(oes): 14295607 6
+405 | valido, desvia 1/2 | 0 solucao(oes): 
+408 | valido, desvia 1/0 | 1 solucao(oes): 14686689 7
+411 | invalido: cabac_init_idc=34 fora de [0,2] | 0 solucao(oes): 
+412 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+416 | invalido: modification_of_pic_nums_idc=12 fora de [0,3] | 0 solucao(oes): 
+417 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 15142027 2 + 15142030 5
+425 | invalido: modification_of_pic_nums_idc=268830406 fora de [0,3] | 1 solucao(oes): 15431108 5
+427 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 15473020 1
+428 | invalido: num_ref_idx_l0=51 fora de [0,31] | 0 solucao(oes): 
+431 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+433 | invalido: cabac_init_idc=42 fora de [0,2] | 1 solucao(oes): 15828238 6
+436 | invalido: beta=256 fora de [-6,6] | 0 solucao(oes): 
+448 | invalido: cabac_init_idc=28 fora de [0,2] | 0 solucao(oes): 
+461 | invalido: modification_of_pic_nums_idc=23 fora de [0,3] | 0 solucao(oes): 
+466 | valido, desvia 1/0 | 1 solucao(oes): 17346849 4
+473 | invalido: luma_log2_weight_denom=8 fora de [0,7] | 0 solucao(oes): 
+474 | valido, desvia 1/0 | 1 solucao(oes): 17584159 5 + 17584159 3
+475 | valido, desvia 0/1 | 1 solucao(oes): 17598108 0
+480 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 17738044 5
+492 | valido, desvia 1/2 | 0 solucao(oes): 
+505 | valido, desvia 0/3 | 1 solucao(oes): 18728178 2 + 18728179 1
+515 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 19411079 1
+516 | valido, desvia 0/3 | 1 solucao(oes): 19452072 3 + 19452073 1
+517 | invalido: abs_diff_pic_num_minus1=8215 fora de [0,255] | 1 solucao(oes): 19455483 1
+519 | valido, desvia 1/0 | 1 solucao(oes): 19462191 3
+521 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 19551460 0 + 19551461 6
+525 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 19652924 1 + 19652925 7
+526 | valido, desvia 0/1 | 1 solucao(oes): 19664245 0
+533 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+537 | invalido: ue com zeros demais | 1 solucao(oes): 20218440 0
+538 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 20252986 2
+549 | invalido: cabac_init_idc=58 fora de [0,2] | 0 solucao(oes): 
+552 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 0 solucao(oes): 
+555 | valido, desvia 2/0 | 1 solucao(oes): 21078405 5 + 21078406 6
+559 | valido, desvia 1/0 | 1 solucao(oes): 21231470 7
+563 | valido, desvia 0/1 | 1 solucao(oes): 21421220 7
+568 | valido, desvia 0/1 | 1 solucao(oes): 21621168 1
+572 | valido, desvia 1/0 | 1 solucao(oes): 21727608 7 + 21727608 3
+575 | invalido: modification_of_pic_nums_idc=63 fora de [0,3] | 1 solucao(oes): 21813832 6 + 21813833 0
+582 | valido, desvia 1/0 | 1 solucao(oes): 22057981 7
+588 | invalido: cabac_init_idc=26 fora de [0,2] | 1 solucao(oes): 22209903 6
+592 | valido, desvia 1/0 | 1 solucao(oes): 22352355 5
+597 | invalido: ue com zeros demais | 1 solucao(oes): 22598317 1
+598 | valido, desvia 1/0 | 1 solucao(oes): 22606012 1
+601 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 22704952 4
+604 | invalido: mmco=10 fora de [0,6] | 0 solucao(oes): 
+606 | valido, desvia 1/1 | 0 solucao(oes): 
+610 | valido, desvia 1/0 | 1 solucao(oes): 22998607 7
+612 | valido, desvia 1/0 | 1 solucao(oes): 23103802 4
+616 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+620 | invalido: mmco=12 fora de [0,6] | 0 solucao(oes): 
+622 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 23436086 3
+626 | invalido: modification_of_pic_nums_idc=8 fora de [0,3] | 1 solucao(oes): 23681526 5 + 23681528 3
+627 | valido, desvia 1/1 | 1 solucao(oes): 23690683 2 + 23690688 5
+629 | valido, desvia 0/2 | 1 solucao(oes): 23756205 4
+630 | invalido: ue com zeros demais | 1 solucao(oes): 23782796 0 + 23782797 3
+633 | invalido: modification_of_pic_nums_idc=4 fora de [0,3] | 1 solucao(oes): 23883287 5 + 23883289 4
+636 | invalido: qp=-3 fora de [0,51] | 1 solucao(oes): 23984564 7 + 23984566 2
+639 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+641 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 24141620 1
+643 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 24182677 0
+649 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 24475742 2
+656 | invalido: luma_log2_weight_denom=65 fora de [0,7] | 1 solucao(oes): 24567643 0
+657 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 0 solucao(oes): 
+658 | valido, desvia 1/0 | 1 solucao(oes): 24628289 6
+661 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+666 | valido, desvia 1/1 | 0 solucao(oes): 
+667 | valido, desvia 1/2 | 0 solucao(oes): 
+669 | valido, desvia 1/0 | 1 solucao(oes): 24915559 5
+674 | valido, desvia 1/0 | 1 solucao(oes): 25057789 3
+675 | invalido: modification_of_pic_nums_idc=1023 fora de [0,3] | 1 solucao(oes): 25070841 3
+681 | valido, desvia 1/1 | 1 solucao(oes): 25403594 7 + 25403598 3
+682 | invalido: modification_of_pic_nums_idc=10 fora de [0,3] | 0 solucao(oes): 
+685 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+697 | valido, desvia 1/0 | 1 solucao(oes): 25895572 0
+700 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 26045501 4
+709 | valido, desvia 1/0 | 1 solucao(oes): 26486964 0
+714 | valido, desvia 0/1 | 1 solucao(oes): 26585142 1
+718 | invalido: long_term_pic_num=511 fora de [0,255] | 0 solucao(oes): 
+720 | valido, desvia 1/1 | 1 solucao(oes): 26777566 2 + 26777569 0
+723 | valido, desvia 0/1 | 1 solucao(oes): 26878360 4
+726 | valido, desvia 1/0 | 1 solucao(oes): 26928528 4
+728 | valido, desvia 0/1 | 1 solucao(oes): 27030694 0
+740 | valido, desvia 1/1 | 1 solucao(oes): 27627305 5 + 27627306 0
+746 | invalido: cabac_init_idc=22 fora de [0,2] | 0 solucao(oes): 
+750 | invalido: modification_of_pic_nums_idc=8727 fora de [0,3] | 0 solucao(oes): 
+751 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 27918784 2 + 27918786 2
+761 | valido, desvia 1/0 | 1 solucao(oes): 28304493 2
+764 | valido, desvia 0/1 | 1 solucao(oes): 28575808 5
+765 | valido, desvia 0/2 | 1 solucao(oes): 28610511 0 + 28610514 6
+770 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 28705260 6
+774 | valido, desvia 1/0 | 1 solucao(oes): 28801832 1
+777 | invalido: cabac_init_idc=22 fora de [0,2] | 1 solucao(oes): 28900098 6
+780 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 28953938 1 + 28953939 4
+781 | invalido: ue com zeros demais | 0 solucao(oes): 
+786 | valido, desvia 1/0 | 1 solucao(oes): 29199891 3
+792 | invalido: ue com zeros demais | 0 solucao(oes): 
+800 | invalido: disable_deblocking_filter_idc=4 fora de [0,2] | 0 solucao(oes): 
+804 | valido, desvia 0/1 | 1 solucao(oes): 29630322 0
+810 | valido, desvia 1/0 | 1 solucao(oes): 29779984 2
+813 | valido, desvia 0/1 | 1 solucao(oes): 29836316 5
+819 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+821 | invalido: modification_of_pic_nums_idc=2051 fora de [0,3] | 1 solucao(oes): 30032147 0
+827 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 30127342 4 + 30127346 4
+829 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 30169879 1
+835 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+836 | valido, desvia 2/0 | 1 solucao(oes): 30320768 0 + 30320770 6
+841 | valido, desvia 1/1 | 1 solucao(oes): 30415738 1 + 30415739 1
+842 | valido, desvia 0/1 | 1 solucao(oes): 30428178 2
+844 | valido, desvia 0/2 | 1 solucao(oes): 30511553 4
+853 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 30668821 0
+858 | invalido: cabac_alignment_one_bit = 0 | 19 solucao(oes): 30772063 3 + 30772072 1 ; 30772063 3 + 30772073 2 ; 30772063 2 + 30772072 1 ; 30772063 2 + 30772073 2 ; 30772064 1 + 30772072 1 ; 30772064 1 + 30772073 2
+859 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 30809534 5
+863 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 30913015 4 + 30913019 1
+864 | valido, desvia 0/1 | 1 solucao(oes): 30958912 2
+868 | valido, desvia 2/1 | 0 solucao(oes): 
+877 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+883 | invalido: alpha=-54 fora de [-6,6] | 0 solucao(oes): 
+886 | invalido: modification_of_pic_nums_idc=22 fora de [0,3] | 0 solucao(oes): 
+889 | invalido: modification_of_pic_nums_idc=11534336 fora de [0,3] | 0 solucao(oes): 
+892 | valido, desvia 0/1 | 1 solucao(oes): 31754546 1
+895 | valido, desvia 2/0 | 1 solucao(oes): 31840558 0 + 31840559 0
+899 | valido, desvia 0/1 | 1 solucao(oes): 31946897 3
+902 | valido, desvia 1/1 | 1 solucao(oes): 32085858 0 + 32085862 2
+905 | invalido: ue com zeros demais | 0 solucao(oes): 
+909 | valido, desvia 1/0 | 1 solucao(oes): 32237268 4
+913 | valido, desvia 1/0 | 1 solucao(oes): 32337575 4
+915 | invalido: mmco=8 fora de [0,6] | 0 solucao(oes): 
+917 | valido, desvia 1/1 | 1 solucao(oes): 32439156 1 + 32439158 1
+925 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 0 solucao(oes): 
+931 | invalido: abs_diff_pic_num_minus1=4095 fora de [0,255] | 1 solucao(oes): 32930238 0 + 32930239 0
+934 | valido, desvia 1/0 | 1 solucao(oes): 32989669 7
+938 | valido, desvia 2/0 | 1 solucao(oes): 33071487 5 + 33071487 0
+941 | invalido: mmco=11 fora de [0,6] | 0 solucao(oes): 
+943 | invalido: cabac_init_idc=19 fora de [0,2] | 1 solucao(oes): 33214685 2 + 33214693 2
+945 | valido, desvia 2/0 | 1 solucao(oes): 33274752 2 + 33274753 3
+946 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 33326039 7
+951 | invalido: long_term_pic_num=1023 fora de [0,255] | 0 solucao(oes): 
+958 | invalido: cabac_init_idc=14 fora de [0,2] | 1 solucao(oes): 33665015 5
+964 | valido, desvia 1/0 | 1 solucao(oes): 33818999 5
+968 | invalido: modification_of_pic_nums_idc=2228247 fora de [0,3] | 1 solucao(oes): 33910979 3
+974 | valido, desvia 1/2 | 0 solucao(oes): 
+975 | invalido: cabac_init_idc=18 fora de [0,2] | 1 solucao(oes): 34101662 6
+978 | valido, desvia 0/3 | 1 solucao(oes): 34151415 1 + 34151418 7
+979 | invalido: modification_of_pic_nums_idc=134316162 fora de [0,3] | 1 solucao(oes): 34202676 3
+986 | invalido: modification_of_pic_nums_idc=511 fora de [0,3] | 1 solucao(oes): 34445667 7 + 34445668 7
+988 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 34496065 7
+991 | valido, desvia 1/0 | 1 solucao(oes): 34551429 0 + 34551430 3
+995 | valido, desvia 1/0 | 1 solucao(oes): 34647602 0
+1001 | valido, desvia 0/4 | 1 solucao(oes): 34848240 0
+1004 | valido, desvia 1/0 | 1 solucao(oes): 34942188 2
+1007 | valido, desvia 1/0 | 1 solucao(oes): 35043350 0
+1009 | invalido: cabac_alignment_one_bit = 0 | 2 solucao(oes): 35088338 7 + 35088339 0 ; 35088338 7 + 35088340 1
+1012 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 0 solucao(oes): 
+1014 | valido, desvia 0/1 | 1 solucao(oes): 35340703 7
+1018 | invalido: modification_of_pic_nums_idc=4 fora de [0,3] | 0 solucao(oes): 
+1020 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 35486903 4
+1021 | valido, desvia 1/0 | 1 solucao(oes): 35531509 1
+1027 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 35677598 5
+1030 | invalido: pps_id=121 fora de [0,0] | 0 solucao(oes): 
+1033 | invalido: beta=16408 fora de [-6,6] | 1 solucao(oes): 35870933 1 + 35870933 0
+1036 | invalido: qp=-92 fora de [0,51] | 1 solucao(oes): 35926598 6 + 35926601 0
+1039 | valido, desvia 1/0 | 1 solucao(oes): 36025603 6
+1043 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 36217359 5 + 36217363 3
+1048 | invalido: modification_of_pic_nums_idc=6 fora de [0,3] | 1 solucao(oes): 36312322 2 + 36312323 0
+1049 | valido, desvia 0/1 | 1 solucao(oes): 36324578 0
+1051 | valido, desvia 0/1 | 1 solucao(oes): 36414360 4
+1057 | valido, desvia 1/0 | 1 solucao(oes): 36559782 7
+1058 | valido, desvia 1/2 | 1 solucao(oes): 36615853 2 + 36615857 6
+1060 | invalido: modification_of_pic_nums_idc=4 fora de [0,3] | 0 solucao(oes): 
+1063 | invalido: cabac_init_idc=3 fora de [0,2] | 0 solucao(oes): 
+1065 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 0 solucao(oes): 
+1070 | valido, desvia 0/3 | 1 solucao(oes): 37098004 2
+1071 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 37146878 1
+1079 | invalido: abs_diff_pic_num_minus1=4101 fora de [0,255] | 1 solucao(oes): 37357744 1
+1083 | valido, desvia 1/0 | 1 solucao(oes): 37420095 3
+1084 | valido, desvia 1/0 | 1 solucao(oes): 37423245 3
+1090 | valido, desvia 2/0 | 1 solucao(oes): 37491693 1 + 37491694 6
+1097 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 37589587 7
+1108 | valido, desvia 1/0 | 1 solucao(oes): 37885704 5
+1109 | invalido: long_term_pic_num=4194319 fora de [0,255] | 0 solucao(oes): 
+1115 | valido, desvia 1/0 | 1 solucao(oes): 38039983 6
+1123 | invalido: cabac_init_idc=139263 fora de [0,2] | 0 solucao(oes): 
+1129 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 38382632 6
+1134 | invalido: cabac_init_idc=15 fora de [0,2] | 1 solucao(oes): 38535472 3
+1151 | valido, desvia 1/0 | 1 solucao(oes): 39115484 7
+1153 | valido, desvia 0/3 | 0 solucao(oes): 
+1154 | valido, desvia 0/3 | 1 solucao(oes): 39173079 5
+1159 | invalido: cabac_init_idc=15 fora de [0,2] | 0 solucao(oes): 
+1163 | invalido: ue com zeros demais | 0 solucao(oes): 
+1167 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 39463787 6
+1170 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 39569895 7
+1174 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1179 | valido, desvia 2/0 | 0 solucao(oes): 
+1181 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+1184 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 39999089 7 + 39999092 6
+1191 | valido, desvia 1/0 | 1 solucao(oes): 40247599 7
+1195 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 40404379 1 + 40404380 3
+1202 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 0 solucao(oes): 
+1203 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 1 solucao(oes): 40843372 5 + 40843374 5
+1207 | valido, desvia 2/0 | 0 solucao(oes): 
+1212 | invalido: modification_of_pic_nums_idc=4718639 fora de [0,3] | 1 solucao(oes): 41087263 4 + 41087263 0
+1218 | invalido: luma_log2_weight_denom=81 fora de [0,7] | 1 solucao(oes): 41254554 0 + 41254556 3
+1219 | valido, desvia 1/1 | 1 solucao(oes): 41334960 2 + 41334961 0
+1221 | invalido: modification_of_pic_nums_idc=63 fora de [0,3] | 1 solucao(oes): 41384371 3
+1229 | valido, desvia 0/1 | 1 solucao(oes): 41721232 0
+1235 | invalido: cabac_init_idc=3 fora de [0,2] | 0 solucao(oes): 
+1240 | valido, desvia 1/0 | 1 solucao(oes): 42262322 2
+1243 | valido, desvia 0/1 | 1 solucao(oes): 42307804 3
+1244 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 42313742 7 + 42313742 3
+1246 | invalido: ue com zeros demais | 1 solucao(oes): 42361557 3 + 42361559 7
+1249 | valido, desvia 1/4 | 0 solucao(oes): 
+1258 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 42555151 1
+1264 | valido, desvia 1/0 | 1 solucao(oes): 42658147 5
+1266 | invalido: modification_of_pic_nums_idc=4101 fora de [0,3] | 1 solucao(oes): 42714195 1 + 42714196 5
+1269 | invalido: qp=-193 fora de [0,51] | 1 solucao(oes): 42852720 3
+1271 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1272 | valido, desvia 1/0 | 1 solucao(oes): 42912587 5
+1281 | valido, desvia 0/3 | 1 solucao(oes): 43094016 4 + 43094016 1
+1285 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 43199126 2 + 43199127 0
+1287 | invalido: disable_deblocking_filter_idc=6 fora de [0,2] | 1 solucao(oes): 43297388 5
+1289 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 43345061 2
+1294 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 43587334 0
+1296 | valido, desvia 1/0 | 1 solucao(oes): 43634697 1
+1298 | invalido: chroma_log2_weight_denom=15 fora de [0,7] | 1 solucao(oes): 43838907 4
+1300 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1304 | valido, desvia 1/0 | 1 solucao(oes): 43988830 4
+1308 | valido, desvia 1/0 | 1 solucao(oes): 44084803 1
+1314 | invalido: slice_type SP/SI | 0 solucao(oes): 
+1318 | invalido: qp=56 fora de [0,51] | 0 solucao(oes): 
+1319 | invalido: luma_log2_weight_denom=11 fora de [0,7] | 0 solucao(oes): 
+1320 | invalido: modification_of_pic_nums_idc=18 fora de [0,3] | 0 solucao(oes): 
+1322 | valido, desvia 0/1 | 1 solucao(oes): 44672194 5
+1323 | valido, desvia 1/0 | 1 solucao(oes): 44725456 4 + 44725456 2
+1326 | valido, desvia 0/2 | 1 solucao(oes): 44766346 2
+1337 | valido, desvia 0/2 | 1 solucao(oes): 45073468 4
+1340 | valido, desvia 1/3 | 0 solucao(oes): 
+1344 | invalido: modification_of_pic_nums_idc=319 fora de [0,3] | 0 solucao(oes): 
+1347 | valido, desvia 1/0 | 1 solucao(oes): 45371304 2
+1349 | valido, desvia 0/2 | 1 solucao(oes): 45406426 4 + 45406428 7
+1351 | valido, desvia 1/0 | 1 solucao(oes): 45601990 6
+1353 | valido, desvia 0/1 | 1 solucao(oes): 45657455 6
+1355 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 45682549 2
+1357 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 45749195 1 + 45749199 6
+1360 | valido, desvia 1/1 | 1 solucao(oes): 45859094 6 + 45859097 7
+1370 | valido, desvia 1/0 | 1 solucao(oes): 46147650 3
+1372 | invalido: mmco=21 fora de [0,6] | 0 solucao(oes): 
+1384 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1385 | valido, desvia 2/0 | 1 solucao(oes): 46747368 6 + 46747369 3
+1388 | invalido: ue com zeros demais | 1 solucao(oes): 46792836 7 + 46792836 3
+1397 | valido, desvia 0/2 | 1 solucao(oes): 47131549 4
+1404 | invalido: alpha=524288 fora de [-6,6] | 0 solucao(oes): 
+1415 | valido, desvia 1/2 | 0 solucao(oes): 
+1425 | invalido: luma_log2_weight_denom=70 fora de [0,7] | 1 solucao(oes): 47961206 0 + 47961210 2
+1426 | valido, desvia 0/1 | 1 solucao(oes): 48010729 0
+1433 | valido, desvia 0/2 | 1 solucao(oes): 48169778 2
+1434 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+1440 | valido, desvia 1/0 | 1 solucao(oes): 48405580 3
+1445 | invalido: ue com zeros demais | 0 solucao(oes): 
+1447 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 48561110 5 + 48561114 0
+1450 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 48605280 5
+1451 | valido, desvia 2/2 | 0 solucao(oes): 
+1452 | invalido: modification_of_pic_nums_idc=127 fora de [0,3] | 0 solucao(oes): 
+1457 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1459 | valido, desvia 2/0 | 1 solucao(oes): 48811249 3 + 48811250 4
+1461 | valido, desvia 1/0 | 1 solucao(oes): 48854190 3
+1468 | invalido: modification_of_pic_nums_idc=1023 fora de [0,3] | 1 solucao(oes): 49054080 2 + 49054082 7
+1471 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 49099233 7 + 49099235 5
+1472 | invalido: cabac_init_idc=14 fora de [0,2] | 1 solucao(oes): 49141137 6 + 49141138 1
+1477 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 49242751 7 + 49242753 7
+1481 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 49348098 2 + 49348100 7
+1487 | invalido: ue com zeros demais | 1 solucao(oes): 49485554 3 + 49485556 3
+1489 | invalido: abs_diff_pic_num_minus1=263 fora de [0,255] | 1 solucao(oes): 49543924 7 + 49543925 7
+1491 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 0 solucao(oes): 
+1497 | valido, desvia 1/0 | 1 solucao(oes): 49783158 7 + 49783158 5
+1498 | invalido: ue com zeros demais | 0 solucao(oes): 
+1506 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 49935504 5 + 49935505 1
+1511 | invalido: pps_id=2 fora de [0,0] | 0 solucao(oes): 
+1512 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 50039953 1 + 50039957 2
+1516 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1519 | valido, desvia 1/0 | 1 solucao(oes): 50229141 4
+1522 | valido, desvia 1/0 | 1 solucao(oes): 50334123 0
+1526 | valido, desvia 0/1 | 1 solucao(oes): 50532280 6
+1532 | invalido: long_term_pic_num=131071 fora de [0,255] | 1 solucao(oes): 50623801 7
+1534 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 50674469 6
+1537 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1540 | invalido: mmco=12 fora de [0,6] | 0 solucao(oes): 
+1544 | valido, desvia 2/0 | 1 solucao(oes): 50911099 2 + 50911100 3
+1548 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 51017512 1
+1551 | valido, desvia 1/0 | 1 solucao(oes): 51121943 5
+1554 | valido, desvia 0/3 | 1 solucao(oes): 51314364 2
+1556 | valido, desvia 0/2 | 1 solucao(oes): 51363733 0 + 51363736 3
+1565 | invalido: mmco=12 fora de [0,6] | 0 solucao(oes): 
+1573 | invalido: modification_of_pic_nums_idc=1048581 fora de [0,3] | 1 solucao(oes): 51809397 3
+1575 | valido, desvia 1/0 | 1 solucao(oes): 51893000 2
+1587 | invalido: chroma_log2_weight_denom=70 fora de [0,7] | 1 solucao(oes): 52342964 0 + 52342966 2
+1588 | invalido: modification_of_pic_nums_idc=24 fora de [0,3] | 0 solucao(oes): 
+1594 | valido, desvia 1/0 | 1 solucao(oes): 52531503 7 + 52531503 1
+1595 | invalido: luma_log2_weight_denom=2860 fora de [0,7] | 0 solucao(oes): 
+1596 | valido, desvia 2/0 | 0 solucao(oes): 
+1597 | valido, desvia 2/0 | 0 solucao(oes): 
+1598 | invalido: mmco=12 fora de [0,6] | 0 solucao(oes): 
+1599 | valido, desvia 2/0 | 1 solucao(oes): 52662196 3 + 52662197 6
+1600 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 0 solucao(oes): 
+1601 | valido, desvia 2/0 | 1 solucao(oes): 52755234 3 + 52755235 6
+1602 | valido, desvia 2/0 | 1 solucao(oes): 52774411 3 + 52774412 6
+1603 | valido, desvia 2/0 | 1 solucao(oes): 52794779 3 + 52794780 6
+1604 | valido, desvia 2/0 | 1 solucao(oes): 52858388 3 + 52858389 6
+1605 | invalido: modification_of_pic_nums_idc=262151 fora de [0,3] | 0 solucao(oes): 
+1606 | valido, desvia 2/0 | 1 solucao(oes): 52911491 3 + 52911492 6
+1607 | invalido: beta=-134242339 fora de [-6,6] | 0 solucao(oes): 
+1608 | valido, desvia 2/0 | 0 solucao(oes): 
+1609 | invalido: ue com zeros demais | 0 solucao(oes): 
+1610 | valido, desvia 2/2 | 0 solucao(oes): 
+1613 | invalido: qp=90 fora de [0,51] | 0 solucao(oes): 
+1615 | invalido: ue com zeros demais | 0 solucao(oes): 
+1617 | valido, desvia 1/2 | 1 solucao(oes): 53376582 1 + 53376584 3
+1624 | invalido: mmco=148204 fora de [0,6] | 1 solucao(oes): 53517212 3
+1628 | invalido: ue com zeros demais | 0 solucao(oes): 
+1630 | valido, desvia 0/3 | 1 solucao(oes): 53768158 0 + 53768159 1
+1631 | invalido: cabac_init_idc=14 fora de [0,2] | 1 solucao(oes): 53815463 6 + 53815464 1
+1635 | valido, desvia 2/1 | 0 solucao(oes): 
+1638 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 53960003 1
+1646 | valido, desvia 0/3 | 1 solucao(oes): 54234186 7 + 54234187 2
+1647 | valido, desvia 1/0 | 1 solucao(oes): 54303044 7 + 54303044 6
+1652 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 0 solucao(oes): 
+1662 | valido, desvia 1/0 | 1 solucao(oes): 54906281 7
+1668 | invalido: cabac_init_idc=18 fora de [0,2] | 1 solucao(oes): 55152291 6 + 55152293 6
+1670 | invalido: modification_of_pic_nums_idc=15 fora de [0,3] | 1 solucao(oes): 55199650 0 + 55199653 3
+1677 | valido, desvia 0/1 | 1 solucao(oes): 55485259 2
+1679 | valido, desvia 1/0 | 1 solucao(oes): 55533603 7
+1690 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1695 | valido, desvia 1/0 | 1 solucao(oes): 56231771 5
+1698 | valido, desvia 0/3 | 1 solucao(oes): 56375393 1 + 56375395 4
+1704 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 56612217 6
+1705 | valido, desvia 1/0 | 1 solucao(oes): 56625611 6
+1708 | valido, desvia 0/3 | 0 solucao(oes): 
+1710 | valido, desvia 1/0 | 1 solucao(oes): 56758591 6
+1715 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+1718 | valido, desvia 1/0 | 1 solucao(oes): 57208772 3
+1720 | valido, desvia 2/0 | 1 solucao(oes): 57262145 5 + 57262146 4
+1722 | valido, desvia 1/1 | 1 solucao(oes): 57348263 7 + 57348265 1
+1727 | valido, desvia 0/2 | 1 solucao(oes): 57499019 3
+1729 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 57551739 3
+1733 | valido, desvia 2/0 | 1 solucao(oes): 57746408 0 + 57746410 4
+1734 | invalido: ue com zeros demais | 1 solucao(oes): 57844398 5 + 57844399 7
+1742 | valido, desvia 2/1 | 0 solucao(oes): 
+1743 | valido, desvia 1/1 | 1 solucao(oes): 58288366 0 + 58288371 6
+1746 | valido, desvia 1/0 | 1 solucao(oes): 58336291 7
+1749 | invalido: abs_diff_pic_num_minus1=1023 fora de [0,255] | 1 solucao(oes): 58438260 3 + 58438263 7
+1751 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 58528937 0 + 58528940 7
+1757 | valido, desvia 0/2 | 1 solucao(oes): 58687092 3
+1761 | valido, desvia 0/1 | 1 solucao(oes): 58826745 4
+1765 | valido, desvia 1/0 | 1 solucao(oes): 58972396 5
+1772 | valido, desvia 0/3 | 1 solucao(oes): 59320200 5 + 59320201 2
+1778 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+1780 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 59466930 6 + 59466932 7
+1781 | valido, desvia 1/2 | 1 solucao(oes): 59475693 5 + 59475695 4
+1783 | valido, desvia 0/2 | 1 solucao(oes): 59514288 6
+1784 | invalido: cabac_init_idc=127 fora de [0,2] | 0 solucao(oes): 
+1787 | valido, desvia 1/0 | 1 solucao(oes): 59565681 6
+1788 | invalido: modification_of_pic_nums_idc=15 fora de [0,3] | 1 solucao(oes): 59571462 3 + 59571464 0
+1794 | invalido: modification_of_pic_nums_idc=142 fora de [0,3] | 1 solucao(oes): 59660083 7
+1797 | valido, desvia 1/0 | 1 solucao(oes): 59707822 5
+1798 | valido, desvia 1/0 | 1 solucao(oes): 59714788 7
+1803 | valido, desvia 1/0 | 1 solucao(oes): 59865278 6
+1807 | valido, desvia 0/1 | 1 solucao(oes): 59920020 6
+1817 | invalido: cabac_init_idc=33535 fora de [0,2] | 0 solucao(oes): 
+1824 | valido, desvia 1/0 | 1 solucao(oes): 60260391 0
+1832 | valido, desvia 1/0 | 1 solucao(oes): 60498516 0
+1837 | valido, desvia 1/0 | 1 solucao(oes): 60641517 5
+1841 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 60705022 0
+1850 | valido, desvia 2/0 | 1 solucao(oes): 60853639 4 + 60853639 0
+1851 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1852 | invalido: abs_diff_pic_num_minus1=203039 fora de [0,255] | 2 solucao(oes): 60901973 7 + 60901973 2 ; 60901973 7 + 60901973 1
+1855 | valido, desvia 1/1 | 1 solucao(oes): 60951563 6 + 60951566 4
+1866 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 61233041 7 + 61233041 1
+1868 | valido, desvia 2/0 | 1 solucao(oes): 61294060 7 + 61294061 4
+1871 | invalido: cabac_alignment_one_bit = 0 | 2 solucao(oes): 61337726 3 + 61337735 1 ; 61337726 2 + 61337735 1
+1874 | invalido: ue com zeros demais | 1 solucao(oes): 61439879 5
+1878 | invalido: mmco=12 fora de [0,6] | 0 solucao(oes): 
+1893 | valido, desvia 2/0 | 0 solucao(oes): 
+1897 | valido, desvia 1/0 | 1 solucao(oes): 62270968 1
+1902 | valido, desvia 1/0 | 1 solucao(oes): 62418851 2
+1914 | valido, desvia 1/0 | 1 solucao(oes): 62868964 2
+1923 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 63296260 1 + 63296263 1
+1928 | invalido: ue com zeros demais | 1 solucao(oes): 63404550 5
+1944 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 63985073 3
+1946 | valido, desvia 0/1 | 1 solucao(oes): 64085464 5
+1948 | valido, desvia 0/1 | 1 solucao(oes): 64141694 4
+1951 | valido, desvia 1/0 | 1 solucao(oes): 64384777 0
+1956 | valido, desvia 1/0 | 1 solucao(oes): 64479753 3
+1967 | invalido: qp=-193 fora de [0,51] | 1 solucao(oes): 64834996 1
+1970 | valido, desvia 2/0 | 0 solucao(oes): 
+1975 | invalido: long_term_pic_num=1052685 fora de [0,255] | 0 solucao(oes): 
+1977 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 65226714 1 + 65226717 2
+1983 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+1995 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 65862194 6 + 65862194 0
+1997 | invalido: cabac_init_idc=30 fora de [0,2] | 1 solucao(oes): 65952795 7 + 65952797 6
+2011 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 66544043 7
+2012 | invalido: cabac_init_idc=34 fora de [0,2] | 1 solucao(oes): 66555809 4
+2021 | valido, desvia 0/2 | 2 solucao(oes): 66838952 5 + 66838952 4 ; 66838953 5 + 66838953 2
+2024 | valido, desvia 1/0 | 1 solucao(oes): 66885970 1
+2027 | valido, desvia 0/1 | 1 solucao(oes): 66998483 3
+2029 | valido, desvia 1/0 | 1 solucao(oes): 67095176 3
+2034 | valido, desvia 1/0 | 1 solucao(oes): 67278666 1
+2037 | invalido: chroma=16780292 fora de [-128,127] | 0 solucao(oes): 
+2038 | invalido: modification_of_pic_nums_idc=1537 fora de [0,3] | 1 solucao(oes): 67523282 2
+2039 | valido, desvia 0/1 | 1 solucao(oes): 67531212 2
+2042 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 67622412 4 + 67622413 4
+2043 | valido, desvia 0/1 | 1 solucao(oes): 67633331 4
+2049 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 67777014 0 + 67777016 3
+2050 | invalido: modification_of_pic_nums_idc=199 fora de [0,3] | 1 solucao(oes): 67875368 7
+2060 | valido, desvia 0/2 | 1 solucao(oes): 68213367 2
+2068 | valido, desvia 1/1 | 1 solucao(oes): 68657208 5 + 68657210 1
+2074 | invalido: abs_diff_pic_num_minus1=65535 fora de [0,255] | 1 solucao(oes): 68863492 6
+2080 | valido, desvia 1/0 | 1 solucao(oes): 68959795 4
+2085 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 69047155 3
+2087 | valido, desvia 0/2 | 1 solucao(oes): 69106036 4
+2094 | invalido: cabac_init_idc=255 fora de [0,2] | 0 solucao(oes): 
+2098 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 69400240 0 + 69400242 4
+2102 | invalido: qp=-193 fora de [0,51] | 1 solucao(oes): 69593230 6 + 69593233 3
+2104 | valido, desvia 0/1 | 1 solucao(oes): 69638878 4
+2105 | valido, desvia 1/3 | 0 solucao(oes): 
+2110 | invalido: chroma_log2_weight_denom=65 fora de [0,7] | 1 solucao(oes): 69747937 6
+2113 | invalido: modification_of_pic_nums_idc=753663 fora de [0,3] | 1 solucao(oes): 69838874 2 + 69838876 5
+2114 | invalido: mmco=7 fora de [0,6] | 1 solucao(oes): 69852857 3
+2116 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2120 | valido, desvia 1/0 | 1 solucao(oes): 70094006 2
+2122 | invalido: luma_log2_weight_denom=64 fora de [0,7] | 0 solucao(oes): 
+2123 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 70229612 3 + 70229615 4
+2125 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+2129 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2135 | valido, desvia 1/0 | 1 solucao(oes): 70733444 3
+2138 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+2140 | valido, desvia 1/0 | 1 solucao(oes): 70927973 6
+2142 | invalido: modification_of_pic_nums_idc=31 fora de [0,3] | 0 solucao(oes): 
+2145 | invalido: cabac_init_idc=1835015 fora de [0,2] | 0 solucao(oes): 
+2147 | valido, desvia 1/1 | 1 solucao(oes): 71112865 4 + 71112870 7
+2149 | invalido: abs_diff_pic_num_minus1=2047 fora de [0,255] | 1 solucao(oes): 71211249 7
+2151 | invalido: luma_log2_weight_denom=69 fora de [0,7] | 1 solucao(oes): 71268325 0
+2153 | invalido: ue com zeros demais | 1 solucao(oes): 71319330 6 + 71319332 7
+2155 | valido, desvia 1/0 | 1 solucao(oes): 71363881 4
+2175 | valido, desvia 1/0 | 1 solucao(oes): 71856080 3
+2176 | valido, desvia 1/0 | 1 solucao(oes): 71862701 6
+2179 | valido, desvia 1/0 | 1 solucao(oes): 71946585 1
+2196 | valido, desvia 1/0 | 1 solucao(oes): 72440226 2
+2206 | invalido: chroma=6144 fora de [-128,127] | 0 solucao(oes): 
+2211 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 72893178 1
+2215 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 73027798 1
+2224 | valido, desvia 1/1 | 1 solucao(oes): 73323251 0 + 73323255 3
+2225 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 73335603 2 + 73335605 6
+2232 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 73533185 4
+2234 | invalido: modification_of_pic_nums_idc=161 fora de [0,3] | 0 solucao(oes): 
+2235 | invalido: ue com zeros demais | 0 solucao(oes): 
+2244 | valido, desvia 0/1 | 1 solucao(oes): 73922547 0
+2257 | invalido: disable_deblocking_filter_idc=98307 fora de [0,2] | 0 solucao(oes): 
+2261 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 74357347 7 + 74357348 4
+2273 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 74609471 4 + 74609473 3
+2274 | invalido: num_ref_idx_l1=32 fora de [0,31] | 0 solucao(oes): 
+2276 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 74763893 4 + 74763897 1
+2278 | valido, desvia 1/1 | 1 solucao(oes): 74802211 4 + 74802213 6
+2284 | invalido: chroma_log2_weight_denom=265 fora de [0,7] | 0 solucao(oes): 
+2293 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 75157067 7 + 75157071 2
+2302 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 75451600 2 + 75451602 5
+2360 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 77496466 2
+2361 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 77528965 2 + 77528966 4
+2364 | valido, desvia 0/2 | 1 solucao(oes): 77816103 5 + 77816103 2
+2372 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 78021333 0
+2374 | invalido: disable_deblocking_filter_idc=7 fora de [0,2] | 0 solucao(oes): 
+2377 | valido, desvia 1/0 | 1 solucao(oes): 78206515 6
+2379 | invalido: modification_of_pic_nums_idc=6 fora de [0,3] | 0 solucao(oes): 
+2380 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 78371357 5
+2382 | invalido: ue com zeros demais | 0 solucao(oes): 
+2384 | invalido: modification_of_pic_nums_idc=543 fora de [0,3] | 0 solucao(oes): 
+2386 | invalido: modification_of_pic_nums_idc=18 fora de [0,3] | 1 solucao(oes): 78615584 0 + 78615585 7
+2387 | valido, desvia 1/3 | 0 solucao(oes): 
+2388 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+2389 | invalido: modification_of_pic_nums_idc=29 fora de [0,3] | 0 solucao(oes): 
+2390 | valido, desvia 0/2 | 1 solucao(oes): 78851217 4 + 78851218 2
+2395 | valido, desvia 0/1 | 1 solucao(oes): 79189709 0
+2396 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2397 | valido, desvia 2/1 | 0 solucao(oes): 
+2398 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 1 solucao(oes): 79262764 4 + 79262765 6
+2400 | valido, desvia 2/1 | 0 solucao(oes): 
+2402 | valido, desvia 1/0 | 1 solucao(oes): 79393186 3
+2403 | valido, desvia 1/1 | 1 solucao(oes): 79411243 5 + 79411243 0
+2405 | valido, desvia 0/4 | 1 solucao(oes): 79512226 3
+2407 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 79547617 1 + 79547621 2
+2409 | invalido: abs_diff_pic_num_minus1=137215 fora de [0,255] | 1 solucao(oes): 79660698 7
+2410 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 79699360 7
+2412 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2415 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2416 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 79966344 3 + 79966345 1
+2417 | valido, desvia 1/0 | 1 solucao(oes): 80100121 0 + 80100122 7
+2419 | valido, desvia 1/0 | 1 solucao(oes): 80198245 0
+2421 | valido, desvia 1/0 | 1 solucao(oes): 80533258 1
+2422 | valido, desvia 0/1 | 1 solucao(oes): 80586491 1
+2425 | invalido: cabac_init_idc=20 fora de [0,2] | 1 solucao(oes): 80614038 7 + 80614041 5
+2427 | valido, desvia 1/1 | 1 solucao(oes): 80693576 4 + 80693578 4
+2429 | invalido: chroma_log2_weight_denom=298 fora de [0,7] | 0 solucao(oes): 
+2430 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 80812900 7
+2433 | valido, desvia 1/0 | 1 solucao(oes): 80871619 6
+2434 | valido, desvia 0/5 | 0 solucao(oes): 
+2435 | invalido: cabac_init_idc=34 fora de [0,2] | 1 solucao(oes): 80984921 7 + 80984924 6
+2437 | valido, desvia 1/0 | 1 solucao(oes): 81023789 7
+2442 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 81353703 3 + 81353703 1
+2443 | valido, desvia 2/0 | 1 solucao(oes): 81407746 7 + 81407747 6
+2444 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2449 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+2451 | invalido: modification_of_pic_nums_idc=14 fora de [0,3] | 1 solucao(oes): 81614369 2
+2456 | valido, desvia 1/0 | 1 solucao(oes): 81758863 4
+2458 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 0 solucao(oes): 
+2459 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 81895039 2 + 81895043 4
+2466 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2473 | valido, desvia 1/1 | 0 solucao(oes): 
+2474 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 0 solucao(oes): 
+2479 | valido, desvia 1/3 | 1 solucao(oes): 82683775 3 + 82683777 7
+2484 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 0 solucao(oes): 
+2485 | valido, desvia 1/0 | 1 solucao(oes): 82907078 5
+2486 | invalido: modification_of_pic_nums_idc=67071 fora de [0,3] | 0 solucao(oes): 
+2489 | invalido: cabac_init_idc=14 fora de [0,2] | 1 solucao(oes): 83023873 6
+2492 | invalido: modification_of_pic_nums_idc=68 fora de [0,3] | 0 solucao(oes): 
+2496 | invalido: chroma_log2_weight_denom=8 fora de [0,7] | 0 solucao(oes): 
+2504 | valido, desvia 1/0 | 1 solucao(oes): 83516123 2
+2505 | invalido: qp=80 fora de [0,51] | 1 solucao(oes): 83575175 2 + 83575176 1
+2509 | valido, desvia 0/1 | 1 solucao(oes): 83666293 4
+2512 | valido, desvia 1/0 | 0 solucao(oes): 
+2515 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2517 | valido, desvia 0/1 | 1 solucao(oes): 83912422 0
+2520 | valido, desvia 2/0 | 1 solucao(oes): 83970796 5 + 83970797 1
+2534 | invalido: disable_deblocking_filter_idc=286756 fora de [0,2] | 0 solucao(oes): 
+2535 | invalido: cabac_init_idc=10 fora de [0,2] | 0 solucao(oes): 
+2538 | invalido: alpha=-15 fora de [-6,6] | 0 solucao(oes): 
+2542 | invalido: cabac_init_idc=261 fora de [0,2] | 0 solucao(oes): 
+2545 | valido, desvia 1/0 | 1 solucao(oes): 84748446 5
+2548 | valido, desvia 1/0 | 1 solucao(oes): 84842259 6
+2551 | invalido: long_term_pic_num=288767 fora de [0,255] | 1 solucao(oes): 84949900 7
+2556 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 85146736 6 + 85146738 0
+2564 | invalido: modification_of_pic_nums_idc=4101 fora de [0,3] | 0 solucao(oes): 
+2574 | invalido: cabac_init_idc=7 fora de [0,2] | 0 solucao(oes): 
+2577 | invalido: modification_of_pic_nums_idc=6070 fora de [0,3] | 0 solucao(oes): 
+2581 | valido, desvia 2/0 | 1 solucao(oes): 85725395 3 + 85725396 3
+2582 | valido, desvia 0/1 | 1 solucao(oes): 85781024 4
+2588 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 85978545 3
+2598 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2600 | valido, desvia 1/3 | 1 solucao(oes): 86272990 0 + 86272992 2
+2601 | valido, desvia 2/0 | 1 solucao(oes): 86325164 6 + 86325164 0
+2603 | valido, desvia 1/0 | 1 solucao(oes): 86364940 2
+2614 | invalido: modification_of_pic_nums_idc=255 fora de [0,3] | 1 solucao(oes): 86760024 7 + 86760025 7
+2615 | valido, desvia 1/0 | 1 solucao(oes): 86771720 2
+2623 | invalido: cabac_init_idc=31 fora de [0,2] | 0 solucao(oes): 
+2627 | valido, desvia 0/1 | 1 solucao(oes): 87067499 0
+2629 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 87103433 0
+2640 | valido, desvia 1/1 | 1 solucao(oes): 87460936 2 + 87460940 2
+2645 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 87643169 0 + 87643170 2
+2646 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 87655188 7
+2650 | valido, desvia 2/1 | 0 solucao(oes): 
+2653 | valido, desvia 2/1 | 0 solucao(oes): 
+2665 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 88197291 7 + 88197293 5
+2674 | invalido: num_ref_idx_l1=33 fora de [0,31] | 0 solucao(oes): 
+2675 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+2681 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 88832779 3 + 88832780 0
+2686 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 88975841 0
+2691 | invalido: disable_deblocking_filter_idc=527 fora de [0,2] | 0 solucao(oes): 
+2692 | invalido: mmco=19 fora de [0,6] | 0 solucao(oes): 
+2693 | invalido: modification_of_pic_nums_idc=33151 fora de [0,3] | 1 solucao(oes): 89328602 0
+2694 | invalido: modification_of_pic_nums_idc=20 fora de [0,3] | 1 solucao(oes): 89363645 2 + 89363645 0
+2698 | valido, desvia 0/1 | 1 solucao(oes): 89561572 4 + 89561574 7
+2701 | valido, desvia 0/2 | 1 solucao(oes): 89909669 0 + 89909671 6
+2702 | valido, desvia 1/0 | 1 solucao(oes): 89918554 5
+2706 | invalido: modification_of_pic_nums_idc=67071 fora de [0,3] | 1 solucao(oes): 90007998 5 + 90007999 7
+2711 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2715 | invalido: ue com zeros demais | 0 solucao(oes): 
+2717 | valido, desvia 2/1 | 0 solucao(oes): 
+2727 | valido, desvia 1/0 | 1 solucao(oes): 90542157 2
+2734 | invalido: modification_of_pic_nums_idc=10 fora de [0,3] | 0 solucao(oes): 
+2735 | valido, desvia 1/1 | 1 solucao(oes): 90951132 5 + 90951133 4
+2738 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 91034970 0 + 91034974 4
+2741 | invalido: disable_deblocking_filter_idc=10 fora de [0,2] | 1 solucao(oes): 91093424 3 + 91093427 4
+2750 | valido, desvia 1/1 | 1 solucao(oes): 91481443 2 + 91481446 4
+2752 | valido, desvia 1/1 | 1 solucao(oes): 91533855 0 + 91533857 1
+2754 | invalido: abs_diff_pic_num_minus1=623103 fora de [0,255] | 0 solucao(oes): 
+2758 | invalido: cabac_init_idc=38 fora de [0,2] | 1 solucao(oes): 92019810 0 + 92019812 2
+2764 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 92170288 7 + 92170289 7
+2771 | invalido: slice_type SP/SI | 0 solucao(oes): 
+2775 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 92567564 2
+2777 | valido, desvia 2/4 | 0 solucao(oes): 
+2779 | valido, desvia 1/2 | 0 solucao(oes): 
+2780 | valido, desvia 1/0 | 1 solucao(oes): 92810260 2
+2784 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+2785 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 93106332 5 + 93106337 2
+2787 | valido, desvia 0/1 | 1 solucao(oes): 93405962 7
+2788 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 93455605 6 + 93455607 1
+2791 | invalido: chroma_log2_weight_denom=693 fora de [0,7] | 0 solucao(oes): 
+2792 | invalido: disable_deblocking_filter_idc=5 fora de [0,2] | 1 solucao(oes): 93556689 5
+2799 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 93739984 7 + 93739985 0
+2800 | valido, desvia 1/0 | 1 solucao(oes): 93839777 3
+2815 | valido, desvia 0/1 | 1 solucao(oes): 94289204 4
+2820 | valido, desvia 1/0 | 1 solucao(oes): 94436572 3
+2822 | valido, desvia 1/0 | 1 solucao(oes): 94477503 7
+2826 | valido, desvia 0/3 | 1 solucao(oes): 94626776 7
+2828 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 94720584 4
+2833 | invalido: modification_of_pic_nums_idc=47 fora de [0,3] | 1 solucao(oes): 94970108 4 + 94970110 1
+2834 | valido, desvia 0/1 | 0 solucao(oes): 
+2838 | valido, desvia 1/0 | 1 solucao(oes): 95074157 5
+2845 | valido, desvia 1/0 | 1 solucao(oes): 95275974 4
+2849 | invalido: disable_deblocking_filter_idc=6 fora de [0,2] | 1 solucao(oes): 95417168 3 + 95417169 1
+2850 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 1 solucao(oes): 95458780 7
+2852 | invalido: modification_of_pic_nums_idc=4 fora de [0,3] | 1 solucao(oes): 95570690 0 + 95570692 2
+2857 | invalido: ue com zeros demais | 1 solucao(oes): 95761876 0
+2864 | valido, desvia 1/0 | 1 solucao(oes): 96058736 7
+2865 | invalido: mmco=12 fora de [0,6] | 0 solucao(oes): 
+2869 | valido, desvia 1/0 | 1 solucao(oes): 96210458 0 + 96210459 3
+2873 | invalido: modification_of_pic_nums_idc=16 fora de [0,3] | 1 solucao(oes): 96350327 2
+2876 | invalido: disable_deblocking_filter_idc=13 fora de [0,2] | 1 solucao(oes): 96406559 2
+2877 | valido, desvia 1/0 | 1 solucao(oes): 96491702 3
+2879 | valido, desvia 1/0 | 1 solucao(oes): 96542260 1
+2893 | invalido: chroma_log2_weight_denom=281 fora de [0,7] | 0 solucao(oes): 
+2903 | invalido: ue com zeros demais | 1 solucao(oes): 97525706 5
+2907 | valido, desvia 1/0 | 1 solucao(oes): 97680372 2
+2910 | valido, desvia 1/0 | 1 solucao(oes): 97829130 6
+2918 | valido, desvia 1/0 | 1 solucao(oes): 98164798 3
+2921 | invalido: cabac_init_idc=22 fora de [0,2] | 1 solucao(oes): 98268691 6
+2932 | invalido: disable_deblocking_filter_idc=7 fora de [0,2] | 1 solucao(oes): 98655423 5
+2937 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 98854976 2 + 98854978 2
+2941 | valido, desvia 1/0 | 1 solucao(oes): 99045385 5 + 99045385 3
+2945 | invalido: cabac_init_idc=3 fora de [0,2] | 0 solucao(oes): 
+2946 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 99404168 7
+2949 | invalido: cabac_init_idc=353111275 fora de [0,2] | 0 solucao(oes): 
+2951 | invalido: modification_of_pic_nums_idc=132 fora de [0,3] | 0 solucao(oes): 
+2953 | invalido: modification_of_pic_nums_idc=6 fora de [0,3] | 0 solucao(oes): 
+2966 | valido, desvia 1/0 | 1 solucao(oes): 100132723 0
+2972 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 100632928 1
+2977 | valido, desvia 1/1 | 1 solucao(oes): 100774521 6 + 100774522 1
+2980 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 100823945 2
+2983 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 100919274 5
+2987 | invalido: cabac_init_idc=34 fora de [0,2] | 0 solucao(oes): 
+2991 | invalido: cabac_init_idc=38 fora de [0,2] | 1 solucao(oes): 101272155 1 + 101272158 6
+2993 | invalido: ue com zeros demais | 1 solucao(oes): 101416455 3 + 101416457 1
+2996 | invalido: chroma_log2_weight_denom=269 fora de [0,7] | 1 solucao(oes): 101519107 5
+3014 | invalido: qp=-92 fora de [0,51] | 1 solucao(oes): 102387863 0 + 102387865 4
+3017 | valido, desvia 1/0 | 1 solucao(oes): 102493937 3
+3025 | valido, desvia 1/0 | 1 solucao(oes): 102740182 4
+3028 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 102933612 1
+3038 | valido, desvia 2/0 | 0 solucao(oes): 
+3040 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 103226922 0 + 103226923 0
+3041 | valido, desvia 0/1 | 1 solucao(oes): 103283271 0
+3045 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 103386030 1 + 103386032 1
+3048 | valido, desvia 1/0 | 1 solucao(oes): 103484067 5
+3051 | valido, desvia 1/0 | 1 solucao(oes): 103570709 0
+3056 | valido, desvia 1/0 | 1 solucao(oes): 103673478 4
+3059 | valido, desvia 1/0 | 1 solucao(oes): 103766539 5
+3065 | invalido: disable_deblocking_filter_idc=3 fora de [0,2] | 0 solucao(oes): 
+3069 | valido, desvia 1/0 | 1 solucao(oes): 104163765 7
+3071 | valido, desvia 0/1 | 1 solucao(oes): 104209433 4
+3074 | invalido: cabac_init_idc=6 fora de [0,2] | 1 solucao(oes): 104305392 0 + 104305396 6
+3075 | invalido: ue com zeros demais | 0 solucao(oes): 
+3078 | invalido: alpha=-15 fora de [-6,6] | 1 solucao(oes): 104603853 2 + 104603853 1
+3081 | invalido: chroma=4104 fora de [-128,127] | 1 solucao(oes): 104656224 0
+3082 | valido, desvia 1/0 | 1 solucao(oes): 104753545 1
+3085 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 104810154 2 + 104810157 2
+3086 | invalido: modification_of_pic_nums_idc=10 fora de [0,3] | 0 solucao(oes): 
+3089 | valido, desvia 1/1 | 1 solucao(oes): 104955175 7 + 104955179 4
+3090 | invalido: disable_deblocking_filter_idc=4101 fora de [0,2] | 0 solucao(oes): 
+3093 | invalido: cabac_init_idc=65 fora de [0,2] | 0 solucao(oes): 
+3095 | invalido: pps_id=2 fora de [0,0] | 0 solucao(oes): 
+3097 | valido, desvia 0/1 | 0 solucao(oes): 
+3098 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 105299134 5 + 105299137 6
+3100 | valido, desvia 1/2 | 1 solucao(oes): 105346003 5 + 105346005 0
+3103 | invalido: disable_deblocking_filter_idc=41343 fora de [0,2] | 0 solucao(oes): 
+3110 | valido, desvia 2/4 | 0 solucao(oes): 
+3117 | invalido: modification_of_pic_nums_idc=519 fora de [0,3] | 1 solucao(oes): 105632324 7 + 105632326 0
+3118 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 105637786 0 + 105637792 4
+3132 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 106028201 3
+3133 | valido, desvia 2/0 | 1 solucao(oes): 106033741 1 + 106033742 4
+3134 | invalido: modification_of_pic_nums_idc=1081354 fora de [0,3] | 0 solucao(oes): 
+3136 | invalido: modification_of_pic_nums_idc=65535 fora de [0,3] | 0 solucao(oes): 
+3143 | invalido: luma_log2_weight_denom=69 fora de [0,7] | 1 solucao(oes): 106179745 0
+3150 | valido, desvia 1/1 | 1 solucao(oes): 106322412 1 + 106322415 4
+3151 | valido, desvia 1/0 | 1 solucao(oes): 106329358 7
+3153 | invalido: disable_deblocking_filter_idc=12 fora de [0,2] | 1 solucao(oes): 106380741 5 + 106380741 3
+3158 | valido, desvia 1/3 | 0 solucao(oes): 
+3159 | valido, desvia 1/0 | 1 solucao(oes): 106622249 1
+3167 | invalido: cabac_init_idc=10 fora de [0,2] | 1 solucao(oes): 106767401 6
+3168 | invalido: chroma_log2_weight_denom=7022 fora de [0,7] | 1 solucao(oes): 106773469 5 + 106773470 5
+3169 | invalido: ue com zeros demais | 1 solucao(oes): 106819350 0 + 106819354 7
+3173 | valido, desvia 0/1 | 1 solucao(oes): 106912845 2
+3174 | valido, desvia 1/0 | 1 solucao(oes): 106922745 4
+3181 | valido, desvia 0/1 | 1 solucao(oes): 107121075 1
+3187 | invalido: modification_of_pic_nums_idc=2196789249 fora de [0,3] | 0 solucao(oes): 
+3196 | invalido: modification_of_pic_nums_idc=26 fora de [0,3] | 1 solucao(oes): 107659183 7 + 107659194 4
+3199 | valido, desvia 0/1 | 2 solucao(oes): 107770414 2 ; 107770414 1
+3202 | invalido: beta=14 fora de [-6,6] | 1 solucao(oes): 107795236 1
+3207 | valido, desvia 2/3 | 0 solucao(oes): 
+3213 | invalido: modification_of_pic_nums_idc=63 fora de [0,3] | 0 solucao(oes): 
+3214 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 107996202 3 + 107996207 1
+3216 | invalido: cabac_alignment_one_bit = 0 | 0 solucao(oes): 
+3222 | invalido: modification_of_pic_nums_idc=7 fora de [0,3] | 0 solucao(oes): 
+3223 | invalido: modification_of_pic_nums_idc=67155837 fora de [0,3] | 0 solucao(oes): 
+3226 | valido, desvia 1/0 | 1 solucao(oes): 108397204 5
+3231 | invalido: modification_of_pic_nums_idc=6 fora de [0,3] | 0 solucao(oes): 
+3232 | valido, desvia 1/0 | 1 solucao(oes): 108491390 7
+3239 | valido, desvia 0/2 | 1 solucao(oes): 108635524 6
+3243 | invalido: modification_of_pic_nums_idc=5 fora de [0,3] | 0 solucao(oes): 
+3247 | valido, desvia 2/0 | 1 solucao(oes): 108836820 3 + 108836821 2
+3250 | invalido: pps_id=295 fora de [0,0] | 1 solucao(oes): 109085049 1 + 109085051 6
+3252 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 109122431 6 + 109122431 1
+3253 | valido, desvia 1/0 | 1 solucao(oes): 109127022 2
+3254 | invalido: chroma_log2_weight_denom=8 fora de [0,7] | 0 solucao(oes): 
+3255 | valido, desvia 1/0 | 1 solucao(oes): 109181787 0 + 109181788 4
+3260 | valido, desvia 1/0 | 1 solucao(oes): 109272919 0 + 109272920 5
+3267 | invalido: disable_deblocking_filter_idc=4 fora de [0,2] | 1 solucao(oes): 109428857 3 + 109428858 7
+3270 | invalido: cabac_alignment_one_bit = 0 | 1 solucao(oes): 109474437 1
+3272 | valido, desvia 1/0 | 1 solucao(oes): 109565901 5
+3283 | valido, desvia 2/2 | 0 solucao(oes): 
+3286 | valido, desvia 1/0 | 1 solucao(oes): 110160724 3
+3290 | valido, desvia 0/1 | 0 solucao(oes): 
+3291 | valido, desvia 0/1 | 1 solucao(oes): 110446668 5
+3292 | valido, desvia 0/1 | 1 solucao(oes): 110520178 1
+3293 | valido, desvia 0/1 | 1 solucao(oes): 110534806 1
+3294 | valido, desvia 0/1 | 1 solucao(oes): 110549263 1
+3295 | valido, desvia 1/1 | 1 solucao(oes): 110561730 5 + 110561733 7
+3296 | valido, desvia 2/1 | 0 solucao(oes): 
+3297 | invalido: cabac_init_idc=3 fora de [0,2] | 0 solucao(oes): 
+3298 | valido, desvia 0/1 | 1 solucao(oes): 110668879 7
+3299 | valido, desvia 0/1 | 1 solucao(oes): 110680174 2
+3300 | valido, desvia 0/1 | 1 solucao(oes): 110768894 7
+3301 | valido, desvia 0/1 | 1 solucao(oes): 110781406 7
+3302 | valido, desvia 1/1 | 1 solucao(oes): 110797810 0 + 110797814 7
+3303 | invalido: cabac_init_idc=10 fora de [0,2] | 0 solucao(oes): 
+3304 | valido, desvia 0/1 | 1 solucao(oes): 110869677 7
+3305 | valido, desvia 0/1 | 1 solucao(oes): 110878420 7
+3306 | valido, desvia 0/1 | 1 solucao(oes): 110884698 7
+3307 | valido, desvia 0/3 | 1 solucao(oes): 110896578 0
+3308 | valido, desvia 0/1 | 1 solucao(oes): 110974696 7
+3309 | valido, desvia 0/1 | 1 solucao(oes): 110987117 7
+3310 | valido, desvia 0/1 | 1 solucao(oes): 111013214 7
+3311 | valido, desvia 0/1 | 1 solucao(oes): 111024964 4
+3312 | valido, desvia 0/1 | 1 solucao(oes): 111113319 7
+3313 | valido, desvia 0/1 | 1 solucao(oes): 111120117 2
+3314 | valido, desvia 0/1 | 1 solucao(oes): 111178529 5
+3315 | valido, desvia 0/1 | 1 solucao(oes): 111181940 7
+3316 | valido, desvia 0/1 | 1 solucao(oes): 111189124 7
+3318 | valido, desvia 0/1 | 1 solucao(oes): 111277198 7
+3319 | valido, desvia 0/1 | 0 solucao(oes): 
+3321 | valido, desvia 0/1 | 1 solucao(oes): 111627356 1
+3322 | valido, desvia 0/1 | 1 solucao(oes): 111642106 1
+3323 | valido, desvia 0/1 | 1 solucao(oes): 111652543 1
+3325 | valido, desvia 0/1 | 1 solucao(oes): 111734237 7
+3326 | valido, desvia 0/1 | 1 solucao(oes): 111744359 7
+3327 | valido, desvia 0/1 | 1 solucao(oes): 111755297 7
+3329 | valido, desvia 0/1 | 2 solucao(oes): 111860882 2 ; 111860882 1
+3330 | valido, desvia 0/1 | 2 solucao(oes): 111891617 2 ; 111891617 1
+3331 | valido, desvia 0/1 | 2 solucao(oes): 111906131 2 ; 111906131 1
+3333 | valido, desvia 0/1 | 2 solucao(oes): 112003007 2 ; 112003007 1
+3334 | valido, desvia 0/1 | 2 solucao(oes): 112021375 2 ; 112021375 1
+3335 | valido, desvia 0/1 | 2 solucao(oes): 112039426 2 ; 112039426 1
+3337 | valido, desvia 0/1 | 1 solucao(oes): 112122651 7
+3338 | valido, desvia 0/1 | 1 solucao(oes): 112132682 7
+3339 | valido, desvia 0/1 | 1 solucao(oes): 112146394 7
+3341 | valido, desvia 0/1 | 2 solucao(oes): 112283661 2 ; 112283661 1
+3342 | valido, desvia 0/1 | 2 solucao(oes): 112302762 2 ; 112302762 1
+3343 | valido, desvia 0/1 | 2 solucao(oes): 112329909 2 ; 112329909 1
+3345 | valido, desvia 0/1 | 1 solucao(oes): 112442283 7
+3346 | valido, desvia 0/1 | 1 solucao(oes): 112451030 7
+3347 | valido, desvia 0/1 | 1 solucao(oes): 112464133 7
+3348 | valido, desvia 0/1 | 2 solucao(oes): 112482595 1 ; 112482595 0
+3349 | valido, desvia 0/1 | 1 solucao(oes): 112725201 5
+3350 | valido, desvia 0/1 | 1 solucao(oes): 112787590 1
+3351 | valido, desvia 0/1 | 1 solucao(oes): 112797462 1
+3352 | valido, desvia 0/1 | 1 solucao(oes): 112807928 1
+3354 | valido, desvia 0/1 | 1 solucao(oes): 112898276 7
+3355 | valido, desvia 0/1 | 1 solucao(oes): 112910966 7
+3356 | valido, desvia 0/1 | 1 solucao(oes): 112922965 7
+3358 | valido, desvia 0/1 | 1 solucao(oes): 112999040 7
+3359 | valido, desvia 0/1 | 1 solucao(oes): 113010762 7
+3360 | valido, desvia 0/1 | 1 solucao(oes): 113036095 7
+3362 | valido, desvia 0/1 | 1 solucao(oes): 113110418 7
+3363 | valido, desvia 0/1 | 1 solucao(oes): 113120181 7
+3364 | valido, desvia 0/1 | 1 solucao(oes): 113131818 7
+3366 | valido, desvia 0/1 | 1 solucao(oes): 113190569 7
+3367 | valido, desvia 0/1 | 1 solucao(oes): 113200563 7
+3368 | valido, desvia 0/1 | 0 solucao(oes): 
