@@ -297,3 +297,58 @@
 #   (o juiz antigo, por MB alcancado: nada melhora depois do byte 147750)
 #
 # Nada disto entra no patches.txt.
+
+# ============================================================================
+# 2026-09-18 -- TRACE DO JM: O FRAME 11 ESTA NUMA ZONA DE DANO DENSO (~3%)
+#
+# JM 19.1 (vcgit.hhi.fraunhofer.de/jvet/JM, auditado) compilado na scratchpad
+# com TRACE=1. Tres ajustes locais so de compilacao: sem warnings-as-errors,
+# guarda do typedef intptr_t so para MSVC, -lws2_32 (ntohl/ntohs). O JM recusa
+# enchimento com bit trocado ("00 00 02", "00 00 03 20"), entao o trecho dado a
+# ele tem o enchimento DEPOIS do fim do slice dos frames 10 e 11 canonico --
+# nao muda nenhum bit que o decodificador le.
+#
+# ELEMENTO A ELEMENTO (com o par do cabecalho):
+#
+#              frame 9 MB 0 (legitimo)        frame 11 MB 0
+#   tipo       P 16x16                        P 16x16
+#   ref_idx    0                              2
+#   mvd        0,0                            0,0
+#   CBP        15                             7
+#   residuo    DC +2 em cada 4x4, nada mais   +-1..+-4 espalhado, runs ate 10
+#
+#   frame 9 MB 1: intra 16x16, sem residuo.
+#   frame 11 MB 1: P 8x8, ref (2,4,0,1), mvd -8, CBP 15, 60+ coeficientes. Lixo.
+#
+# O estilo do codificador: MB 0 pela ref 0 com peso de fade + DC constante que
+# fecha em 16 exato; o resto da tarja intra. A ref_idx 2 do frame 11 ja pode ser
+# o primeiro elemento errado.
+#
+# A TARJA TAMBEM E INTRA NO FRAME 11: o layout de bytes e o mesmo dos frames 7 e
+# 9 -- transiente do MB 0, periodico `00011` (18 c6 31 8c 63), rajada na troca
+# para a fileira 1, periodico com um soluco a cada ~40 bytes (uma fileira).
+#
+# MAS O PERIODICO DO FRAME 11 ESTA SALPICADO. Bytes 110-350, janelas de 40 bits:
+#
+#   frame   perfeitas   desvios isolados (1-4 bits)
+#     3       39/48        7 bits
+#     5       39/48        4 bits
+#     7       39/48       12 bits
+#     9       37/48        7 bits
+#    11        7/48       66 bits      <- ~3% dos bits
+#
+# O enchimento (conteudo CONHECIDO, 00 00 03) confirma a mesma taxa:
+#   frame  6 .... ~5 bits em 250 bytes      (~0,3%)
+#   frame 10 .... ~87 bits em 250 bytes     (~4%)
+#   frame 11 .... 26 bits em 102 bytes      (~3%)
+#
+# CONSEQUENCIA: ~3% de 2.660 bytes de slice sao ~600 bits trocados no frame 11.
+# Nenhuma busca de 1, 2 ou 3 bits conserta isto -- e por isso nenhuma deu. O
+# par do cabecalho e real (2 bits em 22 bytes, a mesma taxa), mas o quadro nao
+# e "um defeito": e uma regiao inteira do arquivo com dano denso, que vai de
+# algum ponto depois do frame 9 (131051, limpo) ate pelo menos o frame 11.
+#
+# O que ainda seria possivel: corrigir por ESTRUTURA onde o conteudo e previsivel
+# (os trechos periodicos da tarja e as corridas de skip do campo) e deixar o
+# decodificador julgar. Sem garantia: as partes nao periodicas (MB 0, trocas de
+# fileira, imagem) tambem tem ~3% de bits trocados.
