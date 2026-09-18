@@ -160,7 +160,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 |---|---|
 | [`RESULTADOS.md`](docs/RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
 | [`CRITERIOS.md`](docs/CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
-| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **54 maneiras de medir errado** que já produziram conclusão falsa aqui |
+| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **55 maneiras de medir errado** que já produziram conclusão falsa aqui |
 | [`CABAC.md`](docs/CABAC.md) | **por que não existe ressincronização dentro do slice**, e o que dá para explorar |
 | [`INVESTIGACOES.md`](docs/INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
 | [`IDRS.md`](docs/IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |
@@ -218,3 +218,11 @@ Consequência: quadro com payload em zona de ~4% tem centenas de bits trocados �
 o frame 11 tem ~600 — e nenhuma busca de 1–3 bits o conserta. **Consultar o mapa
 antes de escolher alvo de varredura.** Aberto: tamanho e alinhamento dos blocos
 de dano.
+
+**Os 1.439 quadros não inteiros, por onde está o dano** ([`dados/alvos.txt`](dados/alvos.txt)):
+435 com **cabeçalho do slice inválido** pela norma (o caso do frame 11; 151 P,
+279 B), 407 que param antes de 512 bytes, 57 entre 512 B e 2 KB, 517 depois de
+2 KB, 23 sem imagem sem causa visível. "Inteiro" = MB final **e** imagem emitida
+**e** cabeçalho válido: 2.006 quadros, não os 2.376 do `mapa` (armadilha 55).
+O dano se concentra no começo dos quadros: 492 param antes de 512 bytes, contra
+~27 esperados se o dano fosse uniforme no payload.

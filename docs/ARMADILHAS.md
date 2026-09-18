@@ -1005,3 +1005,22 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     literais antes de ser considerada segura. E a lição maior: **"não mexe em
     lógica" não é o mesmo que "não muda a saída"** — o nome de uma coluna é
     contrato com quem lê.
+
+55. **"Nenhum erro de macrobloco" não é "quadro inteiro".** O `mapa` calcula
+    `mb = (log_mbx < 0) ? 8160 : ...` — se o log não trouxe erro de macrobloco,
+    o quadro conta como 8160 de 8160. Só que quando o ffmpeg **rejeita o
+    cabeçalho do slice** (`illegal modification_of_pic_nums_idc`,
+    `cabac_init_idc overflow`, `deblocking_filter_idc out of range`…), ele nunca
+    chega a decodificar macrobloco nenhum: imprime `no frame!` e não emite
+    imagem. Para o `mapa`, silêncio de macrobloco = perfeito.
+
+    Medido em 2026-09-18: dos 2.376 que o `mapa` dava como inteiros, **324 não
+    emitem imagem nenhuma** e 46 emitem sobre cabeçalho inválido (o ffmpeg não
+    confere o bit de alinhamento CABAC). Inteiros de verdade: 2.006. O número
+    inflado estava no `RESULTADOS.md` como estado do projeto.
+
+    Conferido em cada uso da expressão no `reparador.c`: o `worker_avanco`, a
+    base do `avanco` e o `trinca` exigem `cap_w > 0` antes; o `corta` registra
+    numa coluna própria se saiu quadro. O `mapa` era o único sem a guarda. A régua certa
+    tem três partes: MB final, imagem emitida (ffprobe `frame=pkt_pos`) e
+    cabeçalho válido pela norma (`-bsf:v trace_headers`).

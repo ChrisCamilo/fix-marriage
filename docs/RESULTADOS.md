@@ -9,7 +9,7 @@ então esta medida é determinística** — ver armadilha 47.
 | | |
 |---|---|
 | quadros que passam no critério rigoroso | **209** de 3.445 |
-| quadros que analisam 100% dos macroblocos (`mapa`) | **2.376** |
+| quadros que analisam 100% dos macroblocos **e** emitem imagem **e** têm cabeçalho válido | **2.006** (medido em 2026-09-18) |
 | quadros com tarja 16,0000 / 0,0000 (`panorama`) | **166** |
 | tempo de vídeo bom | **6,97 s** de 114,95 s |
 | trechos contínuos | **28**, sendo 20 deles de 1 ou 2 quadros |
@@ -26,6 +26,22 @@ Os trechos com 3 quadros ou mais:
 | 1685–1687 | 3 | 0,10 s | 56,22 s |
 | 1979–1981 | 3 | 0,10 s | 66,03 s |
 | 2161–2163 | 3 | 0,10 s | 72,11 s |
+
+**O `mapa` sozinho dava 2.376, e estava inflado** (armadilha 55). Quando o
+ffmpeg rejeita o cabeçalho do slice, ele não imprime erro de macrobloco, e o
+`mapa` contava o quadro como 8160 de 8160. Medido em 2026-09-18:
+
+| | quadros |
+|---|---|
+| o `mapa` diz 8160/8160 | 2.376 |
+| … mas não emitem imagem nenhuma | 324 |
+| … emitem imagem sobre cabeçalho inválido (alinhamento CABAC = 0) | 46 |
+| **inteiros de verdade** | **2.006** |
+
+Os 1.439 restantes estão classificados em
+[`dados/alvos.txt`](../dados/alvos.txt): 435 com cabeçalho do slice inválido,
+407 que param antes de 512 bytes, 57 entre 512 B e 2 KB, 517 depois de 2 KB e
+23 sem imagem sem causa visível.
 
 **Cuidado com "quadros emitidos".** O ffmpeg emite ~3.100 quadros deste filme;
 3.236 deles são ocultação. A diferença entre duas remontagens pode ser
