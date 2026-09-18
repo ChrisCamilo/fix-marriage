@@ -7,14 +7,20 @@ qualquer coisa — são **58** maneiras de medir errado que já custaram horas a
 
 ## 1. Privacidade — inegociável
 
-Este repositório é **local e privado**. Material pessoal de família.
+Este repositório é **privado**. Material pessoal de família.
 
-- **Nunca** adicionar remoto, fazer push, ou criar repositório no GitHub.
-- **Nunca** publicar nada disto: nem artifact, nem gist, nem pastebin, nem
-  serviço de diagrama ou de conversão online.
-- Se um remoto for pedido um dia, tem que nascer privado
-  (`gh repo create --private`). Criar público e trocar depois não resolve:
-  o conteúdo fica em cache e indexado.
+- Existe **um** remoto, `origin` = `git@github.com:ChrisCamilo/fix-marriage.git`,
+  **privado**, criado pelo próprio usuário em 2026-09-18 (nasceu privado, com
+  `gh repo create --private`). **Nunca** adicionar outro remoto, nunca mudar a
+  visibilidade dele, e **push só quando o usuário pedir**.
+- **Nunca** publicar nada disto em outro lugar: nem artifact, nem gist, nem
+  pastebin, nem serviço de diagrama ou de conversão online.
+- Criar público e trocar depois não resolve: o conteúdo fica em cache e
+  indexado. Qualquer repositório novo tem que nascer privado.
+- **Imagem e vídeo nunca entram no git**, nem no remoto privado: o MP4, o
+  reparado e os quadros extraídos (`saidas/*.png`, `*.pgm`, `*.yuv`) estão no
+  `.gitignore`. O que vai para o remoto é só texto — código, patches, índices e
+  documentação.
 
 ## 2. As duas fontes de verdade
 
