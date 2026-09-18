@@ -89,13 +89,14 @@ pessoal de família: não publicar em lugar nenhum. O `.mp4` e o binário compil
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 1.832 linhas:**
+**Composição do `patches.txt` — 2.623 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
 | 1–1338 | 1.338 | base determinística (prefixos de NAL e cabeçalhos). Reconferido: regerar com `base` reproduz os mesmos 1338 byte a byte |
 | 1339–1832 | 494 | destas, **479** também estão em `dados/deterministicos.txt` |
 | | **15** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` |
+| 1833–2623 | 791 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 573 quadros — linha a linha em `dados/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a

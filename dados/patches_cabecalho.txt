@@ -1,0 +1,811 @@
+# patches_cabecalho.txt -- o lote de 2026-09-18 que entrou no patches.txt.
+# Aprovado pelo usuario: grupo A inteiro, B e C desde que nao mexam nos 167
+# quadros bons, e o par do cabecalho do frame 11.
+#
+# Origem: ferramentas/cabecalho_slice.py (juiz: cabecalho valido pela norma e
+# igual ao esperado -- tipo, frame_num e POC pelo ctts; deblocking 0/-1/-1,
+# cabac_init 0, sem reordenacao nas constantes do filme; QP so em faixa larga).
+# So entram solucoes UNICAS de 1 ou 2 bits.
+#
+# Verificacao antes de entrar: as imagens decodificadas dos 167 quadros bons
+# (ilhas 0-10, 2333-2361, 3319-3444 e o frame 12) saem BYTE A BYTE iguais com
+# o lote aplicado (serie com TARJA=1, base contra A, A+B e A+B+C).
+#
+# FORA do lote:
+#   2361  a solucao desfaz um bit de reparo que ja esta no patches.txt
+#         (77528965 2). Decisao do usuario, a parte.
+#   10 quadros ambiguos (2+ solucoes): 15 79 232 858 1009 1871 (A), 1630 1772
+#         2021 (C). O frame 11 era ambiguo e entrou porque o pixel decidiu.
+#
+# colunas: offset bit | quadro | grupo | o que o cabecalho tinha
+147709 7 | 11 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0 (2 solucoes; a escolhida prediz a tarja em 16 exato)
+147712 1 | 11 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0 (2 solucoes; a escolhida prediz a tarja em 16 exato)
+297419 3 | 17 | A cabecalho invalido | invalido: slice_type SP/SI
+297435 7 | 17 | A cabecalho invalido | invalido: slice_type SP/SI
+439003 0 | 19 | B frame_num/POC/tipo errado | valido, desvia 1/0
+1079640 0 | 27 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+1124879 1 | 28 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=65535 fora de [0,3]
+1124880 5 | 28 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=65535 fora de [0,3]
+1723117 4 | 37 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+1723120 4 | 37 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+1838592 4 | 39 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+2503404 0 | 52 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+2703749 3 | 57 | B frame_num/POC/tipo errado | valido, desvia 1/0
+2989980 4 | 62 | A cabecalho invalido | invalido: num_ref_idx_l1=35 fora de [0,31]
+2989981 2 | 62 | A cabecalho invalido | invalido: num_ref_idx_l1=35 fora de [0,31]
+3035415 7 | 64 | A cabecalho invalido | invalido: ue com zeros demais
+3035416 0 | 64 | A cabecalho invalido | invalido: ue com zeros demais
+3041206 6 | 65 | B frame_num/POC/tipo errado | valido, desvia 1/0
+3047410 5 | 66 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+3047410 4 | 66 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+3383411 4 | 76 | B frame_num/POC/tipo errado | valido, desvia 1/0
+4020693 3 | 92 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=6 fora de [0,2]
+4020694 0 | 92 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=6 fora de [0,2]
+4610621 1 | 107 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+4620011 4 | 108 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+4718399 3 | 112 | B frame_num/POC/tipo errado | valido, desvia 1/0
+4809058 7 | 116 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+5106436 6 | 127 | B frame_num/POC/tipo errado | valido, desvia 1/2
+5106438 0 | 127 | B frame_num/POC/tipo errado | valido, desvia 1/2
+5307655 6 | 129 | B frame_num/POC/tipo errado | valido, desvia 1/0
+5398569 3 | 132 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+5508100 0 | 137 | A cabecalho invalido | invalido: luma_log2_weight_denom=68 fora de [0,7]
+5844454 0 | 148 | B frame_num/POC/tipo errado | valido, desvia 1/0
+5946002 5 | 150 | B frame_num/POC/tipo errado | valido, desvia 1/0
+6336598 1 | 158 | B frame_num/POC/tipo errado | valido, desvia 1/0
+6387281 4 | 159 | B frame_num/POC/tipo errado | valido, desvia 1/1
+6387283 2 | 159 | B frame_num/POC/tipo errado | valido, desvia 1/1
+6578921 2 | 168 | B frame_num/POC/tipo errado | valido, desvia 1/0
+6587593 6 | 169 | A cabecalho invalido | invalido: cabac_init_idc=6 fora de [0,2]
+6673751 1 | 171 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+7326703 6 | 190 | B frame_num/POC/tipo errado | valido, desvia 1/0
+7412060 3 | 193 | B frame_num/POC/tipo errado | valido, desvia 1/0
+7513791 5 | 197 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+7513793 7 | 197 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+7657289 1 | 201 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+7861037 7 | 209 | B frame_num/POC/tipo errado | valido, desvia 1/0
+8103996 0 | 214 | B frame_num/POC/tipo errado | valido, desvia 2/0
+8103998 3 | 214 | B frame_num/POC/tipo errado | valido, desvia 2/0
+8554838 4 | 224 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+8554842 4 | 224 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+8603865 2 | 227 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+8849530 1 | 239 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+8893608 3 | 242 | A cabecalho invalido | invalido: mmco=141685 fora de [0,6]
+9181304 0 | 251 | A cabecalho invalido | invalido: ue com zeros demais
+9181307 1 | 251 | A cabecalho invalido | invalido: ue com zeros demais
+9195252 3 | 252 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+9279669 7 | 256 | B frame_num/POC/tipo errado | valido, desvia 1/0
+9293129 5 | 257 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/4
+9630028 3 | 269 | B frame_num/POC/tipo errado | valido, desvia 1/0
+9720616 5 | 271 | B frame_num/POC/tipo errado | valido, desvia 1/0
+9873002 3 | 277 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+10220933 4 | 286 | A cabecalho invalido | invalido: ue com zeros demais
+10220934 3 | 286 | A cabecalho invalido | invalido: ue com zeros demais
+10275625 4 | 287 | B frame_num/POC/tipo errado | valido, desvia 1/1
+10275626 0 | 287 | B frame_num/POC/tipo errado | valido, desvia 1/1
+10755696 1 | 301 | B frame_num/POC/tipo errado | valido, desvia 1/1
+10755700 3 | 301 | B frame_num/POC/tipo errado | valido, desvia 1/1
+10901282 1 | 305 | B frame_num/POC/tipo errado | valido, desvia 1/0
+11203968 6 | 310 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+11794858 5 | 330 | B frame_num/POC/tipo errado | valido, desvia 1/0
+11898708 7 | 335 | B frame_num/POC/tipo errado | valido, desvia 1/0
+11948010 4 | 336 | B frame_num/POC/tipo errado | valido, desvia 2/0
+11948011 5 | 336 | B frame_num/POC/tipo errado | valido, desvia 2/0
+11991731 2 | 339 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=6 fora de [0,2]
+12086738 1 | 342 | B frame_num/POC/tipo errado | valido, desvia 1/1
+12086740 3 | 342 | B frame_num/POC/tipo errado | valido, desvia 1/1
+12521611 4 | 354 | B frame_num/POC/tipo errado | valido, desvia 1/0
+12530672 2 | 355 | B frame_num/POC/tipo errado | valido, desvia 1/0
+12767484 0 | 364 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+12917212 2 | 369 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+13017072 5 | 370 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=7 fora de [0,2]
+13262983 7 | 377 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+13361256 4 | 378 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+13361258 3 | 378 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+13704641 3 | 385 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+13713458 3 | 386 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+13908153 6 | 391 | B frame_num/POC/tipo errado | valido, desvia 1/1
+13908154 1 | 391 | B frame_num/POC/tipo errado | valido, desvia 1/1
+13960762 2 | 394 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+14054442 4 | 395 | B frame_num/POC/tipo errado | valido, desvia 1/0
+14101790 0 | 397 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+14101794 3 | 397 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+14295607 6 | 401 | A cabecalho invalido | invalido: cabac_init_idc=38 fora de [0,2]
+14686689 7 | 408 | B frame_num/POC/tipo errado | valido, desvia 1/0
+15142027 2 | 417 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+15142030 5 | 417 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+15431108 5 | 425 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=268830406 fora de [0,3]
+15473020 1 | 427 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+15828238 6 | 433 | A cabecalho invalido | invalido: cabac_init_idc=42 fora de [0,2]
+17346849 4 | 466 | B frame_num/POC/tipo errado | valido, desvia 1/0
+17584159 5 | 474 | B frame_num/POC/tipo errado | valido, desvia 1/0
+17584159 3 | 474 | B frame_num/POC/tipo errado | valido, desvia 1/0
+17598108 0 | 475 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+17738044 5 | 480 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+18728178 2 | 505 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+18728179 1 | 505 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+19411079 1 | 515 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+19452072 3 | 516 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+19452073 1 | 516 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+19455483 1 | 517 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=8215 fora de [0,255]
+19462191 3 | 519 | B frame_num/POC/tipo errado | valido, desvia 1/0
+19551460 0 | 521 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+19551461 6 | 521 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+19652924 1 | 525 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+19652925 7 | 525 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+19664245 0 | 526 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+20218440 0 | 537 | A cabecalho invalido | invalido: ue com zeros demais
+20252986 2 | 538 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+21078405 5 | 555 | B frame_num/POC/tipo errado | valido, desvia 2/0
+21078406 6 | 555 | B frame_num/POC/tipo errado | valido, desvia 2/0
+21231470 7 | 559 | B frame_num/POC/tipo errado | valido, desvia 1/0
+21421220 7 | 563 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+21727608 7 | 572 | B frame_num/POC/tipo errado | valido, desvia 1/0
+21727608 3 | 572 | B frame_num/POC/tipo errado | valido, desvia 1/0
+21813832 6 | 575 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=63 fora de [0,3]
+21813833 0 | 575 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=63 fora de [0,3]
+22057981 7 | 582 | B frame_num/POC/tipo errado | valido, desvia 1/0
+22209903 6 | 588 | A cabecalho invalido | invalido: cabac_init_idc=26 fora de [0,2]
+22352355 5 | 592 | B frame_num/POC/tipo errado | valido, desvia 1/0
+22598317 1 | 597 | A cabecalho invalido | invalido: ue com zeros demais
+22606012 1 | 598 | B frame_num/POC/tipo errado | valido, desvia 1/0
+22704952 4 | 601 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+22998607 7 | 610 | B frame_num/POC/tipo errado | valido, desvia 1/0
+23103802 4 | 612 | B frame_num/POC/tipo errado | valido, desvia 1/0
+23436086 3 | 622 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+23681526 5 | 626 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=8 fora de [0,3]
+23681528 3 | 626 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=8 fora de [0,3]
+23690683 2 | 627 | B frame_num/POC/tipo errado | valido, desvia 1/1
+23690688 5 | 627 | B frame_num/POC/tipo errado | valido, desvia 1/1
+23756205 4 | 629 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+23782796 0 | 630 | A cabecalho invalido | invalido: ue com zeros demais
+23782797 3 | 630 | A cabecalho invalido | invalido: ue com zeros demais
+23883287 5 | 633 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=4 fora de [0,3]
+23883289 4 | 633 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=4 fora de [0,3]
+23984564 7 | 636 | A cabecalho invalido | invalido: qp=-3 fora de [0,51]
+23984566 2 | 636 | A cabecalho invalido | invalido: qp=-3 fora de [0,51]
+24141620 1 | 641 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+24182677 0 | 643 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+24475742 2 | 649 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+24567643 0 | 656 | A cabecalho invalido | invalido: luma_log2_weight_denom=65 fora de [0,7]
+24620190 0 | 657 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+24620193 6 | 657 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+24628289 6 | 658 | B frame_num/POC/tipo errado | valido, desvia 1/0
+24825384 2 | 667 | B frame_num/POC/tipo errado | valido, desvia 1/1
+24825387 3 | 667 | B frame_num/POC/tipo errado | valido, desvia 1/1
+24915559 5 | 669 | B frame_num/POC/tipo errado | valido, desvia 1/0
+25057789 3 | 674 | B frame_num/POC/tipo errado | valido, desvia 1/0
+25070841 3 | 675 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=1023 fora de [0,3]
+25403594 7 | 681 | B frame_num/POC/tipo errado | valido, desvia 1/1
+25403598 3 | 681 | B frame_num/POC/tipo errado | valido, desvia 1/1
+25895572 0 | 697 | B frame_num/POC/tipo errado | valido, desvia 1/0
+26045501 4 | 700 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+26486964 0 | 709 | B frame_num/POC/tipo errado | valido, desvia 1/0
+26585142 1 | 714 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+26777566 2 | 720 | B frame_num/POC/tipo errado | valido, desvia 1/1
+26777569 0 | 720 | B frame_num/POC/tipo errado | valido, desvia 1/1
+26878360 4 | 723 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+26928528 4 | 726 | B frame_num/POC/tipo errado | valido, desvia 1/0
+27030694 0 | 728 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+27627305 5 | 740 | B frame_num/POC/tipo errado | valido, desvia 1/1
+27627306 0 | 740 | B frame_num/POC/tipo errado | valido, desvia 1/1
+27918784 2 | 751 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+27918786 2 | 751 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+28304493 2 | 761 | B frame_num/POC/tipo errado | valido, desvia 1/0
+28575808 5 | 764 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+28610511 0 | 765 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+28610514 6 | 765 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+28705260 6 | 770 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+28801832 1 | 774 | B frame_num/POC/tipo errado | valido, desvia 1/0
+28900098 6 | 777 | A cabecalho invalido | invalido: cabac_init_idc=22 fora de [0,2]
+28953938 1 | 780 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+28953939 4 | 780 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+29199891 3 | 786 | B frame_num/POC/tipo errado | valido, desvia 1/0
+29539761 0 | 800 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=4 fora de [0,2]
+29539764 5 | 800 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=4 fora de [0,2]
+29630322 0 | 804 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+29779984 2 | 810 | B frame_num/POC/tipo errado | valido, desvia 1/0
+29836316 5 | 813 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+29975177 1 | 819 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+29975179 1 | 819 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+30032147 0 | 821 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=2051 fora de [0,3]
+30127342 4 | 827 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+30127346 4 | 827 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+30169879 1 | 829 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+30320768 0 | 836 | B frame_num/POC/tipo errado | valido, desvia 2/0
+30320770 6 | 836 | B frame_num/POC/tipo errado | valido, desvia 2/0
+30415738 1 | 841 | B frame_num/POC/tipo errado | valido, desvia 1/1
+30415739 1 | 841 | B frame_num/POC/tipo errado | valido, desvia 1/1
+30428178 2 | 842 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+30511553 4 | 844 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+30668821 0 | 853 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+30809534 5 | 859 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+30913015 4 | 863 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+30913019 1 | 863 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+30958912 2 | 864 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+31754546 1 | 892 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+31840558 0 | 895 | B frame_num/POC/tipo errado | valido, desvia 2/0
+31840559 0 | 895 | B frame_num/POC/tipo errado | valido, desvia 2/0
+31946897 3 | 899 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+32085858 0 | 902 | B frame_num/POC/tipo errado | valido, desvia 1/1
+32085862 2 | 902 | B frame_num/POC/tipo errado | valido, desvia 1/1
+32237268 4 | 909 | B frame_num/POC/tipo errado | valido, desvia 1/0
+32337575 4 | 913 | B frame_num/POC/tipo errado | valido, desvia 1/0
+32439156 1 | 917 | B frame_num/POC/tipo errado | valido, desvia 1/1
+32439158 1 | 917 | B frame_num/POC/tipo errado | valido, desvia 1/1
+32930238 0 | 931 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=4095 fora de [0,255]
+32930239 0 | 931 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=4095 fora de [0,255]
+32989669 7 | 934 | B frame_num/POC/tipo errado | valido, desvia 1/0
+33071487 5 | 938 | B frame_num/POC/tipo errado | valido, desvia 2/0
+33071487 0 | 938 | B frame_num/POC/tipo errado | valido, desvia 2/0
+33214685 2 | 943 | A cabecalho invalido | invalido: cabac_init_idc=19 fora de [0,2]
+33214693 2 | 943 | A cabecalho invalido | invalido: cabac_init_idc=19 fora de [0,2]
+33274752 2 | 945 | B frame_num/POC/tipo errado | valido, desvia 2/0
+33274753 3 | 945 | B frame_num/POC/tipo errado | valido, desvia 2/0
+33326039 7 | 946 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+33665015 5 | 958 | A cabecalho invalido | invalido: cabac_init_idc=14 fora de [0,2]
+33818999 5 | 964 | B frame_num/POC/tipo errado | valido, desvia 1/0
+33910979 3 | 968 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=2228247 fora de [0,3]
+34101662 6 | 975 | A cabecalho invalido | invalido: cabac_init_idc=18 fora de [0,2]
+34151415 1 | 978 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+34151418 7 | 978 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+34202676 3 | 979 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=134316162 fora de [0,3]
+34445667 7 | 986 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=511 fora de [0,3]
+34445668 7 | 986 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=511 fora de [0,3]
+34496065 7 | 988 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+34551429 0 | 991 | B frame_num/POC/tipo errado | valido, desvia 1/0
+34551430 3 | 991 | B frame_num/POC/tipo errado | valido, desvia 1/0
+34647602 0 | 995 | B frame_num/POC/tipo errado | valido, desvia 1/0
+34848240 0 | 1001 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/4
+34942188 2 | 1004 | B frame_num/POC/tipo errado | valido, desvia 1/0
+35043350 0 | 1007 | B frame_num/POC/tipo errado | valido, desvia 1/0
+35340703 7 | 1014 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+35486903 4 | 1020 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+35531509 1 | 1021 | B frame_num/POC/tipo errado | valido, desvia 1/0
+35677598 5 | 1027 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+35870933 1 | 1033 | A cabecalho invalido | invalido: beta=16408 fora de [-6,6]
+35870933 0 | 1033 | A cabecalho invalido | invalido: beta=16408 fora de [-6,6]
+35926598 6 | 1036 | A cabecalho invalido | invalido: qp=-92 fora de [0,51]
+35926601 0 | 1036 | A cabecalho invalido | invalido: qp=-92 fora de [0,51]
+36025603 6 | 1039 | B frame_num/POC/tipo errado | valido, desvia 1/0
+36217359 5 | 1043 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+36217363 3 | 1043 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+36312322 2 | 1048 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=6 fora de [0,3]
+36312323 0 | 1048 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=6 fora de [0,3]
+36324578 0 | 1049 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+36414360 4 | 1051 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+36559782 7 | 1057 | B frame_num/POC/tipo errado | valido, desvia 1/0
+36615853 2 | 1058 | B frame_num/POC/tipo errado | valido, desvia 1/2
+36615857 6 | 1058 | B frame_num/POC/tipo errado | valido, desvia 1/2
+37098004 2 | 1070 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+37146878 1 | 1071 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+37357744 1 | 1079 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=4101 fora de [0,255]
+37420095 3 | 1083 | B frame_num/POC/tipo errado | valido, desvia 1/0
+37423245 3 | 1084 | B frame_num/POC/tipo errado | valido, desvia 1/0
+37491693 1 | 1090 | B frame_num/POC/tipo errado | valido, desvia 2/0
+37491694 6 | 1090 | B frame_num/POC/tipo errado | valido, desvia 2/0
+37589587 7 | 1097 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+37885704 5 | 1108 | B frame_num/POC/tipo errado | valido, desvia 1/0
+38039983 6 | 1115 | B frame_num/POC/tipo errado | valido, desvia 1/0
+38382632 6 | 1129 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+38535472 3 | 1134 | A cabecalho invalido | invalido: cabac_init_idc=15 fora de [0,2]
+39115484 7 | 1151 | B frame_num/POC/tipo errado | valido, desvia 1/0
+39173079 5 | 1154 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+39463787 6 | 1167 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+39569895 7 | 1170 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+39999089 7 | 1184 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+39999092 6 | 1184 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+40247599 7 | 1191 | B frame_num/POC/tipo errado | valido, desvia 1/0
+40404379 1 | 1195 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+40404380 3 | 1195 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+40843372 5 | 1203 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=7 fora de [0,3]
+40843374 5 | 1203 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=7 fora de [0,3]
+41087263 4 | 1212 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=4718639 fora de [0,3]
+41087263 0 | 1212 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=4718639 fora de [0,3]
+41254554 0 | 1218 | A cabecalho invalido | invalido: luma_log2_weight_denom=81 fora de [0,7]
+41254556 3 | 1218 | A cabecalho invalido | invalido: luma_log2_weight_denom=81 fora de [0,7]
+41334960 2 | 1219 | B frame_num/POC/tipo errado | valido, desvia 1/1
+41334961 0 | 1219 | B frame_num/POC/tipo errado | valido, desvia 1/1
+41384371 3 | 1221 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=63 fora de [0,3]
+41721232 0 | 1229 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+42262322 2 | 1240 | B frame_num/POC/tipo errado | valido, desvia 1/0
+42307804 3 | 1243 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+42313742 7 | 1244 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+42313742 3 | 1244 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+42361557 3 | 1246 | A cabecalho invalido | invalido: ue com zeros demais
+42361559 7 | 1246 | A cabecalho invalido | invalido: ue com zeros demais
+42555151 1 | 1258 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+42658147 5 | 1264 | B frame_num/POC/tipo errado | valido, desvia 1/0
+42714195 1 | 1266 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=4101 fora de [0,3]
+42714196 5 | 1266 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=4101 fora de [0,3]
+42852720 3 | 1269 | A cabecalho invalido | invalido: qp=-193 fora de [0,51]
+42912587 5 | 1272 | B frame_num/POC/tipo errado | valido, desvia 1/0
+43094016 1 | 1281 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+43199126 2 | 1285 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+43199127 0 | 1285 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+43297388 5 | 1287 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=6 fora de [0,2]
+43345061 2 | 1289 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+43587334 0 | 1294 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+43634697 1 | 1296 | B frame_num/POC/tipo errado | valido, desvia 1/0
+43838907 4 | 1298 | A cabecalho invalido | invalido: chroma_log2_weight_denom=15 fora de [0,7]
+43988830 4 | 1304 | B frame_num/POC/tipo errado | valido, desvia 1/0
+44084803 1 | 1308 | B frame_num/POC/tipo errado | valido, desvia 1/0
+44672194 5 | 1322 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+44725456 4 | 1323 | B frame_num/POC/tipo errado | valido, desvia 1/0
+44725456 2 | 1323 | B frame_num/POC/tipo errado | valido, desvia 1/0
+44766346 2 | 1326 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+45073468 4 | 1337 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+45371304 2 | 1347 | B frame_num/POC/tipo errado | valido, desvia 1/0
+45406426 4 | 1349 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+45601990 6 | 1351 | B frame_num/POC/tipo errado | valido, desvia 1/0
+45657455 6 | 1353 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+45682549 2 | 1355 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+45749195 1 | 1357 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+45749199 6 | 1357 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+45859094 6 | 1360 | B frame_num/POC/tipo errado | valido, desvia 1/0
+46147650 3 | 1370 | B frame_num/POC/tipo errado | valido, desvia 1/0
+46747368 6 | 1385 | B frame_num/POC/tipo errado | valido, desvia 2/0
+46747369 3 | 1385 | B frame_num/POC/tipo errado | valido, desvia 2/0
+46792836 7 | 1388 | A cabecalho invalido | invalido: ue com zeros demais
+46792836 3 | 1388 | A cabecalho invalido | invalido: ue com zeros demais
+47131549 4 | 1397 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+47961206 0 | 1425 | A cabecalho invalido | invalido: luma_log2_weight_denom=70 fora de [0,7]
+47961210 2 | 1425 | A cabecalho invalido | invalido: luma_log2_weight_denom=70 fora de [0,7]
+48010729 0 | 1426 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+48169778 2 | 1433 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+48405580 3 | 1440 | B frame_num/POC/tipo errado | valido, desvia 1/0
+48561110 5 | 1447 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+48561114 0 | 1447 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+48605280 5 | 1450 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+48811249 3 | 1459 | B frame_num/POC/tipo errado | valido, desvia 2/0
+48811250 4 | 1459 | B frame_num/POC/tipo errado | valido, desvia 2/0
+48854190 3 | 1461 | B frame_num/POC/tipo errado | valido, desvia 1/0
+49054080 2 | 1468 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=1023 fora de [0,3]
+49054082 7 | 1468 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=1023 fora de [0,3]
+49099233 7 | 1471 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+49099235 5 | 1471 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+49141137 6 | 1472 | A cabecalho invalido | invalido: cabac_init_idc=14 fora de [0,2]
+49141138 1 | 1472 | A cabecalho invalido | invalido: cabac_init_idc=14 fora de [0,2]
+49242751 7 | 1477 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+49242753 7 | 1477 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+49348098 2 | 1481 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+49348100 7 | 1481 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+49485554 3 | 1487 | A cabecalho invalido | invalido: ue com zeros demais
+49485556 3 | 1487 | A cabecalho invalido | invalido: ue com zeros demais
+49543924 7 | 1489 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=263 fora de [0,255]
+49543925 7 | 1489 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=263 fora de [0,255]
+49783158 7 | 1497 | B frame_num/POC/tipo errado | valido, desvia 1/0
+49783158 5 | 1497 | B frame_num/POC/tipo errado | valido, desvia 1/0
+49935504 5 | 1506 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+49935505 1 | 1506 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+50039953 1 | 1512 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+50039957 2 | 1512 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+50229141 4 | 1519 | B frame_num/POC/tipo errado | valido, desvia 1/0
+50334123 0 | 1522 | B frame_num/POC/tipo errado | valido, desvia 1/0
+50532280 6 | 1526 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+50623801 7 | 1532 | A cabecalho invalido | invalido: long_term_pic_num=131071 fora de [0,255]
+50674469 6 | 1534 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+50911099 2 | 1544 | B frame_num/POC/tipo errado | valido, desvia 2/0
+50911100 3 | 1544 | B frame_num/POC/tipo errado | valido, desvia 2/0
+51017512 1 | 1548 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+51121943 5 | 1551 | B frame_num/POC/tipo errado | valido, desvia 1/0
+51314364 2 | 1554 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+51363733 0 | 1556 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+51363736 3 | 1556 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+51809397 3 | 1573 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=1048581 fora de [0,3]
+51893000 2 | 1575 | B frame_num/POC/tipo errado | valido, desvia 1/0
+52342964 0 | 1587 | A cabecalho invalido | invalido: chroma_log2_weight_denom=70 fora de [0,7]
+52342966 2 | 1587 | A cabecalho invalido | invalido: chroma_log2_weight_denom=70 fora de [0,7]
+52531503 7 | 1594 | B frame_num/POC/tipo errado | valido, desvia 1/0
+52531503 1 | 1594 | B frame_num/POC/tipo errado | valido, desvia 1/0
+52662196 3 | 1599 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52662197 6 | 1599 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52755234 3 | 1601 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52755235 6 | 1601 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52774411 3 | 1602 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52774412 6 | 1602 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52794779 3 | 1603 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52794780 6 | 1603 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52858388 3 | 1604 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52858389 6 | 1604 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52911491 3 | 1606 | B frame_num/POC/tipo errado | valido, desvia 2/0
+52911492 6 | 1606 | B frame_num/POC/tipo errado | valido, desvia 2/0
+53376582 1 | 1617 | B frame_num/POC/tipo errado | valido, desvia 1/1
+53376584 3 | 1617 | B frame_num/POC/tipo errado | valido, desvia 1/1
+53517212 3 | 1624 | A cabecalho invalido | invalido: mmco=148204 fora de [0,6]
+53815463 6 | 1631 | A cabecalho invalido | invalido: cabac_init_idc=14 fora de [0,2]
+53815464 1 | 1631 | A cabecalho invalido | invalido: cabac_init_idc=14 fora de [0,2]
+53960003 1 | 1638 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+54234186 7 | 1646 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+54234187 2 | 1646 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+54303044 7 | 1647 | B frame_num/POC/tipo errado | valido, desvia 1/0
+54303044 6 | 1647 | B frame_num/POC/tipo errado | valido, desvia 1/0
+54906281 7 | 1662 | B frame_num/POC/tipo errado | valido, desvia 1/0
+55152291 6 | 1668 | A cabecalho invalido | invalido: cabac_init_idc=18 fora de [0,2]
+55152293 6 | 1668 | A cabecalho invalido | invalido: cabac_init_idc=18 fora de [0,2]
+55199650 0 | 1670 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=15 fora de [0,3]
+55199653 3 | 1670 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=15 fora de [0,3]
+55485259 2 | 1677 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+55533603 7 | 1679 | B frame_num/POC/tipo errado | valido, desvia 1/0
+56231771 5 | 1695 | B frame_num/POC/tipo errado | valido, desvia 1/0
+56375393 1 | 1698 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+56375395 4 | 1698 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+56612217 6 | 1704 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+56625611 6 | 1705 | B frame_num/POC/tipo errado | valido, desvia 1/0
+56758591 6 | 1710 | B frame_num/POC/tipo errado | valido, desvia 1/0
+57208772 3 | 1718 | B frame_num/POC/tipo errado | valido, desvia 1/0
+57262145 5 | 1720 | B frame_num/POC/tipo errado | valido, desvia 2/0
+57262146 4 | 1720 | B frame_num/POC/tipo errado | valido, desvia 2/0
+57348263 7 | 1722 | B frame_num/POC/tipo errado | valido, desvia 1/1
+57348265 1 | 1722 | B frame_num/POC/tipo errado | valido, desvia 1/1
+57499019 3 | 1727 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+57551739 3 | 1729 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+57746408 0 | 1733 | B frame_num/POC/tipo errado | valido, desvia 2/0
+57746410 4 | 1733 | B frame_num/POC/tipo errado | valido, desvia 2/0
+57844398 5 | 1734 | A cabecalho invalido | invalido: ue com zeros demais
+57844399 7 | 1734 | A cabecalho invalido | invalido: ue com zeros demais
+58288366 0 | 1743 | B frame_num/POC/tipo errado | valido, desvia 1/1
+58288371 6 | 1743 | B frame_num/POC/tipo errado | valido, desvia 1/1
+58336291 7 | 1746 | B frame_num/POC/tipo errado | valido, desvia 1/0
+58438260 3 | 1749 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=1023 fora de [0,255]
+58438263 7 | 1749 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=1023 fora de [0,255]
+58528937 0 | 1751 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+58528940 7 | 1751 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+58687092 3 | 1757 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+58826745 4 | 1761 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+58972396 5 | 1765 | B frame_num/POC/tipo errado | valido, desvia 1/0
+59466930 6 | 1780 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+59466932 7 | 1780 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+59475693 5 | 1781 | B frame_num/POC/tipo errado | valido, desvia 1/1
+59475695 4 | 1781 | B frame_num/POC/tipo errado | valido, desvia 1/1
+59514288 6 | 1783 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+59565681 6 | 1787 | B frame_num/POC/tipo errado | valido, desvia 1/0
+59571462 3 | 1788 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=15 fora de [0,3]
+59571464 0 | 1788 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=15 fora de [0,3]
+59660083 7 | 1794 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=142 fora de [0,3]
+59707822 5 | 1797 | B frame_num/POC/tipo errado | valido, desvia 1/0
+59714788 7 | 1798 | B frame_num/POC/tipo errado | valido, desvia 1/0
+59865278 6 | 1803 | B frame_num/POC/tipo errado | valido, desvia 1/0
+59920020 6 | 1807 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+60260391 0 | 1824 | B frame_num/POC/tipo errado | valido, desvia 1/0
+60498516 0 | 1832 | B frame_num/POC/tipo errado | valido, desvia 1/0
+60641517 5 | 1837 | B frame_num/POC/tipo errado | valido, desvia 1/0
+60705022 0 | 1841 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+60853639 4 | 1850 | B frame_num/POC/tipo errado | valido, desvia 2/0
+60853639 0 | 1850 | B frame_num/POC/tipo errado | valido, desvia 2/0
+60901973 7 | 1852 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=203039 fora de [0,255]
+60951563 6 | 1855 | B frame_num/POC/tipo errado | valido, desvia 1/1
+60951566 4 | 1855 | B frame_num/POC/tipo errado | valido, desvia 1/1
+61233041 7 | 1866 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+61294060 7 | 1868 | B frame_num/POC/tipo errado | valido, desvia 2/0
+61294061 4 | 1868 | B frame_num/POC/tipo errado | valido, desvia 2/0
+61439879 5 | 1874 | A cabecalho invalido | invalido: ue com zeros demais
+62270968 1 | 1897 | B frame_num/POC/tipo errado | valido, desvia 1/0
+62418851 2 | 1902 | B frame_num/POC/tipo errado | valido, desvia 1/0
+62868964 2 | 1914 | B frame_num/POC/tipo errado | valido, desvia 1/0
+63296260 1 | 1923 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+63296263 1 | 1923 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+63404550 5 | 1928 | A cabecalho invalido | invalido: ue com zeros demais
+63985073 3 | 1944 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+64141694 4 | 1948 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+64384777 0 | 1951 | B frame_num/POC/tipo errado | valido, desvia 1/0
+64479753 3 | 1956 | B frame_num/POC/tipo errado | valido, desvia 1/0
+64834996 1 | 1967 | A cabecalho invalido | invalido: qp=-193 fora de [0,51]
+65226714 1 | 1977 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+65226717 2 | 1977 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+65862194 6 | 1995 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+65862194 0 | 1995 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+65952795 7 | 1997 | A cabecalho invalido | invalido: cabac_init_idc=30 fora de [0,2]
+65952797 6 | 1997 | A cabecalho invalido | invalido: cabac_init_idc=30 fora de [0,2]
+66544043 7 | 2011 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+66555809 4 | 2012 | A cabecalho invalido | invalido: cabac_init_idc=34 fora de [0,2]
+66885970 1 | 2024 | B frame_num/POC/tipo errado | valido, desvia 1/0
+66998483 3 | 2027 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+67095176 3 | 2029 | B frame_num/POC/tipo errado | valido, desvia 1/0
+67278666 1 | 2034 | B frame_num/POC/tipo errado | valido, desvia 1/0
+67523282 2 | 2038 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=1537 fora de [0,3]
+67531212 2 | 2039 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+67622412 4 | 2042 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+67622413 4 | 2042 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+67633331 4 | 2043 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+67777014 0 | 2049 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+67777016 3 | 2049 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+67875368 7 | 2050 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=199 fora de [0,3]
+68213367 2 | 2060 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+68657208 5 | 2068 | B frame_num/POC/tipo errado | valido, desvia 1/0
+68863492 6 | 2074 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=65535 fora de [0,255]
+68959795 4 | 2080 | B frame_num/POC/tipo errado | valido, desvia 1/0
+69047155 3 | 2085 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+69106036 4 | 2087 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+69400240 0 | 2098 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+69400242 4 | 2098 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+69593230 6 | 2102 | A cabecalho invalido | invalido: qp=-193 fora de [0,51]
+69593233 3 | 2102 | A cabecalho invalido | invalido: qp=-193 fora de [0,51]
+69638878 4 | 2104 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+69747937 6 | 2110 | A cabecalho invalido | invalido: chroma_log2_weight_denom=65 fora de [0,7]
+69838874 2 | 2113 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=753663 fora de [0,3]
+69838876 5 | 2113 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=753663 fora de [0,3]
+69852857 3 | 2114 | A cabecalho invalido | invalido: mmco=7 fora de [0,6]
+70094006 2 | 2120 | B frame_num/POC/tipo errado | valido, desvia 1/0
+70229612 3 | 2123 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+70229615 4 | 2123 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+70733444 3 | 2135 | B frame_num/POC/tipo errado | valido, desvia 1/0
+70927973 6 | 2140 | B frame_num/POC/tipo errado | valido, desvia 1/0
+71112865 4 | 2147 | B frame_num/POC/tipo errado | valido, desvia 1/1
+71112870 7 | 2147 | B frame_num/POC/tipo errado | valido, desvia 1/1
+71211249 7 | 2149 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=2047 fora de [0,255]
+71268325 0 | 2151 | A cabecalho invalido | invalido: luma_log2_weight_denom=69 fora de [0,7]
+71319330 6 | 2153 | A cabecalho invalido | invalido: ue com zeros demais
+71319332 7 | 2153 | A cabecalho invalido | invalido: ue com zeros demais
+71363881 4 | 2155 | B frame_num/POC/tipo errado | valido, desvia 1/0
+71856080 3 | 2175 | B frame_num/POC/tipo errado | valido, desvia 1/0
+71862701 6 | 2176 | B frame_num/POC/tipo errado | valido, desvia 1/0
+71946585 1 | 2179 | B frame_num/POC/tipo errado | valido, desvia 1/0
+72440226 2 | 2196 | B frame_num/POC/tipo errado | valido, desvia 1/0
+72893178 1 | 2211 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+73027798 1 | 2215 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+73323251 0 | 2224 | B frame_num/POC/tipo errado | valido, desvia 1/1
+73323255 3 | 2224 | B frame_num/POC/tipo errado | valido, desvia 1/1
+73335603 2 | 2225 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+73335605 6 | 2225 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+73533185 4 | 2232 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+73922547 0 | 2244 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+74357347 7 | 2261 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+74609471 4 | 2273 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+74609473 3 | 2273 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+74763893 4 | 2276 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+74763897 1 | 2276 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+74802211 4 | 2278 | B frame_num/POC/tipo errado | valido, desvia 1/1
+74802213 6 | 2278 | B frame_num/POC/tipo errado | valido, desvia 1/1
+75157067 7 | 2293 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+75157071 2 | 2293 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+75451600 2 | 2302 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+75451602 5 | 2302 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+77496466 2 | 2360 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+77816103 5 | 2364 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+77816103 2 | 2364 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+78021333 0 | 2372 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+78206515 6 | 2377 | B frame_num/POC/tipo errado | valido, desvia 1/0
+78371357 5 | 2380 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+78615584 0 | 2386 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=18 fora de [0,3]
+78615585 7 | 2386 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=18 fora de [0,3]
+78851217 4 | 2390 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+78851218 2 | 2390 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+79189709 0 | 2395 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+79262764 4 | 2398 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+79262765 6 | 2398 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=3 fora de [0,2]
+79393186 3 | 2402 | B frame_num/POC/tipo errado | valido, desvia 1/0
+79411243 5 | 2403 | B frame_num/POC/tipo errado | valido, desvia 1/1
+79411243 0 | 2403 | B frame_num/POC/tipo errado | valido, desvia 1/1
+79512226 3 | 2405 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/4
+79547617 1 | 2407 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+79547621 2 | 2407 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+79660698 7 | 2409 | A cabecalho invalido | invalido: abs_diff_pic_num_minus1=137215 fora de [0,255]
+79699360 7 | 2410 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+79966344 3 | 2416 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+79966345 1 | 2416 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+80100121 0 | 2417 | B frame_num/POC/tipo errado | valido, desvia 1/0
+80100122 7 | 2417 | B frame_num/POC/tipo errado | valido, desvia 1/0
+80198245 0 | 2419 | B frame_num/POC/tipo errado | valido, desvia 1/0
+80533258 1 | 2421 | B frame_num/POC/tipo errado | valido, desvia 1/0
+80614038 7 | 2425 | A cabecalho invalido | invalido: cabac_init_idc=20 fora de [0,2]
+80614041 5 | 2425 | A cabecalho invalido | invalido: cabac_init_idc=20 fora de [0,2]
+80693576 4 | 2427 | B frame_num/POC/tipo errado | valido, desvia 1/1
+80693578 4 | 2427 | B frame_num/POC/tipo errado | valido, desvia 1/1
+80812900 7 | 2430 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+80871619 6 | 2433 | B frame_num/POC/tipo errado | valido, desvia 1/0
+80984921 7 | 2435 | A cabecalho invalido | invalido: cabac_init_idc=34 fora de [0,2]
+80984924 6 | 2435 | A cabecalho invalido | invalido: cabac_init_idc=34 fora de [0,2]
+81023789 7 | 2437 | B frame_num/POC/tipo errado | valido, desvia 1/0
+81353703 3 | 2442 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+81353703 1 | 2442 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+81407746 7 | 2443 | B frame_num/POC/tipo errado | valido, desvia 2/0
+81407747 6 | 2443 | B frame_num/POC/tipo errado | valido, desvia 2/0
+81614369 2 | 2451 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=14 fora de [0,3]
+81758863 4 | 2456 | B frame_num/POC/tipo errado | valido, desvia 1/0
+81895039 2 | 2459 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+81895043 4 | 2459 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+82683775 3 | 2479 | B frame_num/POC/tipo errado | valido, desvia 1/3
+82683777 7 | 2479 | B frame_num/POC/tipo errado | valido, desvia 1/3
+82907078 5 | 2485 | B frame_num/POC/tipo errado | valido, desvia 1/0
+83023873 6 | 2489 | A cabecalho invalido | invalido: cabac_init_idc=14 fora de [0,2]
+83516123 2 | 2504 | B frame_num/POC/tipo errado | valido, desvia 1/0
+83575175 2 | 2505 | A cabecalho invalido | invalido: qp=80 fora de [0,51]
+83575176 1 | 2505 | A cabecalho invalido | invalido: qp=80 fora de [0,51]
+83666293 4 | 2509 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+83912422 0 | 2517 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+83970796 5 | 2520 | B frame_num/POC/tipo errado | valido, desvia 2/0
+83970797 1 | 2520 | B frame_num/POC/tipo errado | valido, desvia 2/0
+84748446 5 | 2545 | B frame_num/POC/tipo errado | valido, desvia 1/0
+84842259 6 | 2548 | B frame_num/POC/tipo errado | valido, desvia 1/0
+84949900 7 | 2551 | A cabecalho invalido | invalido: long_term_pic_num=288767 fora de [0,255]
+85146736 6 | 2556 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+85146738 0 | 2556 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+85725395 3 | 2581 | B frame_num/POC/tipo errado | valido, desvia 2/0
+85725396 3 | 2581 | B frame_num/POC/tipo errado | valido, desvia 2/0
+85781024 4 | 2582 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+85978545 3 | 2588 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+86272990 0 | 2600 | B frame_num/POC/tipo errado | valido, desvia 1/3
+86272992 2 | 2600 | B frame_num/POC/tipo errado | valido, desvia 1/3
+86325164 6 | 2601 | B frame_num/POC/tipo errado | valido, desvia 2/0
+86325164 0 | 2601 | B frame_num/POC/tipo errado | valido, desvia 2/0
+86364940 2 | 2603 | B frame_num/POC/tipo errado | valido, desvia 1/0
+86760024 7 | 2614 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=255 fora de [0,3]
+86760025 7 | 2614 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=255 fora de [0,3]
+86771720 2 | 2615 | B frame_num/POC/tipo errado | valido, desvia 1/0
+87067499 0 | 2627 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+87103433 0 | 2629 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+87460936 2 | 2640 | B frame_num/POC/tipo errado | valido, desvia 1/1
+87460940 2 | 2640 | B frame_num/POC/tipo errado | valido, desvia 1/1
+87643169 0 | 2645 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+87643170 2 | 2645 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+87655188 7 | 2646 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+88197291 7 | 2665 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+88197293 5 | 2665 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+88832779 3 | 2681 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+88832780 0 | 2681 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+88975841 0 | 2686 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+89328602 0 | 2693 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=33151 fora de [0,3]
+89363645 2 | 2694 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=20 fora de [0,3]
+89363645 0 | 2694 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=20 fora de [0,3]
+89561572 4 | 2698 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+89561574 7 | 2698 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+89909669 0 | 2701 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+89909671 6 | 2701 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+89918554 5 | 2702 | B frame_num/POC/tipo errado | valido, desvia 1/0
+90007998 5 | 2706 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=67071 fora de [0,3]
+90007999 7 | 2706 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=67071 fora de [0,3]
+90542157 2 | 2727 | B frame_num/POC/tipo errado | valido, desvia 1/0
+90951132 5 | 2735 | B frame_num/POC/tipo errado | valido, desvia 1/1
+90951133 4 | 2735 | B frame_num/POC/tipo errado | valido, desvia 1/1
+91034970 0 | 2738 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+91034974 4 | 2738 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+91093424 3 | 2741 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=10 fora de [0,2]
+91093427 4 | 2741 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=10 fora de [0,2]
+91481443 2 | 2750 | B frame_num/POC/tipo errado | valido, desvia 1/1
+91481446 4 | 2750 | B frame_num/POC/tipo errado | valido, desvia 1/1
+91533855 0 | 2752 | B frame_num/POC/tipo errado | valido, desvia 1/1
+91533857 1 | 2752 | B frame_num/POC/tipo errado | valido, desvia 1/1
+92019810 0 | 2758 | A cabecalho invalido | invalido: cabac_init_idc=38 fora de [0,2]
+92019812 2 | 2758 | A cabecalho invalido | invalido: cabac_init_idc=38 fora de [0,2]
+92170288 7 | 2764 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+92170289 7 | 2764 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+92567564 2 | 2775 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+92810260 2 | 2780 | B frame_num/POC/tipo errado | valido, desvia 1/0
+93106332 5 | 2785 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+93106337 2 | 2785 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+93455605 6 | 2788 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+93455607 1 | 2788 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+93556689 5 | 2792 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=5 fora de [0,2]
+93739984 7 | 2799 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+93739985 0 | 2799 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+93839777 3 | 2800 | B frame_num/POC/tipo errado | valido, desvia 1/0
+94289204 4 | 2815 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+94436572 3 | 2820 | B frame_num/POC/tipo errado | valido, desvia 1/0
+94477503 7 | 2822 | B frame_num/POC/tipo errado | valido, desvia 1/0
+94626776 7 | 2826 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3
+94720584 4 | 2828 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+94970108 4 | 2833 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=47 fora de [0,3]
+94970110 1 | 2833 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=47 fora de [0,3]
+95074157 5 | 2838 | B frame_num/POC/tipo errado | valido, desvia 1/0
+95275974 4 | 2845 | B frame_num/POC/tipo errado | valido, desvia 1/0
+95417168 3 | 2849 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=6 fora de [0,2]
+95417169 1 | 2849 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=6 fora de [0,2]
+95458780 7 | 2850 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=5 fora de [0,3]
+95570690 0 | 2852 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=4 fora de [0,3]
+95570692 2 | 2852 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=4 fora de [0,3]
+95761876 0 | 2857 | A cabecalho invalido | invalido: ue com zeros demais
+96058736 7 | 2864 | B frame_num/POC/tipo errado | valido, desvia 1/0
+96210458 0 | 2869 | B frame_num/POC/tipo errado | valido, desvia 1/0
+96210459 3 | 2869 | B frame_num/POC/tipo errado | valido, desvia 1/0
+96350327 2 | 2873 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=16 fora de [0,3]
+96406559 2 | 2876 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=13 fora de [0,2]
+96491702 3 | 2877 | B frame_num/POC/tipo errado | valido, desvia 1/0
+96542260 1 | 2879 | B frame_num/POC/tipo errado | valido, desvia 1/0
+97525706 5 | 2903 | A cabecalho invalido | invalido: ue com zeros demais
+97680372 2 | 2907 | B frame_num/POC/tipo errado | valido, desvia 1/0
+97829130 6 | 2910 | B frame_num/POC/tipo errado | valido, desvia 1/0
+98164798 3 | 2918 | B frame_num/POC/tipo errado | valido, desvia 1/0
+98268691 6 | 2921 | A cabecalho invalido | invalido: cabac_init_idc=22 fora de [0,2]
+98655423 5 | 2932 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=7 fora de [0,2]
+98854976 2 | 2937 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+98854978 2 | 2937 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+99045385 5 | 2941 | B frame_num/POC/tipo errado | valido, desvia 1/0
+99045385 3 | 2941 | B frame_num/POC/tipo errado | valido, desvia 1/0
+99404168 7 | 2946 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+100132723 0 | 2966 | B frame_num/POC/tipo errado | valido, desvia 1/0
+100632928 1 | 2972 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+100774521 6 | 2977 | B frame_num/POC/tipo errado | valido, desvia 1/1
+100774522 1 | 2977 | B frame_num/POC/tipo errado | valido, desvia 1/1
+100823945 2 | 2980 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+100919274 5 | 2983 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+101272155 1 | 2991 | A cabecalho invalido | invalido: cabac_init_idc=38 fora de [0,2]
+101272158 6 | 2991 | A cabecalho invalido | invalido: cabac_init_idc=38 fora de [0,2]
+101416455 3 | 2993 | A cabecalho invalido | invalido: ue com zeros demais
+101416457 1 | 2993 | A cabecalho invalido | invalido: ue com zeros demais
+101519107 5 | 2996 | A cabecalho invalido | invalido: chroma_log2_weight_denom=269 fora de [0,7]
+102387863 0 | 3014 | A cabecalho invalido | invalido: qp=-92 fora de [0,51]
+102387865 4 | 3014 | A cabecalho invalido | invalido: qp=-92 fora de [0,51]
+102493937 3 | 3017 | B frame_num/POC/tipo errado | valido, desvia 1/0
+102740182 4 | 3025 | B frame_num/POC/tipo errado | valido, desvia 1/0
+102933612 1 | 3028 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+103226922 0 | 3040 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+103226923 0 | 3040 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+103283271 0 | 3041 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+103386030 1 | 3045 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+103386032 1 | 3045 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+103484067 5 | 3048 | B frame_num/POC/tipo errado | valido, desvia 1/0
+103570709 0 | 3051 | B frame_num/POC/tipo errado | valido, desvia 1/0
+103673478 4 | 3056 | B frame_num/POC/tipo errado | valido, desvia 1/0
+103766539 5 | 3059 | B frame_num/POC/tipo errado | valido, desvia 1/0
+104163765 7 | 3069 | B frame_num/POC/tipo errado | valido, desvia 1/0
+104209433 4 | 3071 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+104305392 0 | 3074 | A cabecalho invalido | invalido: cabac_init_idc=6 fora de [0,2]
+104305396 6 | 3074 | A cabecalho invalido | invalido: cabac_init_idc=6 fora de [0,2]
+104603853 2 | 3078 | A cabecalho invalido | invalido: alpha=-15 fora de [-6,6]
+104603853 1 | 3078 | A cabecalho invalido | invalido: alpha=-15 fora de [-6,6]
+104656224 0 | 3081 | A cabecalho invalido | invalido: chroma=4104 fora de [-128,127]
+104753545 1 | 3082 | B frame_num/POC/tipo errado | valido, desvia 1/0
+104810154 2 | 3085 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+104810157 2 | 3085 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+104955175 7 | 3089 | B frame_num/POC/tipo errado | valido, desvia 1/1
+104955179 4 | 3089 | B frame_num/POC/tipo errado | valido, desvia 1/1
+105093651 7 | 3093 | A cabecalho invalido | invalido: cabac_init_idc=65 fora de [0,2]
+105093653 4 | 3093 | A cabecalho invalido | invalido: cabac_init_idc=65 fora de [0,2]
+105299134 5 | 3098 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+105299137 6 | 3098 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+105346003 5 | 3100 | B frame_num/POC/tipo errado | valido, desvia 1/2
+105346005 0 | 3100 | B frame_num/POC/tipo errado | valido, desvia 1/2
+105632324 7 | 3117 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=519 fora de [0,3]
+105632326 0 | 3117 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=519 fora de [0,3]
+105637786 0 | 3118 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+105637792 4 | 3118 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+106028201 3 | 3132 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+106033741 1 | 3133 | B frame_num/POC/tipo errado | valido, desvia 2/0
+106033742 4 | 3133 | B frame_num/POC/tipo errado | valido, desvia 2/0
+106179745 0 | 3143 | A cabecalho invalido | invalido: luma_log2_weight_denom=69 fora de [0,7]
+106322412 1 | 3150 | B frame_num/POC/tipo errado | valido, desvia 1/1
+106322415 4 | 3150 | B frame_num/POC/tipo errado | valido, desvia 1/1
+106329358 7 | 3151 | B frame_num/POC/tipo errado | valido, desvia 1/0
+106380741 5 | 3153 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=12 fora de [0,2]
+106380741 3 | 3153 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=12 fora de [0,2]
+106622249 1 | 3159 | B frame_num/POC/tipo errado | valido, desvia 1/0
+106767401 6 | 3167 | A cabecalho invalido | invalido: cabac_init_idc=10 fora de [0,2]
+106773469 5 | 3168 | A cabecalho invalido | invalido: chroma_log2_weight_denom=7022 fora de [0,7]
+106773470 5 | 3168 | A cabecalho invalido | invalido: chroma_log2_weight_denom=7022 fora de [0,7]
+106819350 0 | 3169 | A cabecalho invalido | invalido: ue com zeros demais
+106819354 7 | 3169 | A cabecalho invalido | invalido: ue com zeros demais
+106912845 2 | 3173 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+106922745 4 | 3174 | B frame_num/POC/tipo errado | valido, desvia 1/0
+107121075 1 | 3181 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/1
+107659183 7 | 3196 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=26 fora de [0,3]
+107659194 4 | 3196 | A cabecalho invalido | invalido: modification_of_pic_nums_idc=26 fora de [0,3]
+107795236 1 | 3202 | A cabecalho invalido | invalido: beta=14 fora de [-6,6]
+107996202 3 | 3214 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+107996207 1 | 3214 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+108397204 5 | 3226 | B frame_num/POC/tipo errado | valido, desvia 1/0
+108491390 7 | 3232 | B frame_num/POC/tipo errado | valido, desvia 1/0
+108635524 6 | 3239 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2
+108836820 3 | 3247 | B frame_num/POC/tipo errado | valido, desvia 2/0
+108836821 2 | 3247 | B frame_num/POC/tipo errado | valido, desvia 2/0
+109085049 1 | 3250 | A cabecalho invalido | invalido: pps_id=295 fora de [0,0]
+109085051 6 | 3250 | A cabecalho invalido | invalido: pps_id=295 fora de [0,0]
+109122431 6 | 3252 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+109122431 1 | 3252 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+109127022 2 | 3253 | B frame_num/POC/tipo errado | valido, desvia 1/0
+109181787 0 | 3255 | B frame_num/POC/tipo errado | valido, desvia 1/0
+109181788 4 | 3255 | B frame_num/POC/tipo errado | valido, desvia 1/0
+109272919 0 | 3260 | B frame_num/POC/tipo errado | valido, desvia 1/0
+109272920 5 | 3260 | B frame_num/POC/tipo errado | valido, desvia 1/0
+109428857 3 | 3267 | A cabecalho invalido | invalido: disable_deblocking_filter_idc=4 fora de [0,2]
+109474437 1 | 3270 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0
+109565901 5 | 3272 | B frame_num/POC/tipo errado | valido, desvia 1/0
+110160724 3 | 3286 | B frame_num/POC/tipo errado | valido, desvia 1/0
+110561730 5 | 3295 | B frame_num/POC/tipo errado | valido, desvia 1/1
+110561733 7 | 3295 | B frame_num/POC/tipo errado | valido, desvia 1/1
+110645691 6 | 3296 | B frame_num/POC/tipo errado | valido, desvia 2/0
+110645691 0 | 3296 | B frame_num/POC/tipo errado | valido, desvia 2/0
+110797810 0 | 3302 | B frame_num/POC/tipo errado | valido, desvia 1/0
+110807411 6 | 3303 | A cabecalho invalido | invalido: cabac_init_idc=10 fora de [0,2]
+110807411 3 | 3303 | A cabecalho invalido | invalido: cabac_init_idc=10 fora de [0,2]
+110896578 0 | 3307 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/3

@@ -18,6 +18,21 @@ referência quebrada. Vistos um a um, 42 estão listrados; o único bom é o fra
 Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 (1140–1142, 1583–1585, 1685–1687, 1979–1981, 2161–2163): nenhum é imagem boa.
 
+### Depois do lote de cabeçalhos (mesmo dia)
+
+| | |
+|---|---|
+| `patches.txt` | 2.623 linhas (+791: cabeçalhos de slice de 573 quadros, `dados/patches_cabecalho.txt`) |
+| `serie 0 3444` com a cadeia de referência (`TARJA=1`) | **167** — idêntico antes e depois do lote. O conjunto é as três ilhas + o 1683 (listrado, falso positivo); o 12 fica de fora por depender do frame 11 |
+| imagens dos 167 bons | **byte a byte iguais** antes e depois do lote |
+| `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **165 / 2.129 / 1.151** |
+| `verify` com `BASE_N=1338` | 5 válidos, os mesmos 10 falsos explicados, 1.270 pulados |
+
+**Consertado por reparo neste lote: cabeçalhos, não imagem.** Nenhum quadro novo
+ficou bom — o que já se sabia do trabalho de cabeçalho anterior (RASTREIO.md):
+o dano continua no corpo. O ganho é que toda busca futura nesses 573 quadros
+parte de um cabeçalho correto; antes, 157 deles nem chegavam a gerar imagem.
+
 ## Medida de 2026-09-17 (o 209 está inflado — ver acima)
 
 Medido com `TARJA=1 ./reparador.exe "$MP4" index.txt patches.txt serie 0 3444`,

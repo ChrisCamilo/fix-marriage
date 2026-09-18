@@ -352,3 +352,13 @@
 # (os trechos periodicos da tarja e as corridas de skip do campo) e deixar o
 # decodificador julgar. Sem garantia: as partes nao periodicas (MB 0, trocas de
 # fileira, imagem) tambem tem ~3% de bits trocados.
+
+# ============================================================================
+# 2026-09-18 -- O PAR DO CABECALHO ENTROU NO patches.txt (aprovado pelo usuario)
+#
+#   147709 7  +  147712 1
+#
+# O cabecalho do slice agora e valido e igual ao do frame 9 campo a campo. O
+# cabecalho_slice.py acha 2 solucoes; a outra (147707 0 + 147712 1) prediz a
+# tarja em 34 e croma 255 no MB 0 -- o pixel decide. O quadro segue ocultado: o
+# erro passa a ser no MB 1, e o corpo do slice esta na zona de dano de ~3%.

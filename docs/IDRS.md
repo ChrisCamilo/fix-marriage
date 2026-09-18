@@ -179,11 +179,11 @@ bits sabidamente errados.
 | IDRs no índice | **132** |
 | que **analisam** os 8.160 macroblocos (`mapa`) | **59** |
 | que não analisam | **73** |
-| que decodificam limpo **e com imagem** (critério rigoroso) | **7** — 1683, 2333, 3319, 3348, 3368, 3397, 3426 |
+| que decodificam limpo **e com imagem** (critério rigoroso) | **7** — 1683, 2333, 3319, 3348, 3368, 3397, 3426. **O 1683 é listrado da metade para baixo** (armadilha 56): imagem boa de verdade são 6 |
 | cabeçalhos fechados | **130 de 131** |
-| `patches.txt` | **1.832** linhas |
+| `patches.txt` | **2.623** linhas (1.832 + 791 de cabeçalho de slice, 2026-09-18) |
 | `deterministicos.txt` | **479** |
-| `verify` com `BASE_N=1338` | **5 válidos, 10 falsos, 479 pulados** — os 10 estão explicados no `AGENTS.md` |
+| `verify` com `BASE_N=1338` | **5 válidos, 10 falsos, 1.270 pulados** (479 determinísticos + 791 de cabeçalho) — os 10 estão explicados no `AGENTS.md` |
 
 **"Analisa 100%" não é "tem imagem".** Dos 132 IDRs, 59 percorrem os 8.160
 macroblocos sem erro, mas só 7 produzem quadro que passa no critério rigoroso.

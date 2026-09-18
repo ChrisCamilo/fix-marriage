@@ -74,6 +74,10 @@ casos=(
   "dump|dump 2333 SAIDA.pgm|"
   "dumpyuv|dumpyuv 2333 SAIDA.yuv|"
   "serie|serie 2333 2340 SAIDA.yuv SAIDA.txt|"
+  # Cadeia QUEBRADA: o IDR 953 e borrao e o serie tem que recusar os quadros
+  # que decodificam sem erro em cima dele (armadilha 56). O caso acima cai
+  # numa ilha, onde a cadeia inteira e boa, e nao exercita a regra.
+  "serie_cadeia|serie 953 962 SAIDA.yuv SAIDA.txt|"
   "verify|verify|BASE_N=1830"
   "report|report|"
 )
