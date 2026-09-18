@@ -1,0 +1,81 @@
+# mapa_dano.txt -- onde o arquivo esta danificado, medido em conteudo conhecido.
+# Gerado por `python ferramentas/mapa_dano.py` em 2026-09-18, sobre o MP4
+# ORIGINAL (dano total, inclusive o que o patches.txt ja corrigiu).
+#
+# CONCLUSAO
+#
+# O bit-rot NAO e uniforme. Ele vem em ZONAS com 2-5% dos bits trocados; fora
+# delas o arquivo esta praticamente limpo. Tres evidencias independentes:
+#
+#  1. Enchimento (00 00 03): limpo em 0,11-0,13 MB, 48-50 MB, 104 MB, 113-114 MB;
+#     danificado em 0,147-0,150 MB (frames 10 e 11: 4-4,5%) e 59,8-60,4 MB
+#     (frames 1802 e 1831: ~2%).
+#  2. Os 5 primeiros bytes de cada quadro (40 bits conhecidos, onde caem os
+#     1.338 deterministicos): 0,97% em media, mas a distribuicao por quadro NAO
+#     e binomial. Uniforme daria 915 quadros com 1 troca e 2 com 4; o arquivo tem
+#     406 e 39. Poucos quadros concentram muitas trocas -- e mistura de "limpo" e
+#     "zona de dano". Ajusta com ~1 em 4 inicios de quadro caindo em zona de ~4%.
+#  3. Dentro do frame 11 a tarja periodica tem 66 bits fora em 240 bytes (~3%),
+#     contra 4-12 nos frames 3-9 (ver dados/janela_f11.txt).
+#
+# A zona do frame 11 e continua de <= 147428 (patches no cabecalho do frame 10)
+# ate >= 150538 (patches no cabecalho do frame 12), e limpa de novo em 151660
+# (enchimento do frame 12). Frame 9 (enchimento em 133717-133885) limpo.
+#
+# CONSEQUENCIA PARA O REPARO
+#
+# Quadro cujo payload cai em zona de ~4% tem centenas de bits trocados: nenhuma
+# busca de 1-3 bits o conserta. Busca por bits so tem chance em quadro de zona
+# limpa com um defeito isolado. O mapa serve para escolher alvo ANTES de
+# disparar varredura.
+#
+# ABERTO: tamanho e alinhamento dos blocos de dano (setor? cluster?). O limite
+# da zona do frame 11 nao cai em multiplo de 4096 do arquivo (147428 < 147456).
+#
+# A saida da ferramenta, na integra:
+#
+# 1. ENCHIMENTO (00 00 03) -- bits trocados, MP4 original
+#    quadro   offset MB   bytes   bits    taxa
+#        0       0.110    2185      9    0.05%
+#        1       0.112     196      0    0.00%
+#        3       0.120     124      0    0.00%
+#        4       0.121    1978      0    0.00%
+#        5       0.124     142      0    0.00%
+#        6       0.125     190      0    0.00%
+#        7       0.125     238      0    0.00%
+#        8       0.128    1804      6    0.04%
+#        9       0.131     160      0    0.00%
+#       10       0.147     181     65    4.49%
+#       11       0.148     166     55    4.14%
+#       12       0.151    1804      6    0.04%
+#     1437      48.264      38      0    0.00%
+#     1466      48.950      43      0    0.00%
+#     1495      49.675      41      0    0.00%
+#     1802      59.787      37      6    2.03%
+#     1831      60.395      44      8    2.27%
+#     3076     104.332      40      0    0.00%
+#     3368     113.211      40      0    0.00%
+#     3431     114.229     115      0    0.00%
+#     3433     114.234     292      0    0.00%
+#     3434     114.236     193      5    0.32%
+#     3435     114.237     115      0    0.00%
+#     3436     114.238     190      0    0.00%
+#     3437     114.238     142      0    0.00%
+#     3438     114.241    1777      6    0.04%
+#     3439     114.244     115      0    0.00%
+#     3440     114.258     190      0    0.00%
+#     3441     114.259     145      0    0.00%
+#     3442     114.259    1804      7    0.05%
+#     3443     114.262     172      0    0.00%
+#     3444     114.263     195      2    0.13%
+# 
+# 2. OS 5 PRIMEIROS BYTES DE CADA QUADRO (40 bits conhecidos)
+#    1338 bits trocados em 3445 quadros -> 0.97% dos bits
+#    trocas/quadro   observado   se fosse uniforme (binomial 40, 0.97%)
+#         0           2669          2331.8
+#         1            406           914.5
+#         2            231           174.9
+#         3             93            21.7
+#         4             39             2.0
+#         5              7             0.1
+#         6              0             0.0

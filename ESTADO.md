@@ -201,3 +201,20 @@ cat patches.txt dados/candidatos_idr3047.txt | grep -E '^[0-9]+ [0-9]+$' > $SB/c
 VISUAL=1 PISO_TRINCA=1 PISO_CROMA=1 BASE=-1 ./reparador.exe "$MP4" index.txt $SB/cad.txt avanco 3047 1 4450 20000 $SB/e3.txt
 VISUAL=1 ./reparador.exe "$MP4" index.txt $SB/cad.txt trinca 3047 <lista>   # mede os sobreviventes
 ```
+
+## 6. Mapa de dano (2026-09-18)
+
+O bit-rot vem em **zonas** de 2–5% dos bits trocados; fora delas o arquivo está
+praticamente limpo. Medido em conteúdo conhecido, no MP4 original
+(`python ferramentas/mapa_dano.py`, detalhe em
+[`dados/mapa_dano.txt`](dados/mapa_dano.txt)):
+
+| régua | limpo | danificado |
+|---|---|---|
+| enchimento `00 00 03` | 0,11–0,13 MB · 48–50 MB · 104 MB · 113–114 MB | **0,147–0,150 MB (frames 10–11: 4–4,5%)** · **59,8–60,4 MB (~2%)** |
+| 5 primeiros bytes de cada quadro | 2.669 quadros sem troca | 776 com 1–5; distribuição **não binomial** (39 quadros com 4 trocas; uniforme daria 2) |
+
+Consequência: quadro com payload em zona de ~4% tem centenas de bits trocados —
+o frame 11 tem ~600 — e nenhuma busca de 1–3 bits o conserta. **Consultar o mapa
+antes de escolher alvo de varredura.** Aberto: tamanho e alinhamento dos blocos
+de dano.
