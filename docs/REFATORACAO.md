@@ -1,8 +1,10 @@
 # Plano de refatoração do `reparador.c`
 
-Medido em 2026-09-17 sobre 3.004 linhas. **Nada aqui foi executado** — é plano,
-e cada item traz o critério de aceitação, porque refatoração sem critério é como
-varredura sem juiz.
+Medido em 2026-09-17 sobre 3.004 linhas. Cada item traz o critério de aceitação,
+porque refatoração sem critério é como varredura sem juiz.
+
+**Feito:** o arnês de regressão (`ferramentas/regressao.sh`) e o item 1, a tabela
+de modos. O resto é plano.
 
 ## O retrato
 
@@ -340,7 +342,7 @@ Da menor para a maior chance de quebrar coisa:
 
 | # | item | risco | ganho |
 |---|---|---|---|
-| 1 | tabela de modos e validação de `argc` | baixo | mata o `report` silencioso e o `argv[5]` nulo |
+| ~~1~~ | ~~tabela de modos e validação de `argc`~~ | **FEITO** | `main` de 1.212 para 117 linhas; 27/27 na regressão |
 | 2 | documentar o contrato das duas `blocagem` | **nenhum** | tira a armadilha do 0 x 99 sem tocar em calibração |
 | 3 | renomear as famílias do croma e da tarja | baixo | o nome passa a dizer o que mede |
 | 4 | `src/juizes.c` com as 19, em duas camadas | **baixo** | 6 funções colapsam em 2 primitivas, e abre teste sem decodificador |
@@ -361,3 +363,32 @@ de índice sem ganho no relógio).
 - `ctx->thread_count = 1` — determinismo, seção 1 do `PARALELIZACAO.md`.
 - A regra do menor índice na parada antecipada — seção 7 do `AGENTS.md`.
 - `weighted_pred_flag` fica em 1.
+
+## 6. O arnês, e o que ele custou para ficar de pé
+
+`ferramentas/regressao.sh` roda um caso de cada um dos 27 modos e compara o
+SHA-256 da saída. É ele que dá sentido a "saída byte a byte idêntica".
+
+**Seis defeitos apareceram montando o arnês, nenhum no código que ele protege**
+— e cada um teria produzido um falso "tudo ok":
+
+| defeito | o que teria acontecido |
+|---|---|
+| `unico` com argumentos errados — são tamanhos de janela, não faixa de quadros | varria os 132 IDRs e matava a captura em 2 de 27 |
+| `testa` recebendo o número do quadro no lugar do arquivo | hash da string vazia, passaria em qualquer refatoração |
+| arquivo auxiliar do `testa` nunca criado | idem |
+| `[6.7s]` no stdout de 21 lugares do código | `idr` acusava mudança em toda conferência |
+| caminho do `mktemp` no stdout, convertido para a forma Windows pelo MSYS2 | `dump`, `dumpyuv` e `serie` idem |
+| `varre1` com janela de 22.336 candidatos | caso de minutos, inviável como arnês |
+
+Os dois do meio são os piores: **alarme que toca sempre não alarma.** Em duas
+conferências eu já teria aprendido a ignorar quatro modos.
+
+O filtro de tempo já estava escrito na seção 7 do `AGENTS.md`, para a validação
+de paralelismo. Eu tinha a regra e não a apliquei no arnês que existe para
+aplicar regras.
+
+**O arnês se prova antes de provar qualquer coisa:** `grava` seguido de
+`confere`, sem tocar no código, tem que dar 27 de 27. Ele também recusa gravar
+um caso cujo hash seja o da string vazia, que foi o defeito que eu cometi.
+

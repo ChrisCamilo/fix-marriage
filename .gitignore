@@ -16,3 +16,6 @@ saidas/novos_escapes.txt
 # medido; o log cru e volumoso e reconstruivel rodando de novo.
 logs/*
 !logs/.gitignore
+
+# Area de trabalho do arnes de regressao
+logs/.regressao/

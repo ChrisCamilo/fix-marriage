@@ -1763,6 +1763,9 @@ static int quantas_threads(void) {
 /* ---- patches ---- */
 typedef struct { long off; int bit; } Patch;
 static Patch patches[200000];
+/* Nome do arquivo de patches. Existe porque o modo `repair` grava nele e os
+ * blocos de modo viraram funcoes proprias, sem acesso ao argv do main. */
+static const char *arq_patches = NULL;
 static int n_patch = 0;
 
 static void carrega_patches(const char *fn) {
@@ -1815,68 +1818,8 @@ static int tarja_perfeita(const uint8_t *Y, int w, int h) {
     return 1;
 }
 
-int main(int argc, char **argv) {
-    if (argc < 4) {
-        fprintf(stderr,
-          "uso: %s <mp4> <index.txt> <patches.txt> [modo] [args]\n"
-          "  modos:\n"
-          "    repair <ini> <fim> [janela]   conserta os frames do intervalo\n"
-          "    verify                        revalida cada patch, um a um\n"
-          "    report                        estado de cada frame\n"
-          "    idr [j1] [j2] [max]           diagnostica IDRs quebrados (nao grava):\n"
-          "                                  1 bit no corte, 1 bit no inicio, 2 bits\n", argv[0]);
-        return 1;
-    }
-    /* Sem buffer: corridas duram dezenas de minutos e a saida vai para arquivo,
-     * onde stdout bufferiza em blocos. Sem isto o progresso so aparece no fim e
-     * nao da para acompanhar nem estimar quanto falta. */
-    setvbuf(stdout, NULL, _IONBF, 0);
-
-    const char *f_mp4 = argv[1], *f_ix = argv[2], *f_pt = argv[3];
-    const char *modo = argc > 4 ? argv[4] : "report";
-
-    FILE *f = fopen(f_mp4, "rb");
-    fseek(f, 0, SEEK_END); arq_len = ftell(f); fseek(f, 0, SEEK_SET);
-    arq = malloc(arq_len);
-    if (fread(arq, 1, arq_len, f) != (size_t)arq_len) { perror("read"); return 1; }
-    fclose(f);
-
-    f = fopen(f_ix, "r");
-    int i; long off; int size, idr;
-    while (fscanf(f, "%d %ld %d %d", &i, &off, &size, &idr) == 4) {
-        ix[n_ix].off = off; ix[n_ix].size = size; ix[n_ix].idr = idr; n_ix++;
-    }
-    fclose(f);
-    fprintf(stderr, "[+] %d amostras no indice, %ld bytes de arquivo\n", n_ix, arq_len);
-
-    monta_avcc(getenv("SPS") ? getenv("SPS")
-               : "674d4029965200f0044fcb29010101400000fa40003a9821",
-               getenv("PPS") ? getenv("PPS") : "68eb7352");
-    av_log_set_callback(meu_log);
-    if (getenv("VISUAL")) exigir_imagem = atoi(getenv("VISUAL"));
-    if (getenv("ERROS_BASE")) erros_base = atoi(getenv("ERROS_BASE"));
-    if (getenv("PISO_TARJA")) piso_tarja = atoi(getenv("PISO_TARJA"));
-    if (getenv("PISO_TOPO")) piso_topo = atoi(getenv("PISO_TOPO"));
-    if (getenv("PISO_BASE")) piso_base = atoi(getenv("PISO_BASE"));
-    if (getenv("CONSUMO")) consumo_t = atoi(getenv("CONSUMO"));
-    if (getenv("IGUAIS")) iguais = atoi(getenv("IGUAIS"));
-    if (getenv("PISO_CROMA")) { piso_croma = atoi(getenv("PISO_CROMA")); if (piso_croma) guardar_croma = 1; }
-    if (getenv("TOL_COPIA")) tol_copia = atoi(getenv("TOL_COPIA"));
-    if (getenv("TETO_RESPINGO")) teto_respingo = atoi(getenv("TETO_RESPINGO"));
-    if (getenv("JANELA_RESP")) janela_resp = atoi(getenv("JANELA_RESP"));
-    if (getenv("CROMA_FAIXA")) croma_faixa = atoi(getenv("CROMA_FAIXA"));
-    if (getenv("INTACTO_ATE")) intacto_ate = atoi(getenv("INTACTO_ATE"));
-    if (getenv("SEM_CROMA")) sem_croma = atoi(getenv("SEM_CROMA"));
-    if (getenv("TARJA_DESCE")) tarja_desce = atoi(getenv("TARJA_DESCE"));
-    if (getenv("PONTUA_CONSUMO")) pontua_consumo = atoi(getenv("PONTUA_CONSUMO"));
-    if (getenv("PISO_TRINCA")) { piso_trinca = atoi(getenv("PISO_TRINCA")); if (piso_trinca) guardar_croma = 1; }
-    if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
-    if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
-    fprintf(stderr, "[+] criterio: sintatico%s\n",
-            exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");
-    carrega_patches(f_pt);
-
-    if (!strcmp(modo, "repair")) {
+static int modo_repair(int argc, char **argv) {
+    (void)argc; (void)argv;
         int a = atoi(argv[5]), b = atoi(argv[6]);
         int janela = argc > 7 ? atoi(argv[7]) : 4096;
         int ok = 0, duro = 0, jaok = 0;
@@ -1886,7 +1829,7 @@ int main(int argc, char **argv) {
             if (r >= 0) {
                 long abs = ix[t].off + r;
                 arq[abs] ^= (1 << bit);
-                grava_patch(f_pt, abs, bit);
+                grava_patch(arq_patches, abs, bit);
                 ok++;
                 printf("frame %5d: REPARADO offset %ld bit %d (byte %d de %d)\n",
                        t, abs, bit, r, ix[t].size);
@@ -1898,8 +1841,11 @@ int main(int argc, char **argv) {
         }
         printf("\n[+] ja estavam bons: %d | reparados: %d | duros: %d\n",
                jaok, ok, duro);
-    }
-    else if (!strcmp(modo, "verify")) {
+    return 0;
+}
+
+static int modo_verify(int argc, char **argv) {
+    (void)argc; (void)argv;
         /* testa cada patch isoladamente: sem ele o frame quebra? com ele fecha?
          *
          * Pula os DETERMINISTICOS, listados em deterministicos.txt. Sao patches
@@ -1946,10 +1892,13 @@ int main(int argc, char **argv) {
             }
         }
         printf("\n[+] patches validos: %d | falsos: %d | deterministicos pulados: %d\n", bons, falsos, pulados);
-    }
     /* Diagnostico dos IDRs quebrados. Um IDR e sua propria ancora, entao cada
      * teste custa 1 decodificacao. Nao grava patches: so mede. */
-    else if (!strcmp(modo, "idr")) {
+    return 0;
+}
+
+static int modo_idr(int argc, char **argv) {
+    (void)argc; (void)argv;
         int j1  = argc > 5 ? atoi(argv[5]) : 4096;   /* janela da busca de 1 bit */
         int j2  = argc > 6 ? atoi(argv[6]) : 24;     /* janela da busca de 2 bits */
         int max = argc > 7 ? atoi(argv[7]) : 0;      /* 0 = todos */
@@ -1998,9 +1947,12 @@ int main(int argc, char **argv) {
         printf("\n[+] IDRs ja bons: %d | testados: %d\n"
                "    1 bit no corte: %d | 1 bit no inicio: %d | 2 bits: %d | sem solucao: %d\n",
                n_ok, feitos, n_um, n_ini, n_dois, n_sem);
-    }
     /* Conta TODAS as solucoes de 1 bit por IDR quebrado. Nao grava. */
-    else if (!strcmp(modo, "unico")) {
+    return 0;
+}
+
+static int modo_unico(int argc, char **argv) {
+    (void)argc; (void)argv;
         int jc = argc > 5 ? atoi(argv[5]) : 1024;   /* janela em volta do corte */
         int ji = argc > 6 ? atoi(argv[6]) : 256;    /* janela no inicio do NAL  */
         int offs[64], bits[64];
@@ -2042,7 +1994,6 @@ int main(int argc, char **argv) {
         }
         printf("\n[+] unica: %d | multipla: %d | nenhuma: %d\n",
                n_unico, n_multi, n_zero);
-    }
     /* Duas perguntas de uma vez, em IDRs que ja decodificam limpos:
      *
      * 1. Quanto dano visual um bit corrompido causa de fato? Medido contra a
@@ -2054,7 +2005,11 @@ int main(int argc, char **argv) {
      * pratica: 6.300 flips em quatro keyframes e nenhum quebrou. Este desenho
      * usa essa tolerancia a favor -- injeta flips que nao quebram, que e o caso
      * real, e pergunta se a imagem denuncia o que a sintaxe deixa passar. */
-    else if (!strcmp(modo, "oraculo")) {
+    return 0;
+}
+
+static int modo_oraculo(int argc, char **argv) {
+    (void)argc; (void)argv;
         int n_am = argc > 5 ? atoi(argv[5]) : 5;
         int n_fl = argc > 6 ? atoi(argv[6]) : 24;
         size_t PX = 1920 * 1088;
@@ -2102,9 +2057,12 @@ int main(int argc, char **argv) {
         printf("\n[+] IDRs: %d | flips: %d | com blocagem acima do limpo: %d (%.0f%%)\n",
                feitos, testes, acima, testes ? 100.0 * acima / testes : 0.0);
         free(R); free(cap_buf); cap_buf = NULL;
-    }
     /* Recupera um frame usando um vizinho INTEGRO como gabarito. */
-    else if (!strcmp(modo, "vizinho")) {
+    return 0;
+}
+
+static int modo_vizinho(int argc, char **argv) {
+    (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
         int ref  = atoi(argv[6]);
         int jan  = argc > 7 ? atoi(argv[7]) : 0;      /* 0 = NAL inteiro */
@@ -2153,10 +2111,13 @@ int main(int argc, char **argv) {
         printf("[+] frame %d terminou com diferenca %.2f para o vizinho %d\n",
                alvo, m0, ref);
         free(ref_img); ref_img = NULL; free(cap_buf); cap_buf = NULL;
-    }
     /* Recuperacao incremental de um frame: aceita o flip que faz a imagem
      * crescer e repete. NAO grava patches -- imprime o que achou. */
-    else if (!strcmp(modo, "recupera")) {
+    return 0;
+}
+
+static int modo_recupera(int argc, char **argv) {
+    (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
         int jan   = argc > 6 ? atoi(argv[6]) : 2048;
         int passos= argc > 7 ? atoi(argv[7]) : 8;
@@ -2205,10 +2166,13 @@ int main(int argc, char **argv) {
         }
         printf("[+] frame %d terminou com %d linhas reais de ~850 visiveis\n", alvo, L);
         free(cap_buf); cap_buf = NULL;
-    }
     /* Rankeia os IDRs por quanto de imagem real sobrou. Saida: <idr> <linhas>
      * (-1 = quadro de ocultacao, nao decodificou nada). */
-    else if (!strcmp(modo, "ranking")) {
+    return 0;
+}
+
+static int modo_ranking(int argc, char **argv) {
+    (void)argc; (void)argv;
         int salvo = exigir_imagem; exigir_imagem = 0;   /* queremos ver todos */
         cap_buf = malloc((size_t)1920 * 1088);
         for (int t = 0; t < n_ix; t++) {
@@ -2220,9 +2184,12 @@ int main(int argc, char **argv) {
         }
         exigir_imagem = salvo;
         free(cap_buf); cap_buf = NULL;
-    }
     /* Despeja o plano Y de um frame como PGM, para inspecao visual. */
-    else if (!strcmp(modo, "varre2")) {
+    return 0;
+}
+
+static int modo_varre2(int argc, char **argv) {
+    (void)argc; (void)argv;
         alvo2 = atoi(argv[5]);
         int len = ix[alvo2].size;
         n_bits2 = (len - 5) * 8;
@@ -2251,7 +2218,6 @@ int main(int argc, char **argv) {
                        o1, pares[k].a % 8, o2, pares[k].b % 8);
         }
         if (g) { fclose(g); printf("    gravados em %s\n", argv[6]); }
-    }
     /* ---- modo avanco ----
      * O criterio binario "decodifica limpo" desperdica a informacao mais util
      * que o decoder da: ATE ONDE ele chegou antes de falhar. Num slice CABAC
@@ -2270,7 +2236,11 @@ int main(int argc, char **argv) {
      * pacote juntos. Patchar so o prefixo nao serve -- o ffmpeg confere o
      * tamanho contra o buffer e descarta o NAL inteiro, e ai o unico erro que
      * sobra e de outro quadro da cadeia, o que parece resposta e nao e. */
-    else if (!strcmp(modo, "corta")) {
+    return 0;
+}
+
+static int modo_corta(int argc, char **argv) {
+    (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
         int ini  = argc > 6 ? atoi(argv[6]) : 100;
         int fim  = argc > 7 ? atoi(argv[7]) : ix[alvo].size;
@@ -2296,8 +2266,11 @@ int main(int argc, char **argv) {
                    k, mb, mb >= 8160 ? -1 : mb / 120, cap_w > 0 ? "sim" : "nao");
         }
         free(copia); free(cap_buf); cap_buf = NULL;
-    }
-    else if (!strcmp(modo, "avanco")) {
+    return 0;
+}
+
+static int modo_avanco(int argc, char **argv) {
+    (void)argc; (void)argv;
         alvok  = atoi(argv[5]);
         prof_k = atoi(argv[6]);
         int len = ix[alvok].size;
@@ -2455,8 +2428,11 @@ int main(int argc, char **argv) {
         }
         if (g) { fclose(g); printf("    gravadas em %s\n", argv[9]); }
         free(combos_k); free(placar);
-    }
-    else if (!strcmp(modo, "varrek")) {
+    return 0;
+}
+
+static int modo_varrek(int argc, char **argv) {
+    (void)argc; (void)argv;
         alvok  = atoi(argv[5]);
         prof_k = atoi(argv[6]);
         int len = ix[alvok].size;
@@ -2514,8 +2490,11 @@ int main(int argc, char **argv) {
         }
         if (g) { fclose(g); printf("    gravadas em %s\n", argv[9]); }
         free(combos_k); free(achk); free(achk_c); achk = NULL; achk_c = NULL;
-    }
-    else if (!strcmp(modo, "cresce")) {
+    return 0;
+}
+
+static int modo_cresce(int argc, char **argv) {
+    (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
         int len = ix[alvo].size, anc = ancora_de(alvo);
         int ini = argc > 6 ? atoi(argv[6]) : 5;
@@ -2602,8 +2581,11 @@ int main(int argc, char **argv) {
             printf("  despejo gravado em %s\n", argv[8]);
             free(medidas); medidas = NULL;
         }
-    }
-    else if (!strcmp(modo, "campo")) {
+    return 0;
+}
+
+static int modo_campo(int argc, char **argv) {
+    (void)argc; (void)argv;
         campo_alvo = atoi(argv[5]);
         FILE *f = fopen(argv[6], "r");
         if (!f) { fprintf(stderr, "nao abriu %s%s", argv[6], "\n"); return 1; }
@@ -2653,7 +2635,6 @@ int main(int argc, char **argv) {
                    campos[k].imed, campos[k].ides, campos[k].ibloc);
         }
         free(campos);
-    }
     /* ---- modo mapa ----
      * Onde cada quadro do filme para, num arquivo so. Uma decodificacao por
      * GOP, como o panorama: manda pacote por pacote, zera o log antes de cada
@@ -2662,7 +2643,11 @@ int main(int argc, char **argv) {
      * Serve para escolher alvo por medida em vez de por ordem: quadro que para
      * cedo tem dano de cabecalho e janela pequena; quadro que para tarde tem
      * dessincronizacao e janela grande; e quadro que nao para esta bom. */
-    else if (!strcmp(modo, "mapa")) {
+    return 0;
+}
+
+static int modo_mapa(int argc, char **argv) {
+    (void)argc; (void)argv;
         cap_qualquer = 1;
         cap_buf = malloc((size_t)1920 * 1088);
         printf("frame bytes mb_parada fileira pct_decodificado\n");
@@ -2693,8 +2678,11 @@ int main(int argc, char **argv) {
         av_frame_free(&fr); av_packet_free(&pkt);
         if (ctx) { avcodec_free_context(&ctx); ctx = NULL; }
         cap_qualquer = 0; free(cap_buf); cap_buf = NULL;
-    }
-    else if (!strcmp(modo, "panorama")) {
+    return 0;
+}
+
+static int modo_panorama(int argc, char **argv) {
+    (void)argc; (void)argv;
         /* Decodifica cada GOP numa passada e mede TODO quadro emitido. Uma
          * decodificacao por frame, contra as ~13 que medir um a um custaria. */
         panorama = 1; cap_qualquer = 1;
@@ -2710,8 +2698,11 @@ int main(int argc, char **argv) {
         }
         panorama = 0; cap_qualquer = 0;
         free(cap_buf); cap_buf = NULL;
-    }
-    else if (!strcmp(modo, "cortes")) {
+    return 0;
+}
+
+static int modo_cortes(int argc, char **argv) {
+    (void)argc; (void)argv;
         /* Lista o ponto de corte de todo IDR que nao decodifica. E o que define
          * a faixa a varrer: a armadilha 9 mede o bit ~2600 bytes ANTES do corte,
          * entao a janela util e [5, corte+folga] -- e nao a de +-1024 em volta do
@@ -2739,15 +2730,21 @@ int main(int argc, char **argv) {
         fprintf(stderr, "[+] %d IDRs quebrados, %ld candidatos na soma das faixas\n",
                 n, total);
         free(cap_buf); cap_buf = NULL;
-    }
-    else if (!strcmp(modo, "corte")) {
+    return 0;
+}
+
+static int modo_corte(int argc, char **argv) {
+    (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
         cap_buf = malloc((size_t)1920 * 1088);
         printf("frame %d (%d bytes): o decoder para de consumir por volta do byte %d\n",
                alvo, ix[alvo].size, acha_consumo(alvo));
         free(cap_buf); cap_buf = NULL;
-    }
-    else if (!strcmp(modo, "varre1")) {
+    return 0;
+}
+
+static int modo_varre1(int argc, char **argv) {
+    (void)argc; (void)argv;
         /* Varredura exaustiva de 1 bit sobre o NAL INTEIRO de um frame comum.
          * O modo `unico` so olha IDR; este serve para os frames quebrados que
          * estao cercados de frames bons, que sao os melhores alvos de reparo. */
@@ -2791,8 +2788,11 @@ int main(int argc, char **argv) {
                        ix[alvo].off + offs[i], bits[i], offs[i]);
         }
         free(sol); free(offs); free(bits);
-    }
-    else if (!strcmp(modo, "testa")) {
+    return 0;
+}
+
+static int modo_testa(int argc, char **argv) {
+    (void)argc; (void)argv;
         FILE *f = fopen(argv[5], "r");
         if (!f) { fprintf(stderr, "nao abriu %s%s", argv[5], "\n"); return 1; }
         cands = calloc(100000, sizeof *cands);
@@ -2821,8 +2821,11 @@ int main(int argc, char **argv) {
         printf("%s[+] %d de %d candidatos fazem o frame decodificar limpo%s",
                "\n", bons, n_cands, "\n");
         free(cands);
-    }
-    else if (!strcmp(modo, "serie")) {
+    return 0;
+}
+
+static int modo_serie(int argc, char **argv) {
+    (void)argc; (void)argv;
         /* Extrai uma faixa de frames em I420 cru, numa passada so, mais um mapa
          * de quais decodificaram. E a materia-prima da REMONTAGEM -- que e
          * ocultacao, nao reparo: os frames quebrados sao preenchidos depois pela
@@ -2878,7 +2881,6 @@ int main(int argc, char **argv) {
         printf("faixa %d-%d: %d de %d decodificaram -> %s\n",
                ini, fim, bons, fim - ini + 1, argv[7]);
         free(cap_buf); cap_buf = NULL;
-    }
     /* ---- modo trinca ----
      * Abre a caixa-preta do juiz de tres partes: para cada candidato de uma
      * lista imprime as CINCO medidas em vez do veredito.
@@ -2889,7 +2891,11 @@ int main(int argc, char **argv) {
      * num ramo falso, que foi exatamente o que aconteceu no frame 12. A unica
      * maneira de separar os dois casos e olhar a fronteira do borrao de cada
      * um: quadro consertado nao tem borrao, quadro dessincronizado tem. */
-    else if (!strcmp(modo, "trinca")) {
+    return 0;
+}
+
+static int modo_trinca(int argc, char **argv) {
+    (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
         guardar_croma = 1;
         cap_buf = malloc((size_t)1920 * 1088);
@@ -2959,8 +2965,11 @@ int main(int argc, char **argv) {
         }
         fclose(f);
         free(cap_buf); cap_buf = NULL;
-    }
-    else if (!strcmp(modo, "dumpyuv")) {
+    return 0;
+}
+
+static int modo_dumpyuv(int argc, char **argv) {
+    (void)argc; (void)argv;
         /* Grava o quadro inteiro em I420 cru, para remontagem externa. O resto
          * do programa decide por luma; aqui o croma importa porque a saida vai
          * virar video para assistir. */
@@ -2977,8 +2986,11 @@ int main(int argc, char **argv) {
         printf("frame %d -> %s  %dx%d I420 (decode %s)\n",
                alvo, argv[6], cap_w, cap_h, r ? "COM ERRO" : "limpo");
         free(cap_buf); cap_buf = NULL;
-    }
-    else if (!strcmp(modo, "dump")) {
+    return 0;
+}
+
+static int modo_dump(int argc, char **argv) {
+    (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
         const char *saida = argv[6];
         cap_buf = malloc((size_t)1920 * 1088);
@@ -3006,8 +3018,11 @@ int main(int argc, char **argv) {
                ocultacao ? "  [!] OCULTACAO, nao e o frame" : "",
                saida, cap_w, cap_h,
                100 * propagacao(cap_buf, cap_w, cap_h), blocagem(cap_buf, cap_w, cap_h));
-    }
-    else {
+    return 0;
+}
+
+static int modo_report(int argc, char **argv) {
+    (void)argc; (void)argv;
         /* Saida por frame: <t> <estado> <propagacao> <blocagem>
          *   quebrado  - falhou no criterio sintatico
          *   propagado - decodificou "limpo" mas a slice terminou cedo e a
@@ -3032,6 +3047,124 @@ int main(int argc, char **argv) {
         printf("\n[+] de %d frames: real %d | propagado %d | uniforme %d | quebrado %d\n",
                n_ix, real, propagado, uniforme, quebrado);
         free(cap_buf); cap_buf = NULL;
-    }
     return 0;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 4) {
+        fprintf(stderr,
+          "uso: %s <mp4> <index.txt> <patches.txt> [modo] [args]\n"
+          "  modos:\n"
+          "    repair <ini> <fim> [janela]   conserta os frames do intervalo\n"
+          "    verify                        revalida cada patch, um a um\n"
+          "    report                        estado de cada frame\n"
+          "    idr [j1] [j2] [max]           diagnostica IDRs quebrados (nao grava):\n"
+          "                                  1 bit no corte, 1 bit no inicio, 2 bits\n", argv[0]);
+        return 1;
+    }
+    /* Sem buffer: corridas duram dezenas de minutos e a saida vai para arquivo,
+     * onde stdout bufferiza em blocos. Sem isto o progresso so aparece no fim e
+     * nao da para acompanhar nem estimar quanto falta. */
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    const char *f_mp4 = argv[1], *f_ix = argv[2], *f_pt = argv[3];
+    arq_patches = f_pt;   /* o modo `repair` grava nele, e vira funcao propria */
+    const char *modo = argc > 4 ? argv[4] : "report";
+
+    FILE *f = fopen(f_mp4, "rb");
+    fseek(f, 0, SEEK_END); arq_len = ftell(f); fseek(f, 0, SEEK_SET);
+    arq = malloc(arq_len);
+    if (fread(arq, 1, arq_len, f) != (size_t)arq_len) { perror("read"); return 1; }
+    fclose(f);
+
+    f = fopen(f_ix, "r");
+    int i; long off; int size, idr;
+    while (fscanf(f, "%d %ld %d %d", &i, &off, &size, &idr) == 4) {
+        ix[n_ix].off = off; ix[n_ix].size = size; ix[n_ix].idr = idr; n_ix++;
+    }
+    fclose(f);
+    fprintf(stderr, "[+] %d amostras no indice, %ld bytes de arquivo\n", n_ix, arq_len);
+
+    monta_avcc(getenv("SPS") ? getenv("SPS")
+               : "674d4029965200f0044fcb29010101400000fa40003a9821",
+               getenv("PPS") ? getenv("PPS") : "68eb7352");
+    av_log_set_callback(meu_log);
+    if (getenv("VISUAL")) exigir_imagem = atoi(getenv("VISUAL"));
+    if (getenv("ERROS_BASE")) erros_base = atoi(getenv("ERROS_BASE"));
+    if (getenv("PISO_TARJA")) piso_tarja = atoi(getenv("PISO_TARJA"));
+    if (getenv("PISO_TOPO")) piso_topo = atoi(getenv("PISO_TOPO"));
+    if (getenv("PISO_BASE")) piso_base = atoi(getenv("PISO_BASE"));
+    if (getenv("CONSUMO")) consumo_t = atoi(getenv("CONSUMO"));
+    if (getenv("IGUAIS")) iguais = atoi(getenv("IGUAIS"));
+    if (getenv("PISO_CROMA")) { piso_croma = atoi(getenv("PISO_CROMA")); if (piso_croma) guardar_croma = 1; }
+    if (getenv("TOL_COPIA")) tol_copia = atoi(getenv("TOL_COPIA"));
+    if (getenv("TETO_RESPINGO")) teto_respingo = atoi(getenv("TETO_RESPINGO"));
+    if (getenv("JANELA_RESP")) janela_resp = atoi(getenv("JANELA_RESP"));
+    if (getenv("CROMA_FAIXA")) croma_faixa = atoi(getenv("CROMA_FAIXA"));
+    if (getenv("INTACTO_ATE")) intacto_ate = atoi(getenv("INTACTO_ATE"));
+    if (getenv("SEM_CROMA")) sem_croma = atoi(getenv("SEM_CROMA"));
+    if (getenv("TARJA_DESCE")) tarja_desce = atoi(getenv("TARJA_DESCE"));
+    if (getenv("PONTUA_CONSUMO")) pontua_consumo = atoi(getenv("PONTUA_CONSUMO"));
+    if (getenv("PISO_TRINCA")) { piso_trinca = atoi(getenv("PISO_TRINCA")); if (piso_trinca) guardar_croma = 1; }
+    if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
+    if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));
+    fprintf(stderr, "[+] criterio: sintatico%s\n",
+            exigir_imagem ? " + imagem (propagacao)" : " apenas (VISUAL=0)");
+    carrega_patches(f_pt);
+
+
+/* Tabela de modos. Substitui a cadeia de 24 else-if, e traz duas coisas
+ * que a cadeia nao tinha: o argc minimo de cada modo, validado ANTES de
+ * despachar, e o texto de uso ao lado da implementacao.
+ *
+ * A cadeia antiga terminava num else SEM comparacao, que era o modo
+ * `report`. Erro de digitacao no nome rodava um relatorio do filme inteiro
+ * em silencio -- 3.445 decodificacoes -- em vez de dizer "modo
+ * desconhecido". Ver docs/REFATORACAO.md, secao 3. */
+typedef struct { const char *nome; int min_args; const char *uso;
+                 int (*executa)(int, char **); } Modo;
+static const Modo MODOS[] = {
+    { "repair", 7, "<ini> <fim> [janela]", modo_repair },
+    { "verify", 5, "", modo_verify },
+    { "idr", 5, "[j1] [j2] [max]", modo_idr },
+    { "unico", 5, "[jc] [ji] [max]", modo_unico },
+    { "oraculo", 5, "[n_amostras] [n_flips]", modo_oraculo },
+    { "vizinho", 7, "<alvo> <ref> [janela] [passos]", modo_vizinho },
+    { "recupera", 6, "<alvo> [janela] [passos]", modo_recupera },
+    { "ranking", 5, "", modo_ranking },
+    { "varre2", 6, "<alvo> [saida]", modo_varre2 },
+    { "corta", 6, "<alvo> [ini] [fim] [passo]", modo_corta },
+    { "avanco", 7, "<alvo> <k> [ini] [fim] [saida]", modo_avanco },
+    { "varrek", 7, "<alvo> <k> [ini] [fim] [saida]", modo_varrek },
+    { "cresce", 6, "<alvo> [ini] [fim] [saida]", modo_cresce },
+    { "campo", 7, "<alvo> <lista> [referencia.pgm]", modo_campo },
+    { "mapa", 5, "", modo_mapa },
+    { "panorama", 5, "", modo_panorama },
+    { "cortes", 5, "[folga]", modo_cortes },
+    { "corte", 6, "<alvo>", modo_corte },
+    { "varre1", 6, "<alvo> [saida] [jini] [jfim]", modo_varre1 },
+    { "testa", 6, "<lista>", modo_testa },
+    { "serie", 9, "<ini> <fim> <saida.yuv> <mapa.txt>", modo_serie },
+    { "trinca", 7, "<alvo> <lista>", modo_trinca },
+    { "dumpyuv", 7, "<alvo> <saida.yuv>", modo_dumpyuv },
+    { "dump", 7, "<alvo> <saida.pgm>", modo_dump },
+    { "report", 5, "", modo_report },
+};
+static const int N_MODOS = sizeof MODOS / sizeof MODOS[0];
+
+    const Modo *m = NULL;
+    for (int k = 0; k < N_MODOS; k++)
+        if (!strcmp(modo, MODOS[k].nome)) { m = &MODOS[k]; break; }
+    if (!m) {
+        fprintf(stderr, "modo desconhecido: %s\n\nmodos:\n", modo);
+        for (int k = 0; k < N_MODOS; k++)
+            fprintf(stderr, "  %-10s %s\n", MODOS[k].nome, MODOS[k].uso);
+        return 1;
+    }
+    if (argc < m->min_args) {
+        fprintf(stderr, "uso: %s <mp4> <index.txt> <patches.txt> %s %s\n",
+                argv[0], m->nome, m->uso);
+        return 1;
+    }
+    return m->executa(argc, argv);
 }
