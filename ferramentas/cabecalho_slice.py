@@ -205,18 +205,48 @@ def esperado_por_ctts(d, pos):
         comp += [o] * c
     assert len(comp) == V_N, 'ctts nao cobre os %d quadros' % V_N
     disp = [(t * 1001 + comp[t]) // 1001 for t in range(V_N)]
-    idr = [t for t in range(V_N) if eh_idr(d, pos[t])]
-    esp = [None] * V_N
-    for j, g in enumerate(idr):
-        fim = idr[j + 1] if j + 1 < len(idr) else V_N
-        mx, refs = -1, 0
+
+    def gop(g, fim):
+        """Tipo, frame_num e POC de cada quadro de [g, fim), com IDR em g."""
+        e, mx, refs = {}, -1, 0
         for t in range(g, fim):
             k = disp[t] - disp[g]
             ref = t == g or k > mx
-            tipo = 7 if t == g else (5 if ref else 6)
-            esp[t] = (tipo, refs % 256, (2 * k) % 256)
+            e[t] = (7 if t == g else (5 if ref else 6), refs % 256, (2 * k) % 256)
             refs += ref
             mx = max(mx, k)
+        return e
+
+    def lido(t):
+        try:
+            h = le_cabecalho(bytes(d[pos[t] + 4:pos[t] + 68]))
+            return h['slice_type'], h['frame_num'], h['poc']
+        except Invalido:
+            return None
+
+    # O byte NAL diz quem e IDR, mas ele tambem sofre bit-rot. O 1595 tem 0x65
+    # (IDR) e NAO e IDR: os 9 cabecalhos legiveis de 1596-1610 continuam a
+    # sequencia do IDR 1582, nenhum reinicia. Contar a partir dele "consertou"
+    # frame_num/POC certos em 6 quadros (dados/patches_cabecalho.txt). Entao um
+    # candidato so vira IDR se os quadros seguintes REINICIAM a partir dele.
+    cand = [t for t in range(V_N) if eh_idr(d, pos[t])]
+    idr = [cand[0]]
+    for j, g in enumerate(cand[1:], 1):
+        fim = cand[j + 1] if j + 1 < len(cand) else V_N
+        reinicia = gop(g, fim)
+        continua = gop(idr[-1], fim)
+        viz = [(t, lido(t)) for t in range(g + 1, min(fim, g + 17))]
+        a = sum(1 for t, v in viz if v and v == reinicia[t])
+        b = sum(1 for t, v in viz if v and v == continua[t])
+        if b > a:
+            print('[!] quadro %d: byte NAL diz IDR, mas %d vizinhos continuam o GOP '
+                  'do %d contra %d que reiniciam -- nao e IDR' % (g, b, idr[-1], a))
+        else:
+            idr.append(g)
+    esp = [None] * V_N
+    for j, g in enumerate(idr):
+        for t, v in gop(g, idr[j + 1] if j + 1 < len(idr) else V_N).items():
+            esp[t] = v
     return esp
 
 
