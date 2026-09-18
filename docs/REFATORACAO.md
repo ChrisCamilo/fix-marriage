@@ -464,3 +464,34 @@ onde começo a ler" — sem tocar no código que decide os resultados.
 o arnês de 28 casos, isolaram a camada testável e puseram 46 funções no padrão.
 Os dois que sobraram custam mais do que rendem, e isso está medido, não achado.
 
+### E separar os workers sem unificá-los?
+
+Medido, porque a pergunta é boa e a resposta não era óbvia.
+
+| | exporta | lê de globais |
+|---|---|---|
+| `src/juizes.c` | 12 funções | **0** |
+| um `src/workers.c` | 9 funções | **43** |
+
+Quarenta e três variáveis teriam que deixar de ser `static` e atravessar um
+cabeçalho. Isso não é modularizar: é tornar globalmente visível o que hoje o
+compilador sabe ser local ao arquivo, **mantendo o acoplamento exatamente igual**
+e perdendo a garantia de que aquele estado não é tocado de fora. Fronteira
+fictícia.
+
+O contraste com o `juizes.c` dá o critério: **desenha-se uma fronteira de
+arquivo onde o acoplamento já é fino.** As medidas eram puras antes de mudarem
+de arquivo — por isso a separação valeu. Os workers não são, e mudá-los de lugar
+não os torna.
+
+E há uma razão mais funda: **a unidade coesa não é "o worker", é "a varredura"**
+— o modo e o worker juntos. O `modo_avanco` preenche `alvok`, `prof_k`, `ini_k`,
+gera as combinações e aloca o `placar`; o `worker_avanco` consome tudo isso.
+Separar um do outro corta a unidade pelo meio, e é por isso que aparecem 43
+globais na fronteira: elas são o canal entre as duas metades.
+
+Juntá-los num arquivo por varredura seria uma fronteira real — e levaria junto
+os 1.152 linhas dos modos, ou seja, quase o programa inteiro. Deixa de ser
+"separar os workers" e vira reescrever a organização do projeto, com o mesmo
+risco do item 7 e o mesmo ganho duvidoso.
+
