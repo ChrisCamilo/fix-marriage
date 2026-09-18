@@ -140,3 +140,11 @@ fi
 # NAO usar o hash do BINARIO para isso: a compilacao aqui nao e reproduzivel.
 # Medido -- dois builds da MESMA fonte dao hashes diferentes, e mudar o nome do
 # arquivo de saida muda o hash tambem. Binario diferente nao prova nada.
+
+# --- confere o padrao de documentacao (secao 4c do REFATORACAO.md) ---
+#
+# Toda funcao, fora os modo_* cujo contrato vive na tabela MODOS, tem que ter
+# comentario com UM parametro por linha e o valor de retorno. O teste e
+# mecanico: o nome de cada parametro e a palavra "devolve" aparecem no bloco?
+#
+#   python ferramentas/confere_doc.py

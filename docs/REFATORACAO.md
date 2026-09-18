@@ -346,7 +346,7 @@ Da menor para a maior chance de quebrar coisa:
 | ~~2~~ | ~~documentar o contrato das duas `blocagem`~~ | **FEITO** | pré-processado idêntico ao `HEAD` |
 | ~~3~~ | ~~renomear as famílias do croma e da tarja~~ | **FEITO** | 37 ocorrências; o arnês pegou 2 strings trocadas por engano |
 | ~~4~~ | ~~`src/juizes.c`~~ | **FEITO** | 13 medidas puras + `testes_juizes.c`; 28/28 |
-| ~~5~~ | ~~documentar as funções sem comentário~~ | **FEITO** | 26 blocos; pré-processado idêntico |
+| ~~5~~ | ~~documentar as funções no padrão~~ | **FEITO** | 46 de 46; conferido por `ferramentas/confere_doc.py` |
 | 6 | `nota_do_quadro()` fora do `worker_avanco` | médio | os pisos passam a valer em todo modo, não só no `avanco` |
 | 7 | motor único de varredura em `src/workers.c` | **alto** | menos ~400 linhas, e worker novo deixa de ser copiar-e-colar |
 
@@ -402,4 +402,21 @@ O que serve é comparar o **pré-processado** (`gcc -E -P`) contra o `HEAD`: o
 pré-processador descarta comentários, então saída idêntica prova que a mudança
 não pode alterar comportamento. Custa segundos contra os minutos do arnês, e é
 a prova certa para os itens 2, 3 e 5, que não mexem em lógica.
+
+### O padrão vale para as que já tinham comentário
+
+A primeira passada documentou só as 26 que não tinham nada, e ficou pela
+metade: as outras 27 tinham justificativa medida mas **nenhuma dizia os
+parâmetros nem o valor de retorno**. Comentário que explica o porquê e não diz o
+contrato resolve metade do problema.
+
+A segunda passada acrescentou o bloco de interface a essas 27, **sem tocar na
+justificativa** — ela entra antes do `*/` que já existia. Hoje são **46 de 46**
+funções no padrão, fora os `modo_*`.
+
+E o padrão passou a ser conferível: `ferramentas/confere_doc.py` verifica
+mecanicamente que o nome de cada parâmetro e o retorno aparecem no bloco. Ele
+não garante que o texto esteja **certo** — só que existe. Garantir que está
+certo é trabalho de quem lê, e o teste mecânico é o que impede a regressão
+silenciosa quando alguém acrescentar uma função.
 

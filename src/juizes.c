@@ -64,7 +64,15 @@ double blocagem(const uint8_t *Y, int w, int h) {
  * acima. Quando a slice termina cedo, o decoder propaga verticalmente o ultimo
  * macrobloco decodificado e a imagem vira listras: quase toda linha repete a
  * anterior. Numa imagem real isso e raro. E o sinal que o criterio sintatico
- * nao da -- ele aceita a slice truncada em silencio. */
+ * nao da -- ele aceita a slice truncada em silencio.
+ *
+ *   Y     plano de luma
+ *   w, h  dimensoes em pixels
+ *
+ * Devolve: a fracao de linhas da metade de baixo que sao praticamente copia da
+ * de cima, de 0 a 1. Cena desfocada da valores altos legitimamente -- ver a
+ * `linhas_identicas`, que separa de forma binaria.
+ */
 double propagacao(const uint8_t *Y, int w, int h) {
     int y0 = h / 2, repet = 0, total = 0;
     for (int y = y0; y < h; y++) {
@@ -82,7 +90,11 @@ double propagacao(const uint8_t *Y, int w, int h) {
  * primeira linha a partir da qual 20 seguidas sao copia da anterior. E o proxy
  * util de "quao corrompido": mede o que sobrou de imagem, nao quanto byte o
  * decoder leu. Devolve -1 para quadro de ocultacao (poucos tons distintos),
- * que nao e imagem nenhuma -- armadilha 1 do ARMADILHAS.md. */
+ * que nao e imagem nenhuma -- armadilha 1 do ARMADILHAS.md.
+ *
+ *   Y     plano de luma
+ *   w, h  dimensoes em pixels
+ */
 int linhas_reais(const uint8_t *Y, int w, int h) {
     int hist[256] = {0}, distintos = 0;
     for (size_t i = 0; i < (size_t)w*h; i += 97) hist[Y[i]] = 1;
@@ -188,7 +200,16 @@ int linha_copia(const uint8_t *Y, int w, int y) {
     return 1;
 }
 
-/* Primeira linha a partir de y0 que inicia uma sequencia de 8+ copias exatas. */
+/* Primeira linha a partir de y0 que inicia uma sequencia de 8+ copias exatas.
+ *
+ *   Y     plano de luma
+ *   w, h  dimensoes em pixels
+ *   y0    a partir de que linha procurar
+ *
+ * Devolve: a ultima linha antes do borrao comecar, ou `h` quando nao acha
+ * nenhum trecho de 8 linhas-copia seguidas. O `h` quer dizer "nao achei", NAO
+ * "nao ha borrao" -- com tolerancia zero os dois se confundem (armadilha 40).
+ */
 int fronteira_borrao(const uint8_t *Y, int w, int h, int y0) {
     for (int y = y0 + 1; y < h - 8; ) {
         if (!linha_copia(Y, w, y)) { y++; continue; }
@@ -268,7 +289,14 @@ double blocagem_faixa(const uint8_t *Y, int w, int y0, int y1) {
  * Medido no frame 13: os candidatos que levam a fronteira a 1080 -- "sem borrao
  * nenhum" -- tem desvio de tarja de 13 a 26, contra ~2,5 dos que avancam pouco.
  * Ali "liberar tudo" quer dizer transformar a tarja em ruido. Seguir a fronteira
- * neste alvo e subir no ramo errado. */
+ * neste alvo e subir no ramo errado.
+ *
+ *   Y     plano de luma
+ *   w, h  dimensoes; abaixo de 1920x1080 devolve -1
+ *
+ * Devolve: o desvio padrao das linhas 962 a 1079, ou -1 se nao da para medir.
+ * Zero e o estado de chegada; -1 e ausencia de medida.
+ */
 double tarja_baixo_desvio(const uint8_t *Y, int w, int h) {
     if (w < 1920 || h < 1080) return -1;
     double s = 0, s2 = 0; long n = 0;
@@ -306,7 +334,17 @@ int tarja_baixo_uniforme(const uint8_t *Y, int w, int h) {
  * A tarja de CIMA e a fileira 0 a 7, decodificada antes de qualquer defeito
  * tardio. Serve de piso sem estragar a medida. Nao fixa o valor em 16 de
  * proposito: o frame 13 sai com a de cima em 15,000 e desvio zero, herdando o
- * frame 11, e uniformidade e o que se sabe a priori -- o valor, nao. */
+ * frame 11, e uniformidade e o que se sabe a priori -- o valor, nao.
+ *
+ *   Y              plano de luma
+ *   w, h           dimensoes em pixels
+ *   valor_exigido  o valor que a tarja tem que ter; NEGATIVO aceita qualquer
+ *                  um, exigindo so a uniformidade
+ *
+ * Devolve: 1 quando as linhas 0 a 123 sao todas iguais entre si e, se
+ * `valor_exigido` for nao negativo, iguais a ele. 0 caso contrario, inclusive
+ * com quadro menor que 1920x1080.
+ */
 int tarja_topo_uniforme(const uint8_t *Y, int w, int h, int valor_exigido) {
     if (w < 1920 || h < 1080) return 0;
     int v = Y[0];
@@ -315,12 +353,9 @@ int tarja_topo_uniforme(const uint8_t *Y, int w, int h, int valor_exigido) {
      * 16,000 com desvio 0,000, sem excecao. O frame 13 da 15,000 na de cima --
      * uniforme, entao nao e dessincronizacao, e deslocamento global de -1 num
      * trecho que decodifica MUITO antes do travamento da fileira 54. Julgar por
-     * esse valor isola esse defeito dos outros.
-     *
-     *   valor_exigido  o valor que a tarja tem que ter; NEGATIVO aceita
-     *                  qualquer um, exigindo so a uniformidade. O chamador
-     *                  passa 16 quando PISO_TOPO=2. A politica mora la, nao
-     *                  aqui -- esta funcao nao le variavel de ambiente. */
+     * esse valor isola esse defeito dos outros. E por isso que o valor vem por
+     * ARGUMENTO: a politica mora no chamador, e esta funcao nao le variavel de
+     * ambiente nenhuma. */
     if (valor_exigido >= 0 && v != valor_exigido) return 0;
     for (int y = 0; y < 124; y++)
         for (int x = 0; x < w; x += 8)
@@ -333,7 +368,13 @@ int tarja_topo_uniforme(const uint8_t *Y, int w, int h, int valor_exigido) {
  * grandes areas uniformes acerta valores altos legitimamente -- o GOP 3368 tem
  * quadros perfeitos com propagacao 0,98. Linha EXATAMENTE identica separa de
  * forma binaria: medido em 137 quadros bons, todos dao ZERO; o IDR 1683,
- * listrado, da 34,3%. Ver armadilha 16. */
+ * listrado, da 34,3%. Ver armadilha 16.
+ *
+ *   Y     plano de luma
+ *   w, h  dimensoes em pixels
+ *
+ * Devolve: o percentual de linhas EXATAMENTE iguais a de cima, de 0 a 100.
+ */
 int linhas_identicas(const uint8_t *Y, int w, int h) {
     int n = 0;
     for (int y = 137; y < 950 && y < h; y++) {

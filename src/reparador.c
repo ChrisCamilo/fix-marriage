@@ -340,7 +340,14 @@ static int ancora_de(int alvo) {
     return 0;
 }
 
-/* ---- busca do byte culpado ---- */
+/* ---- busca do byte culpado ----
+ *
+ *   ancora, alvo  indices no index.txt; a cadeia vai de um ao outro
+ *
+ * Devolve: o byte ate onde o decodificador consumiu antes de falhar. Prefere a
+ * conta do proprio log (tamanho - bytestream) e so cai na busca binaria por
+ * truncamento quando o log nao informa.
+ */
 static int acha_corte(int ancora, int alvo) {
     /* 1) o proprio decoder costuma informar quantos bytes sobraram */
     decodifica(ancora, alvo, NULL, 0, NULL);
@@ -365,7 +372,15 @@ static int acha_corte(int ancora, int alvo) {
 }
 
 /* Procura um flip de 1 bit que faca a cadeia inteira ficar perfeita.
- * Devolve o offset no payload (>=0) e escreve o bit em *bit_out. */
+ * Devolve o offset no payload (>=0) e escreve o bit em *bit_out.
+ *
+ *   alvo     indice do quadro a consertar
+ *   janela   quantos bytes em volta do corte varrer
+ *   bit_out  recebe o bit achado, quando houver
+ *
+ * Devolve: o deslocamento do byte consertado, ou -1 se nao achou. GRAVA no
+ * patches.txt quando acha -- e o unico caminho que escreve em fonte de verdade.
+ */
 static int repara(int alvo, int janela, int *bit_out) {
     int ancora = ancora_de(alvo);
     if (decodifica(ancora, alvo, NULL, 0, NULL) == 0) return -2;  /* ja esta bom */
@@ -395,7 +410,13 @@ static int repara(int alvo, int janela, int *bit_out) {
  * onde o decoder reclamou, e esse nao reclama. O ponto util e outro -- a partir
  * de onde corromper nao muda mais a imagem, o dado nao esta sendo lido. O
  * primeiro bit corrompido esta perto dessa fronteira, porque foi ele que fez o
- * decoder parar ali. Busca binaria: O(log n) decodificacoes. */
+ * decoder parar ali. Busca binaria: O(log n) decodificacoes.
+ *
+ *   alvo  indice do quadro
+ *
+ * Devolve: o byte a partir do qual truncar nao muda mais o resultado, ou seja,
+ * ate onde o decodificador realmente le. Busca binaria por truncamento.
+ */
 static int acha_consumo(int alvo) {
     int len = ix[alvo].size;
     uint8_t *base = arq + ix[alvo].off;
@@ -422,7 +443,15 @@ static int acha_consumo(int alvo) {
     return lo;
 }
 
-/* Busca de 1 bit restrita a [ini,fim). Nao grava nada. */
+/* Busca de 1 bit restrita a [ini,fim). Nao grava nada.
+ *
+ *   ancora, alvo      indices no index.txt
+ *   ini, fim          a faixa de bytes a varrer, [ini, fim)
+ *   off_out, bit_out  recebem o primeiro acerto
+ *
+ * Devolve: 1 se achou, 0 se nao. Para no PRIMEIRO acerto, entao serve para
+ * decidir "existe solucao?" e nao para contar quantas.
+ */
 static int busca1(int ancora, int alvo, int ini, int fim, int *off_out, int *bit_out) {
     uint8_t *base = arq + ix[alvo].off;
     for (int off = fim - 1; off >= ini; off--) {
@@ -537,7 +566,12 @@ static int n_cand;
  * mede a blocagem. Suporta parada antecipada pela regra do menor indice --
  * achar em k para de puxar indices >= k, mas termina os menores que ja estao em
  * voo. Nunca "a primeira que chegar": ha quadros com milhares de solucoes e a
- * escolha por chegada pegaria bit errado. */
+ * escolha por chegada pegaria bit errado.
+ *
+ *   p  ignorado; a tarefa vem do contador atomico e das globais da varredura
+ *
+ * Devolve: NULL sempre. A assinatura e imposta pelo pthread_create.
+ */
 static void *worker_varre(void *p) {
     Worker *w = p;
     int len = ix[w->alvo].size;
@@ -665,7 +699,12 @@ static _Atomic int n_pares_achados;
  *   p  ignorado; a tarefa vem de `prox_par` e de `pares`
  *
  * Pontua: aceita ou rejeita. Os pares vem pre-gerados num vetor global de teto
- * FIXO (4096) -- faixa maior que isso trunca em silencio. */
+ * FIXO (4096) -- faixa maior que isso trunca em silencio.
+ *
+ *   p  ignorado; a tarefa vem de `prox_par` e do vetor `pares`
+ *
+ * Devolve: NULL sempre.
+ */
 static void *worker_par2(void *p) {
     (void)p;
     int alvo = alvo2, len = ix[alvo].size, anc = ancora_de(alvo);
@@ -802,7 +841,13 @@ static int base_ntrechos = -1, base_maior = -1, base_linhas = -1, base_longos = 
  *
  * O teto de 8 e o dobro do pior quadro INTACTO medido (p99U ate 6, p99V ate 3,
  * em 20 faixas de 5 quadros). Isso quer dizer que nem o melhor candidato chega
- * a ter faixa liberada com cara de imagem: ele e o menos ruim, nao um acerto. */
+ * a ter faixa liberada com cara de imagem: ele e o menos ruim, nao um acerto.
+ *
+ *   y0, y1  a faixa a medir, [y0, y1), em linhas do QUADRO (nao do plano)
+ *
+ * Devolve: o maior p99 entre os planos U e V, ou -1 quando nao da para medir --
+ * sem captura, faixa curta demais ou menos de mil amostras.
+ */
 static int croma_salto_p99(int y0, int y1) {
     if (!cap_u || !cap_v || cap_w <= 0 || y1 > cap_h || y1 - y0 < 8) return -1;
     int cw = cap_w / 2, h0 = y0 / 2, h1 = y1 / 2, pior = -1;
@@ -831,7 +876,13 @@ static int croma_salto_p99(int y0, int y1) {
  * Repetir linha ACHATA a cor, lixo a ESTOURA, e o alvo esta no meio -- por isso
  * e faixa e nao limiar. Estava calibrada desde a armadilha 39 e o juiz nao a
  * consultava: o `croma_mb_na_faixa` mede outra coisa (variacao DENTRO do macrobloco e
- * salto entre medias de macroblocos vizinhos), nao o desvio do plano. */
+ * salto entre medias de macroblocos vizinhos), nao o desvio do plano.
+ *
+ *   y0, y1  a faixa, [y0, y1), em linhas do quadro
+ *   du, dv  recebem o desvio padrao de U e de V
+ *
+ * Nao devolve valor: ambos saem -1 quando nao da para medir.
+ */
 static void croma_desvio_plano(int y0, int y1, double *du, double *dv) {
     *du = *dv = -1;
     if (!cap_u || !cap_v || cap_w <= 0 || y1 > cap_h || y1 - y0 < 8) return;
@@ -866,7 +917,13 @@ static _Thread_local double tri_bloc = -1, tri_tarja = -1;
  * que e exatamente a informacao de que a etapa seguinte precisa. */
 static _Thread_local double cr_dentro = -1, cr_p99 = -1;
 
-/* Veredito dos criterios. Precisa da linha de base ja medida. */
+/* Veredito dos criterios. Precisa da linha de base ja medida.
+ *
+ * Sem argumentos: le a captura da thread e o estado da base.
+ *
+ * Devolve: 1 quando o candidato passa em TODOS os criterios; 0 em qualquer
+ * reprovacao, inclusive sem captura ou sem base medida.
+ */
 static int trinca_ok(void) {
     if (!cap_buf || cap_w <= 0 || base_fronteira < 0) return 0;
     /* 0. NAO ESTRAGUE O QUE JA ESTA BOM.
@@ -982,7 +1039,15 @@ static int cmp_double(const void *a, const void *b) {
  * estoura. Ver a armadilha 39 e o CRITERIOS.md.
  *
  * CROMA_DEBUG=1 imprime os valores medidos, para conferir contra a medicao
- * feita por fora -- foi a falta disso que me deixou cego na primeira versao. */
+ * feita por fora -- foi a falta disso que me deixou cego na primeira versao.
+ *
+ *   y0, y1  a faixa a julgar, [y0, y1), em linhas do quadro
+ *
+ * Devolve: 1 quando a variacao dentro do macrobloco e o salto entre macroblocos
+ * vizinhos ficam na faixa calibrada; 0 fora dela E tambem quando nao da para
+ * medir. Os dois casos dao 0, entao um zero nao distingue "reprovou" de "nao
+ * mediu" -- quem precisa da diferenca tem que olhar cap_w antes.
+ */
 static int croma_mb_na_faixa(int y0, int y1) {
     if (!cap_u || !cap_v || cap_w <= 0 || cap_h < y1) return 0;
     int cw = cap_w / 2, nmx = cap_w / 16;
@@ -1031,7 +1096,12 @@ static int croma_mb_na_faixa(int y0, int y1) {
  *
  * E aqui que moram os pisos -- e SO aqui, o que nao esta obvio: passar
  * PISO_TARJA para o `varrek` ou o `cresce` nao da erro, da silencio. O item 6
- * do REFATORACAO.md tira essa linha daqui para valer em todo modo. */
+ * do REFATORACAO.md tira essa linha daqui para valer em todo modo.
+ *
+ *   p  ignorado; a tarefa vem de `prox_combo` e de `combos_k`
+ *
+ * Devolve: NULL sempre. O resultado sai em `placar[indice]`.
+ */
 static void *worker_avanco(void *p) {
     (void)p;
     int alvo = alvok, len = ix[alvo].size, anc = ancora_de(alvo);
@@ -1128,7 +1198,12 @@ static void *worker_avanco(void *p) {
  *   p  ignorado; a tarefa vem de `prox_combo` e de `combos_k`
  *
  * Pontua: binario, sem os pisos do `avanco`. A diferenca entre os dois e
- * justamente essa -- aqui nao ha nota de progresso nem piso. */
+ * justamente essa -- aqui nao ha nota de progresso nem piso.
+ *
+ *   p  ignorado; a tarefa vem de `prox_combo` e de `combos_k`
+ *
+ * Devolve: NULL sempre.
+ */
 static void *worker_varrek(void *p) {
     (void)p;
     int alvo = alvok, len = ix[alvo].size, anc = ancora_de(alvo);
@@ -1161,7 +1236,15 @@ static void *worker_varrek(void *p) {
     return NULL;
 }
 
-/* Gera C(nbits_k, prof_k) combinacoes em ordem lexicografica. */
+/* Gera C(nbits_k, prof_k) combinacoes em ordem lexicografica.
+ *
+ * Sem argumentos: le `nbits_k` e `prof_k`.
+ *
+ * Nao devolve valor; aloca `combos_k` e preenche `n_combos`. A tabela e
+ * materializada inteira -- com profundidade 4 numa janela larga isso passa de
+ * um gigabyte, e a decisao de nao trocar por aritmetica combinatoria esta no
+ * docs/REFATORACAO.md, secao 4.
+ */
 static void gera_combos(void) {
     long total = 1;
     for (int q = 0; q < prof_k; q++) total = total * (nbits_k - q) / (q + 1);
@@ -1205,7 +1288,13 @@ static void gera_combos(void) {
 /* Estatistica de croma numa faixa de linhas. Min/max NAO serve de guarda --
  * listra pastel cabe dentro da faixa e passa; foi assim que o segundo candidato
  * do IDR 1683 escapou. O DESVIO separa: cena real fica em 4 a 8, e o lixo pastel
- * deu 10,1. */
+ * deu 10,1.
+ *
+ *   y0, y1          a faixa, [y0, y1), em linhas do quadro
+ *   um, ud, vm, vd  recebem media e desvio de U e de V
+ *
+ * Nao devolve valor; com faixa vazia todos saem zero. Amostra 1 coluna em 2.
+ */
 static void croma_media_desvio(int y0, int y1, double *um, double *ud, double *vm, double *vd) {
     int cw = cap_w / 2, ch = cap_h / 2;
     if (y1 / 2 > ch) y1 = ch * 2;
@@ -1270,7 +1359,12 @@ typedef struct { int alvo, ancora, ini; int nota, off, bit, idx; } WorkerC;
  *
  * Pontua: mede a imagem resultante e guarda as que melhoram, com guardas de
  * media e desvio calibradas pela metade integra do proprio quadro -- sem elas a
- * busca sobe em lixo colorido saturado. */
+ * busca sobe em lixo colorido saturado.
+ *
+ *   p  ponteiro para WorkerC, com o alvo e a faixa
+ *
+ * Devolve: NULL sempre.
+ */
 static void *worker_cresce(void *p) {
     WorkerC *w = p;
     int len = ix[w->alvo].size;
@@ -1352,7 +1446,12 @@ static int alvo_w = 0, alvo_h = 0;
  *
  * Pontua: nao aceita nem rejeita -- preenche, para cada candidato, vinte
  * medidas do quadro resultante. E modo de MEDICAO, nao de busca: quem decide e
- * quem le a tabela. */
+ * quem le a tabela.
+ *
+ *   p  ignorado; a tarefa vem de `prox_cand` e de `campos`
+ *
+ * Devolve: NULL sempre. O resultado sai nos campos de `campos[k]`.
+ */
 static void *worker_campo(void *p) {
     (void)p;
     cap_buf = malloc((size_t)1920 * 1088);
@@ -1483,7 +1582,12 @@ static int n_cands = 0;
  *   p  ignorado; a tarefa vem de `prox_cand` e de `cands`
  *
  * Pontua: marca `ok` em cada candidato que faz o quadro decodificar limpo.
- * Serve para revalidar uma lista vinda de outra corrida, sem refazer a busca. */
+ * Serve para revalidar uma lista vinda de outra corrida, sem refazer a busca.
+ *
+ *   p  ignorado; a tarefa vem de `prox_cand` e de `cands`
+ *
+ * Devolve: NULL sempre. Marca `ok` em cada candidato aprovado.
+ */
 static void *worker_testa(void *p) {
     (void)p;
     cap_buf = malloc((size_t)1920 * 1088);
@@ -1547,7 +1651,12 @@ typedef struct {
  *   p  ponteiro para WorkerR, com o alvo e a faixa da tarefa
  *
  * Pontua: pela diferenca media absoluta contra a referencia (`mad_ref`), o que
- * so vale quando existe um quadro bom conhecido para comparar. */
+ * so vale quando existe um quadro bom conhecido para comparar.
+ *
+ *   p  ponteiro para WorkerR, com o alvo e a faixa
+ *
+ * Devolve: NULL sempre.
+ */
 static void *worker_ref(void *p) {
     WorkerR *w = p;
     int len = ix[w->alvo].size;
@@ -1611,7 +1720,12 @@ typedef struct {
  *   p  ponteiro para WorkerL, com o alvo e a faixa da tarefa
  *
  * Pontua: quantas linhas do quadro tem conteudo de verdade, em vez de listra
- * propagada. Criterio de imagem, nao sintatico. */
+ * propagada. Criterio de imagem, nao sintatico.
+ *
+ *   p  ponteiro para WorkerL, com o alvo e a faixa
+ *
+ * Devolve: NULL sempre.
+ */
 static void *worker_linhas(void *p) {
     WorkerL *w = p;
     int len = ix[w->alvo].size;
@@ -1671,7 +1785,13 @@ static int conta(int ancora, int alvo, int ini, int fim,
 }
 
 /* Default 12, teto em nucleos-2 para nao saturar a maquina em corridas longas.
- * THREADS=1 usa o caminho sequencial original, para a comparacao A/B. */
+ * THREADS=1 usa o caminho sequencial original, para a comparacao A/B.
+ *
+ * Sem argumentos: le THREADS e NUMBER_OF_PROCESSORS.
+ *
+ * Devolve: o numero de threads, nunca menor que 1 nem maior que nucleos-2.
+ * O padrao e 12 por decisao medida; nao "otimizar" para 26.
+ */
 static int quantas_threads(void) {
     const char *s = getenv("NUMBER_OF_PROCESSORS");
     int nc = s ? atoi(s) : 4; if (nc < 1) nc = 4;
@@ -1744,7 +1864,13 @@ static void grava_patch(const char *fn, long off, int bit) {
  * A lista e explicita de proposito. Um criterio generico do tipo "tarja
  * uniforme mas fora de 16" pegaria 761 frames, dos quais 736 tem tarja 128 --
  * o cinza de ocultacao. Repintar aqueles seria maquiar lixo. So entra quadro
- * cuja IMAGEM foi verificada contra gabarito. */
+ * cuja IMAGEM foi verificada contra gabarito.
+ *
+ *   t  indice do quadro
+ *
+ * Devolve: 1 se o quadro esta na lista de REPINTA, 0 caso contrario. Repintar e
+ * OCULTACAO, nao reparo: melhora o que se ve e nao afirma nada sobre os bits.
+ */
 static int repinta_tarja(int t) {
     const char *l = getenv("REPINTA");
     if (!l) return 0;
