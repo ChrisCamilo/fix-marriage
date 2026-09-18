@@ -125,7 +125,9 @@ semântica que o dano acaba produzindo. Detectam, não localizam.
 | alinhamento de byte e `rbsp_slice_trailing_bits` | bit 1 seguido de zeros até o byte |
 | `cabac_zero_word` em pares de `00 00` | **já explorado**, `escapes.py` |
 | `00 00 01` ilegal no payload | **já explorado**, 84 bits provados |
-| `codIOffset` inicial igual a 510 ou 511 | **não explorado** |
+| `00 00 02` / `00 00 00` no payload | **ENCERRADO em 2026-09-18** — 93 NALs; ver armadilha 27 (revista). Não reabrir a classe: decide-se caso a caso, pelo critério de ocultação |
+| ocultação sem erro (`end_of_slice` cedo) | **explorado em 2026-09-18**, armadilha 59; o critério agora exige zero ocultados |
+| `codIOffset` inicial igual a 510 ou 511 | **explorado** no frame 11 — foi o que denunciou o cabeçalho corrompido (`dados/janela_f11.txt`) |
 
 Um detalhe que o projeto já mediu e que agora tem explicação: o
 `bytestream N` do frame 12 aponta o byte 1.820, mas os dados reais acabam no

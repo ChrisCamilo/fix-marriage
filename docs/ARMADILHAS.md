@@ -498,6 +498,29 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     perfeito. O codificador deste filme não escapa esse caso, e a norma que eu
     citava era leitura minha, não conferência.
 
+    > **REVISTO em 2026-09-18 — a prova acima era falsa, e a classe está
+    > ENCERRADA.** O 2360 não "decodificava perfeito": o `00 00 02` no byte 10
+    > faz o leitor de NAL do ffmpeg **encerrar o NAL ali**, o slice acaba no MB
+    > 510 e o ffmpeg oculta 7.650 macroblocos **sem erro nenhum** — o que o
+    > reparador não enxergava até a armadilha 59. Trocar por `03` não quebra o
+    > quadro: expõe o dado real, que vai até o MB 959. E `cabac_zero_word` vem
+    > DEPOIS do fim do slice, nunca no byte 10 de um quadro de 32 KB.
+    >
+    > Medido no filme inteiro: **93 NALs** têm `00 00 02` (82) ou `00 00 00`
+    > (11) antes do fim do dado. Restaurar o `03` em todos de uma vez: o parse
+    > sobe em 15 quadros (~550 → ~1.000, até o próximo dano), cai em 14 — cinco
+    > deles estavam em 8.160 só porque o corte do NAL escondia o resto (10, 12,
+    > 59, 407, 1610). Nenhum completa só com isso. No frame 10 o corte
+    > provavelmente mostra a imagem VERDADEIRA: é um B "tudo skip" cujos zeros
+    > cortados têm bits trocados.
+    >
+    > **Regra final, para não reinvestigar:** a sequência é dano quase sempre (um
+    > `03` com o bit 0 trocado), mas **não se aplica em lote**. Decide-se caso a
+    > caso, e só com o critério de ocultação (`reparador.c` desde `3e25fec`) e a
+    > curva de truncamento do `corta` — reparo real usa todo o dado do quadro.
+    > Aplicado assim no 2360 (`77496469 0`), com aprovação do usuário. Detalhe em
+    > `dados/alvos_ocultos.txt`.
+
 
 28. **`cabac_zero_word` vem em pares — e o invariante detecta sem consertar.**
     Depois do RBSP, o codificador pode anexar palavras `0x0000`. Medido nos 161
