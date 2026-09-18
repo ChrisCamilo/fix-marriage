@@ -12,7 +12,8 @@ Este repositório é **privado**. Material pessoal de família.
 - Existe **um** remoto, `origin` = `git@github.com:ChrisCamilo/fix-marriage.git`,
   **privado**, criado pelo próprio usuário em 2026-09-18 (nasceu privado, com
   `gh repo create --private`). **Nunca** adicionar outro remoto, nunca mudar a
-  visibilidade dele, e **push só quando o usuário pedir**.
+  visibilidade dele. **O push é sempre do usuário**: o agente faz os commits e
+  nunca roda `git push` — nem quando o commit parece pronto para subir.
 - **Nunca** publicar nada disto em outro lugar: nem artifact, nem gist, nem
   pastebin, nem serviço de diagrama ou de conversão online.
 - Criar público e trocar depois não resolve: o conteúdo fica em cache e

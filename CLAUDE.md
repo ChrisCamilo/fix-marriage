@@ -7,8 +7,8 @@ Três coisas que não podem ser esquecidas:
 1. **Repositório privado.** Material pessoal de família. Existe **um** remoto,
    privado, criado pelo usuário em 2026-09-18:
    `git@github.com:ChrisCamilo/fix-marriage.git`. Nunca criar outro remoto,
-   nunca torná-lo público, nunca publicar nada em outro lugar. Push só quando o
-   usuário pedir.
+   nunca torná-lo público, nunca publicar nada em outro lugar. **O push é sempre
+   do usuário**: o agente faz os commits e nunca roda `git push`.
 2. **O MP4 nunca é modificado.** O `patches.txt` **não** é append-only, mas
    **toda mudança nele passa pelo usuário antes** — é fonte de verdade, e linha
    que entra afirma "este bit estava corrompido". As duas juntas são a base;
