@@ -489,6 +489,12 @@ armadilha 17.
 > `77528965 2` e entrou `77528966 4` — cabeçalho válido e igual ao esperado; o
 > `77528961 0` é o `frame_num` e ficou. O dado real decodifica até o MB 989; o
 > resto é ocultação. Ver `dados/patches_cabecalho.txt`.
+>
+> **Candidato `77529030 2` (achado pelo `repair`), REJEITADO em 2026-09-18.** Com
+> ele o 2361 "decodifica limpo", mas o ffmpeg oculta 7.108 macroblocos: o bit
+> fabrica um `end_of_slice` perto do MB 1.052. A imagem só muda nas linhas
+> 128–147, e fica pior que sem ele (0,49 contra 0,11 de diferença para o 2360).
+> Armadilha 59.
 
 A revarredura com a cadeia limpa devolveu **1 solução** onde a anterior dera 0 —
 confirmação direta da armadilha 13. O par `77528961 bit 0` + `77528965 bit 2`

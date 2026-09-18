@@ -161,7 +161,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 |---|---|
 | [`RESULTADOS.md`](docs/RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
 | [`CRITERIOS.md`](docs/CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
-| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **58 maneiras de medir errado** que já produziram conclusão falsa aqui |
+| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **59 maneiras de medir errado** que já produziram conclusão falsa aqui |
 | [`CABAC.md`](docs/CABAC.md) | **por que não existe ressincronização dentro do slice**, e o que dá para explorar |
 | [`INVESTIGACOES.md`](docs/INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
 | [`IDRS.md`](docs/IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |

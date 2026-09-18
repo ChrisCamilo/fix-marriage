@@ -1103,3 +1103,28 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
 
     Lição: ferramenta de verificação também precisa ser verificada — conferir o
     código de retorno, e nunca dar a ela escrita sobre o que ela verifica.
+
+59. **Sem erro de macrobloco e com os 8.160 "decodificados" — e metade é
+    ocultação.** O CABAC pode ler `end_of_slice_flag` = 1 antes do último
+    macrobloco. A norma permite vários slices por quadro, então o ffmpeg trata
+    como "este slice acabou", **não reporta erro** e oculta o resto no fim do
+    quadro. Só a mensagem `concealing N DC` revela — e o `mapa`, o `repair` e o
+    critério rigoroso não a olham.
+
+    Apareceu avaliando o bit que o `repair` achou para o 2361 (`77529030 2`):
+    com ele o quadro "decodifica limpo", mas o ffmpeg oculta 7.108 macroblocos —
+    o bit fabrica um fim de slice alguns MBs depois do ponto onde hoje há erro
+    (989). Rejeitado. E a mesma medida achou o defeito em quadros contados como
+    bons: **2359 (3.339 MBs ocultados), 2360 (7.650) e 3442 (1.037)**, além do
+    2361. Parecem perfeitos porque a ocultação copia de vizinhos bons (ou de um
+    quadro quase preto, no fade final do 3442).
+
+    Medir com `python ferramentas/ocultacao.py <scratch> patches.txt <gop>...`:
+    cada GOP vira um stream Annex B e o `-debug pict` do ffmpeg dá uma linha por
+    slice, com a ocultação logo depois. Cuidado: quadro com cabeçalho rejeitado
+    não tem linha, e a atribuição por ordem desalinha depois dele — o script
+    avisa comparando o número de linhas com o de quadros.
+
+    Busca de reparo que aceita "decodifica limpo" vai achar esse atalho — foi o
+    que o reparo antigo do 2361 achou, e o `repair` achou de novo. O critério
+    certo é **zero macroblocos ocultados**.

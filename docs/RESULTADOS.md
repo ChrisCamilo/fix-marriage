@@ -6,6 +6,12 @@
 3319–3444, somando 166) mais o frame 12. São **5,57 s** de 114,95 s, em 4
 trechos.
 
+**Destes, 4 não são o quadro inteiro** (armadilha 59): 2359, 2360, 2361 e 3442
+têm o slice encerrado cedo e o resto ocultado — 3.339, 7.650, 7.220 e 1.037
+macroblocos. Visualmente seguem bons, porque a ocultação copia de vizinhos bons.
+**Decodificados por inteiro: 163.** Os 4 são alvos de reparo com critério
+"zero ocultados", e têm as referências intactas.
+
 O critério rigoroso dava 209, e **42 deles são imagem listrada** (armadilha 56).
 O `serie` julga cada quadro sozinho: um P ou B decodificado sem erro sobre uma
 referência borrada herda o borrão, e o teste de propagação não o pega porque o
