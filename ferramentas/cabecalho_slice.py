@@ -246,17 +246,21 @@ def desvios(h, esp):
     mole += h.get('beta', -1) != -1
     mole += h.get('mod_l0', 0) + h.get('mod_l1', 0)
     mole += h.get('amrpm', 0)
+    # O QP varia de verdade por quadro: so da para limitar a faixa. A primeira
+    # versao usava faixas estreitas (B -12..2, P -16..0) e acusou 36 quadros
+    # BONS das ilhas -- a cena final usa QP mais alto. Agora e o minimo e o
+    # maximo medidos nos cabecalhos coerentes do filme, com folga de 2.
     if st == 1:
         mole += h.get('direct_spatial', 1) != 1
         mole += (h['n0'], h['n1']) not in ((2, 3), (1, 2))
-        mole += not -12 <= h['qp_delta'] <= 2
+        mole += not -15 <= h['qp_delta'] <= 10
     elif st == 0:
         mole += h['luma_denom'] not in (0, 5)
         mole += h['chroma_denom'] != 0
         mole += h['n0'] not in (1, 2, 3)
-        mole += not -16 <= h['qp_delta'] <= 0
+        mole += not -18 <= h['qp_delta'] <= 12
     else:
-        mole += not -20 <= h['qp_delta'] <= -5
+        mole += not -22 <= h['qp_delta'] <= 2
     return duro, mole
 
 

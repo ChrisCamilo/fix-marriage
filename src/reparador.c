@@ -2937,7 +2937,16 @@ static int modo_serie(int argc, char **argv) {
         size_t ny = (size_t)1920 * 1080, nc = (size_t)960 * 540;
         uint8_t *zero = calloc(1, ny > nc ? ny : nc);
         int bons = 0;
-        for (int t = ini; t <= fim && t < n_ix; t++) {
+        /* Quadro decodificado sem erro sobre referencia borrada HERDA o borrao
+         * -- e o teste de propagacao nao o pega, porque o movimento desenha por
+         * cima das listras (armadilha 56: 42 dos 209 "bons" eram isso). Entao
+         * um quadro so passa se toda referencia decodificada antes dele no GOP
+         * (IDR e quadros com nal_ref_idc > 0) tambem passou. A cadeia comeca no
+         * IDR mesmo quando `ini` cai no meio do GOP: os quadros antes de `ini`
+         * sao julgados so para isso, sem gravar nada. */
+        int ref_quebrada = 0;
+        for (int t = ancora_de(ini); t <= fim && t < n_ix; t++) {
+            if (ix[t].idr) ref_quebrada = 0;
             int r = decodifica(ancora_de(t), t, NULL, 0, NULL);
             int tem = (cap_w == 1920 && cap_h == 1080);
             /* TARJA=1 aceita tambem quadro de imagem certa que o criterio
@@ -2961,8 +2970,10 @@ static int modo_serie(int argc, char **argv) {
                 }
                 fprintf(stderr, "[!] frame %d: tarja REPINTADA (ocultacao)\n", t);
             }
-            int ok = tem && (r == 0 || pinta ||
+            int ok = tem && !ref_quebrada && (r == 0 || pinta ||
                      (aceita_tarja && tarja_baixo_e_16(cap_buf, cap_w, cap_h)));
+            if (!ok && ((arq[ix[t].off + 4] >> 5) & 3)) ref_quebrada = 1;
+            if (t < ini) continue;               /* so alimentou a cadeia */
             if (ok) {
                 fwrite(cap_buf, 1, ny, g);
                 fwrite(cap_u ? cap_u : zero, 1, nc, g);
