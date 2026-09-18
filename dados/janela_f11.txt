@@ -256,3 +256,44 @@
 #
 # Nenhum bit destas cadeias entra em lugar nenhum.
 
+
+# ============================================================================
+# 2026-09-18 -- O CABECALHO DO SLICE ESTA CORROMPIDO (2 bits), E O "MB 15" ERA LIXO
+#
+# Lido campo a campo com `ffmpeg -bsf:v trace_headers` (saidas/reparado.mp4):
+#
+#   campo                    frame 9      frame 11 hoje    frame 11 + 2 bits
+#   chroma_weight_flag[2]    1            0                1   (1,-1,1,1 = f9)
+#   slice_qp_delta           -16 (QP 10)  +3 (QP 29)       -16 (QP 10)
+#   alpha / beta             -1 / -1      +2 / 0           -1 / -1
+#   cabac_alignment_one_bit  1            0  <- PROIBIDO   1
+#
+#   os 2 bits: 147709 7  e  147712 1   (NAO APLICADOS -- esperam o usuario)
+#
+# Duas regras da norma denunciam o cabecalho de hoje, e o ffmpeg nao confere
+# nenhuma das duas: o bit de alinhamento CABAC tem que ser 1, e os 9 primeiros
+# bits da slice nao podem valer 510/511. So com o 147709 7 os dados comecam em
+# FF 8D -> 511, e por isso ele "completava" sem ler nada (falsa conclusao).
+#
+# Com QP 29 o CABAC nasce com os contextos errados: os MB 0-14 saiam skip, lixo.
+# O "chega ao MB 15" nunca foi progresso. Com o par, o erro vai para o MB 1 --
+# MB alcancado CAI de 15 para 1 e o quadro esta MAIS certo. Por isso nenhuma
+# varredura por MB alcancado via este par (armadilha nova).
+#
+# PESOS: a ref 2 do frame 11 tem w=64/32=2,0 e o=-16: 16*2-16 = 16 exato. A
+# ref 0 (1,25, -5) faz o campo 38->43. O codificador pos uma referencia so para
+# a tarja. Croma da ref 2: offsets -1/+1 -> U 127, V 129 sem residuo.
+#
+# COM O PAR, sem ocultacao (-ec 0): MB 0 sai `10>` como o MB 0 de todo P
+# vizinho; o 8x8 de baixo-direita e 16 exato, os outros tres tem residuo +-3,
+# U 127. Nos quadros legitimos a tarja e 16 exato em TODO pixel e U = 128.
+# O defeito seguinte esta no CBP/residuo do MB 0; o MB 1 pede ref 4 de 3.
+#
+# JUIZ POR PIXEL (scratchpad/juiz_px.py): trecho Annex B do GOP 0 ate o frame
+# 12, -ec 0, conta MBs em ordem raster que sao 16 exato E foram decodificados.
+#
+#   1 bit  [147714,147900)   1.488 -> ZERO com MB 0 = 16
+#   2 bits [147714,147751)  43.660 -> ZERO com MB 0 = 16         (13 min)
+#   (o juiz antigo, por MB alcancado: nada melhora depois do byte 147750)
+#
+# Nada disto entra no patches.txt.
