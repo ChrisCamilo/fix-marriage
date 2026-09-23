@@ -144,6 +144,14 @@ fica depois dele — em qualquer lugar até o fim do NAL. Obs.: os últimos byte
 do NAL têm um `00 00 02` (byte 34.311), classe da armadilha 27 — irrelevante
 enquanto o primeiro bit não for achado.
 
+**2 bits, os dois em `[32560,32720)` (opção "rajada curta"): 0 fecham.**
+818.560 pares, 877 s. Nenhum chega a 8.160; o melhor chega ao **MB 7.652**,
+contra 7.470 do melhor bit sozinho. 305.175 passam da base (37%) — avançar um
+pouco é o que qualquer perturbação faz aqui, não é sinal. Conclusão: se o dano
+são dois bits, **não são dois bits juntos nesses 160 bytes**. Ficam abertas as
+opções com o segundo bit depois da janela (até o byte 33.501, ~8,8 M pares, ou
+até o fim do NAL, ~17 M), que pedem janela separada por bit no `avanco`.
+
 ### Censo do GOP 1773 — consertar o IDR não destrava 29 frames
 
 Decodificados os 29 frames (1773 a 1801) com a âncora no estado atual:
