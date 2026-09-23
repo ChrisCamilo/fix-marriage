@@ -25,6 +25,33 @@ depois de medido.
    checagem e a ordenação final — que é o que a melhoria 3 atacaria. Desenho e
    justificativa em `PARALELIZACAO.md`. **Não** mexer no `thread_count` do
    libavcodec — ver seção 1 daquele documento.
+3. **Janela própria para o 2º bit no `avanco`** (2026-09-23) —
+   `JANELA2=ini:fim`, só com `k = 2`. O 1º bit sai da faixa principal
+   `[ini,fim)`, o 2º de `[ini2,fim2)` e sempre depois do 1º; os dois em bytes do
+   NAL, e o corte do enchimento vale para os dois.
+
+   ```bash
+   JANELA2=32560:34317 ./reparador.exe "$MP4" index.txt $SB/pt.txt avanco 1773 2 32560 32720 $SB/saida.txt
+   ```
+
+   Existe porque o primeiro bit errado é localizável (curva de truncamento,
+   imagem, avanço de 1 bit) e o segundo não: fica em qualquer lugar depois. No
+   IDR 1773 isso separa 17 M pares de ~99 M que uma faixa única até o fim do
+   NAL daria. Conferido: com `JANELA2` igual à faixa principal a saída é byte a
+   byte a mesma de sem ela; numa janela assimétrica pequena saem exatamente os
+   476 pares da conta, todos com a mesma nota que têm na varredura comum.
+   Sem `JANELA2` nada muda (regressão inteira com o mesmo SHA-256).
+4. **Saída do `avanco` guarda as melhores, não as primeiras** (2026-09-23).
+   O arquivo tinha teto fixo de 40.000 linhas preenchido na ordem da
+   combinação; no IDR 1773 passaram 305.175 pares e o de melhor nota (7.652)
+   ficou de fora — ordenar o arquivo não o recuperava. Agora, passando do teto,
+   ficam as de **maior nota** (empate no corte pela ordem da combinação), e o
+   arquivo segue em ordem de combinação e no mesmo formato (o `encadeia.py` lê
+   igual). O teto virou `TETO=n` (0 = sem limite), e o stdout ganhou as **5
+   melhores** combinações. Conferido: abaixo do teto o arquivo sai byte a byte
+   igual ao de antes; com `TETO` 100, 500, 605 e 0 sai exatamente o top-N
+   esperado, calculado à parte a partir da varredura completa. Muda o stdout
+   dos três casos `avanco_*` da regressão (as 5 melhores), e só deles.
 
 ### Pendentes
 
