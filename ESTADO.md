@@ -53,7 +53,8 @@ programas contam com isso.
 ```
 raiz/                   o que todo comando cita, e o que nunca se move
   Caio & ... .mp4       original intocado — fonte de verdade, nunca modificar
-  patches.txt           lista `offset bit`, append-only — a outra fonte de verdade
+  patches.txt           lista `offset bit` — a outra fonte de verdade; toda
+                        mudança nele passa pelo usuário antes
   index.txt             índice `i offset size idr` das 3445 amostras
   reparador.exe         binário compilado (fora do versionamento)
   ESTADO.md AGENTS.md CLAUDE.md
@@ -84,8 +85,11 @@ raiz/                   o que todo comando cita, e o que nunca se move
 linha de comando e em todo documento, e o MP4 tem 114 MB. Movê-las não arruma
 nada e multiplica a chance de um comando errado tocar no original.
 
-O projeto é um repositório git **local e privado, sem remoto**. Isto é material
-pessoal de família: não publicar em lugar nenhum. O `.mp4` e o binário compilado
+O projeto é um repositório git **privado, com um remoto só**, também privado,
+criado pelo usuário em 2026-09-18: `git@github.com:ChrisCamilo/fix-marriage.git`.
+Isto é material pessoal de família: nunca criar outro remoto, nunca torná-lo
+público, não publicar em lugar nenhum. **O push é sempre do usuário** — o
+agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 
