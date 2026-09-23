@@ -2440,6 +2440,7 @@ static int modo_corta(int argc, char **argv) {
  *   PORTA=n          so conta e grava nota >= n
  *   BASE=n           substitui a nota medida sem flip (a linha de corte)
  *   IGUAIS=1         grava tambem as que EMPATAM com a base
+ *   TETO=n           linhas do arquivo, 40.000 por padrao; 0 = sem limite
  *   PONTUA_CONSUMO=1 nota em bytes consumidos antes do erro, nao em MB
  *   PISO_TARJA, PISO_TOPO, PISO_BASE, PISO_CROMA, PISO_TRINCA, INTACTO_ATE,
  *   TARJA_DESCE      pisos de imagem: reprovado vira nota -1. So valem AQUI
@@ -2452,12 +2453,15 @@ static int modo_corta(int argc, char **argv) {
  * nao sai quadro ou reprova num piso.
  *
  * Saida no stdout: a linha da faixa, o histograma das notas em 7 faixas de
- * 1.166 MB, a nota da base sem flip, a melhor nota e quantas passam da base.
+ * 1.166 MB, a nota da base sem flip, a melhor nota e quantas passam da base,
+ * e as 5 MELHORES combinacoes (empate pela ordem da combinacao), no formato do
+ * arquivo. Quando o teto corta, uma linha diz a nota de corte.
  * No arquivo: uma linha por combinacao que passa da base (ou empata, com
  * IGUAIS) e da PORTA, "off bit [off bit ...]   mb N", em ordem de combinacao
- * e NAO de nota -- e com TETO de 40.000 linhas. Quando passam mais que isso a
- * melhor pode nao estar no arquivo: no 1773 (2026-09-22) 305.175 passaram e o
- * par da melhor nota, 7.652, ficou de fora. Ordenar o arquivo nao a recupera.
+ * e NAO de nota, ate TETO linhas. Passando do teto ficam as de MAIOR nota
+ * (empate no corte pela ordem da combinacao). Ate 2026-09-23 ficavam as
+ * primeiras 40.000 na ordem da combinacao, e no 1773 o par da melhor nota
+ * (7.652, de 305.175 que passaram) ficou de fora do arquivo.
  *
  * Devolve: 0; 1 se JANELA2 vier malformada ou com k != 2.
  */
@@ -2631,16 +2635,65 @@ static int modo_avanco(int argc, char **argv) {
         for (long c = 0; c < n_combos; c++) if (placar[c] > base && placar[c] >= porta) passam++;
         printf("[+] melhor macrobloco alcancado: %d   (%ld passam da base, %ld tambem da porta %d)\n",
                melhor, quantos, passam, porta);
+        /* Quem vai para o arquivo: nota >= porta e acima da base. Quando a base
+         * ja esta no maximo -- caso do encadeamento, em que o bit anterior
+         * fecha o quadro -- exigir "> base" nao deixa passar nada e o arquivo
+         * sai vazio mesmo havendo milhares de candidatos validos. IGUAIS=1
+         * tambem grava os que empatam com a base, e ai quem separa e o piso,
+         * nao o macrobloco. */
+        int piso = iguais ? base : base + 1;
+        if (piso < porta) piso = porta;
+        long elegiveis = 0;
+        for (long c = 0; c < n_combos; c++) if (placar[c] >= piso) elegiveis++;
+        /* As 5 melhores notas, empate pela ordem da combinacao. Sem isto a
+         * melhor so aparecia se coubesse no arquivo -- ver o teto abaixo. */
+        {
+            long top[5]; int ntop = 0;
+            for (long c = 0; c < n_combos; c++) {
+                if (placar[c] < piso) continue;
+                if (ntop == 5 && placar[c] <= placar[top[4]]) continue;
+                int p = ntop < 5 ? ntop++ : 4;
+                while (p > 0 && placar[c] > placar[top[p - 1]]) { top[p] = top[p - 1]; p--; }
+                top[p] = c;
+            }
+            if (ntop) printf("[+] as %d melhores:\n", ntop);
+            for (int t = 0; t < ntop; t++) {
+                const int *comb = combos_k + top[t] * prof_k;
+                printf("   ");
+                for (int q = 0; q < prof_k; q++)
+                    printf(" %ld %d", ix[alvok].off + ini_k + comb[q] / 8, comb[q] % 8);
+                printf("   mb %d\n", placar[top[t]]);
+            }
+        }
+        /* TETO=n: quantas linhas o arquivo guarda, 40.000 por padrao. Passando
+         * disso ficam as de MAIOR nota -- empate no corte pela ordem da
+         * combinacao -- e o arquivo continua em ordem de combinacao. Antes
+         * ficavam as PRIMEIRAS 40.000 na ordem da combinacao: no IDR 1773
+         * (2026-09-22) passaram 305.175 pares e o de melhor nota, 7.652, nao
+         * estava no arquivo; ordenar o arquivo nao o recuperava. */
+        long teto = getenv("TETO") ? atol(getenv("TETO")) : 40000;
+        int nota_corte = piso;
+        long vagas_corte = -1;              /* -1: tudo que passa cabe */
+        if (elegiveis > teto && teto > 0) {
+            long *hist = calloc((size_t)(melhor - piso + 1), sizeof *hist);
+            for (long c = 0; c < n_combos; c++) if (placar[c] >= piso) hist[placar[c] - piso]++;
+            long acima = 0;
+            int v = melhor;
+            while (v > piso && acima + hist[v - piso] < teto) acima += hist[v-- - piso];
+            nota_corte = v;
+            vagas_corte = teto - acima;
+            free(hist);
+            printf("[+] teto de %ld linhas: %ld passam; ficam as de nota > %d e as %ld primeiras de nota %d\n",
+                   teto, elegiveis, v, vagas_corte, v);
+        }
         FILE *g = argc > 9 ? fopen(argv[9], "w") : NULL;
         int mostradas = 0;
-        for (long c = 0; c < n_combos && mostradas < 40000; c++) {
-            /* Quando a base ja esta no maximo -- caso do encadeamento, em que
-             * o bit anterior fecha o quadro -- exigir "> base" nao deixa passar
-             * nada e o arquivo sai vazio mesmo havendo milhares de candidatos
-             * validos. IGUAIS=1 tambem grava os que empatam com a base, e ai
-             * quem separa e o piso, nao o macrobloco. */
-            if (placar[c] < porta) continue;
-            if (iguais ? placar[c] < base : placar[c] <= base) continue;
+        for (long c = 0; c < n_combos; c++) {
+            if (placar[c] < piso) continue;
+            if (vagas_corte >= 0) {
+                if (placar[c] < nota_corte) continue;
+                if (placar[c] == nota_corte) { if (vagas_corte == 0) continue; vagas_corte--; }
+            }
             const int *comb = combos_k + c * prof_k;
             for (int q = 0; q < prof_k; q++) {
                 long o = ix[alvok].off + ini_k + comb[q] / 8;

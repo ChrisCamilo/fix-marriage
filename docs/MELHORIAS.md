@@ -41,6 +41,17 @@ depois de medido.
    byte a mesma de sem ela; numa janela assimétrica pequena saem exatamente os
    476 pares da conta, todos com a mesma nota que têm na varredura comum.
    Sem `JANELA2` nada muda (regressão inteira com o mesmo SHA-256).
+4. **Saída do `avanco` guarda as melhores, não as primeiras** (2026-09-23).
+   O arquivo tinha teto fixo de 40.000 linhas preenchido na ordem da
+   combinação; no IDR 1773 passaram 305.175 pares e o de melhor nota (7.652)
+   ficou de fora — ordenar o arquivo não o recuperava. Agora, passando do teto,
+   ficam as de **maior nota** (empate no corte pela ordem da combinação), e o
+   arquivo segue em ordem de combinação e no mesmo formato (o `encadeia.py` lê
+   igual). O teto virou `TETO=n` (0 = sem limite), e o stdout ganhou as **5
+   melhores** combinações. Conferido: abaixo do teto o arquivo sai byte a byte
+   igual ao de antes; com `TETO` 100, 500, 605 e 0 sai exatamente o top-N
+   esperado, calculado à parte a partir da varredura completa. Muda o stdout
+   dos três casos `avanco_*` da regressão (as 5 melhores), e só deles.
 
 ### Pendentes
 
