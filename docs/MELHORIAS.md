@@ -60,6 +60,30 @@ depois de medido.
 4. **Paralelizar a busca com parada antecipada** (`busca1`) — ainda sequencial.
    Exige a regra do menor índice descrita em `PARALELIZACAO.md`, porque com
    múltiplas soluções "a primeira que chegar" escolheria bit errado.
+5. **Encadear pela fronteira de MB limpo, não pelo MB alcançado** (proposto
+   2026-09-23, a partir do 1773). Cada estado se decodifica em modo limpo
+   (`-ec 0 -skip_loop_filter all`, armadilha 60); a **fronteira** é o primeiro
+   MB, na ordem de varredura, com artefato — a certa pelo gabarito de sintaxe
+   (QP diferente do slice, I_PCM), a provável pelos juízes de imagem por MB
+   (degrau de borda, croma por MB, custo em bytes). A janela da etapa são os
+   bytes dos MBs entre (fronteira provável − 2 ou 3) e a fronteira certa, pela
+   curva do `corta` no estado atual: dezenas de bytes. Nota do candidato:
+   quanto a fronteira avança; veto se sujar MB que estava limpo; desempate
+   pelos MBs com artefato que sobram na fileira. Feixe de 10–20 ramos,
+   candidatos de saída idêntica fundidos, 2 bits na janela só se 1 não
+   avançar. Nada entra no `patches.txt` por etapa: só a cadeia que termina com
+   tarja 16/0, os 8.160 MBs no QP do slice, zero ocultados e o slice acabando
+   exatamente no fim dos dados. Antes de implementar: conferir o QP constante
+   no trecho limpo dos 131 IDRs e calibrar os juízes de imagem em modo limpo.
+
+   Acrescentado depois da análise no JM (RASTREIO, "IDR 1773 no JM"): o trace
+   do JM dá a sintaxe de cada MB e serve de juiz por MB — `mb_qp_delta ≠ 0` e
+   I_PCM são lixo certo; nível de coeficiente muito acima das fileiras de cima
+   nas mesmas colunas é lixo provável (no 1773 denunciou a coluna 101, nove MBs
+   antes do I_PCM). E **antes de qualquer busca de k bits, contar o dano já
+   visível no NAL** (violações de escape antes dos últimos ~8 bytes, onde os
+   quadros bons também as têm): se passar de k, a
+   busca não fecha — no 1773 isso teria poupado as 5 h das opções a, b e c.
 
 ### RETRATADA: "o modelo de cadeia não serve para todo GOP"
 

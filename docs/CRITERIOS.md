@@ -42,6 +42,13 @@ neste projeto, e onde houve reparo, havia um deles:
 | a tarja | medida em 16 frames íntegros: `Y=16`, `U=V=128`, linhas 962–1079 |
 | vizinho temporal | o frame 2360 tinha quadros bons dos dois lados |
 | aritmética | o nível do fade do 3435, previsto por extrapolação da reta |
+| **sintaxe por macrobloco** (2026-09-23) | o QP é **o mesmo nos 8.160 MBs** de um IDR íntegro e só há I16x16 e I4x4: todo MB com QP diferente do slice, ou I_PCM, é lixo. Medido em 2333 (13), 3319 (23) e nas fileiras 0–56 do 1773 (20); falta conferir nos 131 |
+
+O quarto gabarito, o de sintaxe, só diz **não**: MB com QP certo pode ser lixo,
+porque os contextos do CABAC adaptados a "delta sempre zero" fazem o lixo
+continuar dando zero por um tempo. Ele marca o limite de onde a fronteira do
+dano pode estar, não o ponto exato. Ler com `ffmpeg -debug qp+mb_type -ec 0
+-skip_loop_filter all`.
 
 Onde não há nenhum dos três — o IDR 1683 — **todo juiz vira proxy e todo proxy
 cai**. Não adianta procurar um melhor.

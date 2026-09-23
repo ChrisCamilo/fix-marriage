@@ -219,6 +219,87 @@ bytes: as três opções somam 17,2 M pares (a, b, c) e nenhum par fecha. O dano
 tem 3 bits ou mais, ou o 1º bit está fora de `[32560,32720)`. Busca exaustiva
 de 3 bits na mesma lógica passa de um dia de máquina.
 
+**O QP de cada MB refuta o melhor par — e a minha leitura da imagem.**
+(`ffmpeg -debug qp+mb_type`, modo limpo.) Nos IDRs íntegros 2333 e 3319 os
+8.160 MBs têm o mesmo QP; no 1773 as fileiras 0–56 são todas QP 20. Na fileira
+57, colunas 96–119:
+
+| estado | o que o QP mostra |
+|---|---|
+| base | QP 20 até a coluna 109; **I_PCM na coluna 110** (lixo certo); da fileira 58 em diante nada decodificado |
+| 1º bit `59363305 b7` | QP 20 até a col. 100, **19 na 101**, 18 dali até o fim da fileira; fileira 58 toda em **23**, 59 em 27–39 |
+| melhor par (opção b) | a fileira 57 igual à do 1º bit (QP 18); fileira 58 em 20–23, 59 em 28–33, 60 em 38–46, 61 em 2 |
+
+As diagonais "plausíveis" da fileira 57 com o par, que eu apresentei como
+melhora, são **lixo com QP 18** — o olho errou onde a sintaxe não erra. Com o
+1º bit o lixo começa no **MB 6.941**, dois depois do MB onde o bit age.
+
+Juiz de imagem por MB medido no mesmo modo (degrau na borda de cima/esquerda
+relativo à variação interna): bons 0,56–1,15 de mediana e 0,7–1,9% acima de 3;
+lixo 1,3–2,5 de mediana e 27–47% acima de 3. Separa trechos, não um MB
+isolado. Plano de encadeamento por fronteira no MELHORIAS.md.
+
+### IDR 1773 no JM 19.1 com trace — 2026-09-23
+
+`ldecod` compilado com `ENABLE_TRACING` (scratchpad `JM/`), quadro sozinho em
+Annex B. O `@` do trace em CABAC é contador de elementos de sintaxe, não
+posição em bits; o que ele dá é a sintaxe inteira de cada MB (tipo, modos
+intra, CBP, `mb_qp_delta`, cada coeficiente). Leitor em `jmtrace.py` no
+scratchpad.
+
+**O JM recusa o NAL** (`Invalid startcode emulation prevention found`): há
+`00 00 03` seguido de byte > 3 em rel **34.257** e **34.285** e o `00 00 02` em
+**34.312**, os três nos últimos 60 bytes. Para a análise o NAL foi cortado
+antes do 34.257 — a região estudada é 32.500–33.500.
+
+| | JM | ffmpeg |
+|---|---|---|
+| base | aborta no MB 6.960 (fil. 58, col. 0): `unexpected HOR_PRED_8 chroma intra prediction mode` | `left block unavailable` no mesmo MB |
+| 1º bit | decodifica os 8.160 **sem reclamar** | erro no MB 7.341, lê 6 bytes além do fim |
+| par | decodifica os 8.160 **sem reclamar** | erro no MB 7.854, idem |
+
+O JM é mais permissivo que o ffmpeg: "decodifica até o fim" nele não prova nada.
+
+**A sintaxe diverge exatamente onde a imagem diz:** base × 1º bit no MB
+**6.939**, 1º bit × par no **7.046** — terceira régua concordando com a imagem
+em modo limpo e com a curva do `corta`.
+
+**Gabarito de QP confirmado na sintaxe:** nos 18.360 MBs limpos (2333, 3319 e o
+1773 até a fileira 56) o `mb_qp_delta` é **0 em todos** (19 MBs I4x4 com CBP 0
+não o codificam). Com o 1º bit, os MBs **6.941 e 6.944 têm `mb_qp_delta = −1`**:
+o fluxo do 1º bit (e do par) está errado no 6.941 ou antes — certo, não
+provável. Na base o I_PCM do 6.950 é o limite certo.
+
+**Na base, os coeficientes denunciam antes do I_PCM.** Fileira 57, colunas
+96–119, contra as fileiras 54–56 nas mesmas colunas (limpas):
+
+| | nível máximo por MB |
+|---|---|
+| fileiras 54–56 | até 13, um único 26 |
+| fileira 57, col. 96–100 | 9, 6, 2, 6, 7 |
+| fileira 57, col. 101–117 | **13, 21, 7, 22, 4, 15, 11, 12, 3, PCM, 15, 14, 1, 1, 17, 20, 2** |
+
+A inflação começa na coluna 101 (MB 6.941), a mesma onde a imagem quebra e onde
+o QP do 1º bit desvia. O bit errado da base está nos dados dos MBs
+~6.939–6.941.
+
+**Por que o lixo parece sintaxe normal:** o decodificador aritmético alimentado
+com bits errados *amostra do próprio modelo de contextos* — devolve símbolos
+com a probabilidade que o modelo adaptado lhes dá. É por isso que o lixo segue
+com `mb_qp_delta = 0` por dezenas de MBs e tipos plausíveis. Detector de lixo
+tem que usar o que o modelo **não** codifica: a política do encoder (QP
+constante, sem I_PCM), as regras semânticas (vizinho indisponível para o modo
+intra — foi o que matou a base), a coerência de pixels (o CABAC não sabe nada de
+imagem) e o fim do slice casando com o fim do dado.
+
+**Os 60 bytes finais têm três violações de escape.** Pela armadilha 27 a classe
+é caso a caso; nos quadros bons a regra `00 00 03` + byte > 3 só dispara nos
+últimos 4–7 bytes (3444 no 262 de 266; o 2360, que nem é bom), onde o slice já
+pode ter acabado. As do 1773 estão a 32 e 60 bytes do fim. **Se forem dano,
+são mais 3 bits** além do da frente — e nenhuma busca de 2 bits fecharia o
+quadro, o que explica as opções a, b e c. Indício forte, não prova: não se sabe
+onde o slice do 1773 acaba de verdade.
+
 ### Censo do GOP 1773 — consertar o IDR não destrava 29 frames
 
 Decodificados os 29 frames (1773 a 1801) com a âncora no estado atual:
