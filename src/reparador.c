@@ -1299,6 +1299,38 @@ static void gera_combos(void) {
     n_combos = w;
 }
 
+/* Gera os pares (i, j) com o 1o bit na faixa principal e o 2o numa faixa
+ * propria, sempre j > i. Existe porque o primeiro bit errado de um quadro
+ * costuma ser localizavel -- curva de truncamento, imagem, avanco de 1 bit --
+ * e o segundo nao: ele fica em qualquer lugar DEPOIS do primeiro. No IDR 1773
+ * o primeiro cabe em 160 bytes e o segundo pode estar ate o fim do NAL; com
+ * uma faixa so para os dois, cobrir isso custava ~13 M pares a mais, todos com
+ * o primeiro bit onde ele sabidamente nao esta.
+ *
+ *   j0, j1  faixa do 2o bit, em bits relativos a `ini_k` (j0 >= 0)
+ *
+ * Le `nbits_k` (tamanho da faixa do 1o bit). Aloca `combos_k` e preenche
+ * `n_combos`; a ordem e lexicografica, como no `gera_combos`.
+ */
+static void gera_combos_janelas(int j0, int j1) {
+    long total = 0;
+    for (int i = 0; i < nbits_k; i++) {
+        int a = j0 > i + 1 ? j0 : i + 1;
+        if (a < j1) total += j1 - a;
+    }
+    combos_k = malloc((size_t)(total ? total : 1) * 2 * sizeof(int));
+    long w = 0;
+    for (int i = 0; i < nbits_k; i++) {
+        int a = j0 > i + 1 ? j0 : i + 1;
+        for (int j = a; j < j1; j++) {
+            combos_k[w * 2] = i;
+            combos_k[w * 2 + 1] = j;
+            w++;
+        }
+    }
+    n_combos = w;
+}
+
 
 
 /* ---- modo cresce: objetivo CONTINUO, para frame que passa no criterio ----
@@ -2339,15 +2371,6 @@ static int modo_varre2(int argc, char **argv) {
                        o1, pares[k].a % 8, o2, pares[k].b % 8);
         }
         if (g) { fclose(g); printf("    gravados em %s\n", argv[6]); }
-    /* ---- modo avanco ----
-     * O criterio binario "decodifica limpo" desperdica a informacao mais util
-     * que o decoder da: ATE ONDE ele chegou antes de falhar. Num slice CABAC
-     * nao existe ponto de ressincronizacao, entao tudo que vem ANTES do
-     * primeiro erro esta correto -- e empurrar o primeiro erro para a frente e
-     * progresso medivel, mesmo quando o quadro ainda nao fecha.
-     *
-     * A pontuacao e o endereco linear do macrobloco onde o ALVO parou,
-     * mb_y * 120 + mb_x, de 0 a 8159. Sem erro pontua 8160. */
     /* ---- modo corta ----
      * Onde comeca cada fileira de macrobloco, medido em vez de estimado.
      * Trunca o NAL em k bytes e le no log ate onde o decodificador chegou: isso
@@ -2390,6 +2413,67 @@ static int modo_corta(int argc, char **argv) {
     return 0;
 }
 
+/* Modo `avanco`: varre TODAS as combinacoes de k bits (1 a 4) de uma faixa do
+ * NAL do alvo e da a cada uma uma NOTA DE PROGRESSO -- ate onde o decodificador
+ * chegou -- em vez do sim/nao do `varrek`. Serve para localizar dano e para
+ * encadear etapas (`encadeia.py`), nao para aprovar reparo: 8160 aqui quer
+ * dizer "o decodificador nao reclamou e nao ocultou nada", e so a imagem e a
+ * tarja dizem se esta certo (CRITERIOS.md).
+ *
+ * Com k = 2 e JANELA2, o 2o bit sai de uma faixa propria (ver abaixo): o
+ * primeiro bit errado costuma ser localizavel e o segundo nao, e uma faixa so
+ * para os dois gasta quase tudo com o 1o bit onde ele sabidamente nao esta.
+ *
+ *   argv[5]  alvo     indice do quadro no index.txt
+ *   argv[6]  k        bits por combinacao, 1 a 4 (fora disso e grampeado)
+ *   argv[7]  ini      1o byte da faixa, no NAL (com o prefixo de 4 bytes);
+ *                     padrao e minimo 5, o 1o byte depois do cabecalho NAL
+ *   argv[8]  fim      fim da faixa, exclusivo; padrao o tamanho do NAL
+ *   argv[9]  saida    arquivo das combinacoes que passam; sem ele imprime 25
+ *
+ * Variaveis de ambiente que mudam o que o modo faz:
+ *   JANELA2=ini:fim  so com k = 2: 1o bit em [ini,fim) da faixa principal, 2o
+ *                    em [ini2,fim2) e sempre depois do 1o; exige
+ *                    ini_principal <= ini2 < fim2. Em bytes do NAL.
+ *   SEM_CLAMP=1      nao corta o enchimento (00 00 03 / 00 finais) da faixa;
+ *                    o corte vale para as duas janelas
+ *   PORTA=n          so conta e grava nota >= n
+ *   BASE=n           substitui a nota medida sem flip (a linha de corte)
+ *   IGUAIS=1         grava tambem as que EMPATAM com a base
+ *   PONTUA_CONSUMO=1 nota em bytes consumidos antes do erro, nao em MB
+ *   PISO_TARJA, PISO_TOPO, PISO_BASE, PISO_CROMA, PISO_TRINCA, INTACTO_ATE,
+ *   TARJA_DESCE      pisos de imagem: reprovado vira nota -1. So valem AQUI
+ *                    (worker_avanco), nao no `varrek` nem no `cresce`
+ *   CONSUMO=n        juiz do consumo -- REFUTADO, nao usar (armadilha 36)
+ *
+ * Nota de cada combinacao (worker_avanco + mb_alcancado): o endereco linear do
+ * MB onde o alvo parou, mb_y * 120 + mb_x, de 0 a 8159; 8160 - ocultados
+ * quando o slice acabou cedo sem erro; 8160 so quando saiu inteiro; -1 quando
+ * nao sai quadro ou reprova num piso.
+ *
+ * Saida no stdout: a linha da faixa, o histograma das notas em 7 faixas de
+ * 1.166 MB, a nota da base sem flip, a melhor nota e quantas passam da base.
+ * No arquivo: uma linha por combinacao que passa da base (ou empata, com
+ * IGUAIS) e da PORTA, "off bit [off bit ...]   mb N", em ordem de combinacao
+ * e NAO de nota -- e com TETO de 40.000 linhas. Quando passam mais que isso a
+ * melhor pode nao estar no arquivo: no 1773 (2026-09-22) 305.175 passaram e o
+ * par da melhor nota, 7.652, ficou de fora. Ordenar o arquivo nao a recupera.
+ *
+ * Devolve: 0; 1 se JANELA2 vier malformada ou com k != 2.
+ */
+/* Por que: o criterio binario "decodifica limpo" desperdica a informacao mais
+ * util que o decoder da: ATE ONDE ele chegou antes de falhar. Num slice CABAC
+ * nao existe ponto de ressincronizacao, entao tudo que vem ANTES do
+ * primeiro erro esta correto -- e empurrar o primeiro erro para a frente e
+ * progresso medivel, mesmo quando o quadro ainda nao fecha.
+ *
+ * Ressalva que o texto acima nao fazia: "primeiro erro" e o bit errado, nao o
+ * MB onde o decodificador RECLAMA. Entre os dois ele segue lendo lixo valido,
+ * as vezes por milhares de bytes (armadilha 9), e empurrar a reclamacao para a
+ * frente pode ser so disfarcar melhor o lixo -- e assim que o encadeamento
+ * guloso sobe em ramo falso (frame 12, IDRs 1683 e 3047). Onde o bit errado
+ * esta de fato se ve cruzando a curva do `corta` com a imagem (IDR 1773,
+ * RASTREIO.md). */
 static int modo_avanco(int argc, char **argv) {
     (void)argc; (void)argv;
         alvok  = atoi(argv[5]);
@@ -2399,6 +2483,18 @@ static int modo_avanco(int argc, char **argv) {
         int fim = argc > 8 ? atoi(argv[8]) : len;
         if (ini_k < 5) ini_k = 5;
         if (fim > len) fim = len;
+        /* JANELA2=ini:fim -- faixa propria para o 2o bit (so com k = 2), em
+         * bytes do NAL como a faixa principal. Ver gera_combos_janelas. */
+        const char *j2 = getenv("JANELA2");
+        int ini2 = 0, fim2 = 0;
+        if (j2) {
+            if (sscanf(j2, "%d:%d", &ini2, &fim2) != 2 || prof_k != 2
+                || ini2 < ini_k || fim2 <= ini2) {
+                fprintf(stderr, "JANELA2=ini:fim exige k = 2 e ini_principal <= ini < fim\n");
+                return 1;
+            }
+            if (fim2 > len) fim2 = len;
+        }
         /* Enchimento nao e dado. Depois que a slice acaba vem cabac_zero_word,
          * que pela norma e 00 00 -- aqui aparece como 00 00 03 repetido por
          * causa do byte de prevencao de emulacao. Trocar bit dali para o
@@ -2417,15 +2513,25 @@ static int modo_avanco(int argc, char **argv) {
                        "faixa vai ate ai\n", f, len);
                 fim = f;
             }
+            if (j2 && f < fim2) {
+                printf("[+] enchimento cortado: faixa do 2o bit vai ate o byte %d\n", f);
+                fim2 = f;
+            }
         }
         if (prof_k < 1) prof_k = 1;
         if (prof_k > 4) prof_k = 4;
         nbits_k = (fim - ini_k) * 8;
-        gera_combos();
+        if (j2) gera_combos_janelas((ini2 - ini_k) * 8, (fim2 - ini_k) * 8);
+        else    gera_combos();
         placar = malloc((size_t)n_combos * sizeof(int));
         int nthr = quantas_threads();
-        printf("frame %d: faixa [%d,%d) = %d bits, %d a %d, %ld combinacoes, %d threads\n",
-               alvok, ini_k, fim, nbits_k, prof_k, prof_k, n_combos, nthr);
+        if (j2)
+            printf("frame %d: 1o bit em [%d,%d) = %d bits, 2o bit em [%d,%d) e depois do 1o, "
+                   "%ld combinacoes, %d threads\n",
+                   alvok, ini_k, fim, nbits_k, ini2, fim2, n_combos, nthr);
+        else
+            printf("frame %d: faixa [%d,%d) = %d bits, %d a %d, %ld combinacoes, %d threads\n",
+                   alvok, ini_k, fim, nbits_k, prof_k, prof_k, n_combos, nthr);
         fflush(stdout);
         atomic_store(&prox_combo, 0);
         time_t t0 = time(NULL);
