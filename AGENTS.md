@@ -115,6 +115,23 @@ Quando um parâmetro for resolvido, escrever no `ESTADO.md` que está resolvido,
 para ninguém reinvestigar. Quando uma hipótese for descartada, registrar que foi
 testada e o resultado — o `docs/INVESTIGACOES.md` existe para isso.
 
+### A documentação da função muda junto com a função
+
+**Toda mudança numa função atualiza, no mesmo commit, o bloco de documentação
+acima dela** (padrão do `docs/REFATORACAO.md`, seção 4c): o que faz, os
+parâmetros, as variáveis de ambiente que mudam o comportamento, a saída e o
+valor de retorno com o caso de falha. Parâmetro, variável de ambiente, escala
+de nota ou formato de saída novo que não esteja no bloco é mudança incompleta.
+
+Comentário no meio da função continua bem-vindo — é onde mora a justificativa
+medida de cada linha —, mas **não substitui o bloco**: quem chama a função lê
+o bloco, não o corpo. Se só der tempo de um, é o bloco.
+
+O limite de 8 linhas da seção 4c vale para funções auxiliares; os `modo_*`
+podem passar dele, porque o bloco é o manual do modo. E o bloco fica **acima da
+função que descreve** — na separação dos modos em funções vários comentários
+ficaram no fim da função anterior, onde ninguém os procura.
+
 ## 5. Ordem de ataque
 
 Todo reparo ancora no IDR anterior (`ancora_de`). Um GOP cujo IDR está quebrado
