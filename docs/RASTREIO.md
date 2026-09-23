@@ -130,6 +130,20 @@ pedido do usuário antes de terminar, sem resultado parcial — não conta como
 varrido. Se for retomado, dá para partir ao meio (`[32500,33000)` e
 `[33250,33501)`, os dois grupos que avançam) e rodar em partes.
 
+**Onde está o primeiro bit errado — três medidas independentes, mesmo lugar:**
+
+| medida | o que mostra |
+|---|---|
+| curva de truncamento (`corta 1773`) | ~2 B/MB até o byte **32.640** (MB 6.936); depois 20–40 B/MB, e em 33.000–33.380 **um único MB engole 380 bytes** |
+| imagem, fileiras 54–59 à direita | as bordas diagonais das fileiras 54–56 viram **listra vertical exatamente na fronteira da fileira 57**, a partir da coluna ~97 (MB ~6.937) |
+| avanço de 1 bit | os três melhores (MB 7.470, 7.466, 7.454) estão nos bytes **32.657–32.680** |
+
+Logo o primeiro bit fica em ~`[32560, 32720)` (MB 6.886–6.940, ~50 MB de
+margem antes do primeiro MB ruim): **1.280 bits**. O segundo bit, se houver,
+fica depois dele — em qualquer lugar até o fim do NAL. Obs.: os últimos bytes
+do NAL têm um `00 00 02` (byte 34.311), classe da armadilha 27 — irrelevante
+enquanto o primeiro bit não for achado.
+
 ### Censo do GOP 1773 — consertar o IDR não destrava 29 frames
 
 Decodificados os 29 frames (1773 a 1801) com a âncora no estado atual:
