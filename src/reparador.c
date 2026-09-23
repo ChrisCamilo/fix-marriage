@@ -2013,11 +2013,11 @@ static int modo_verify(int argc, char **argv) {
             }
         }
         printf("\n[+] patches validos: %d | falsos: %d | deterministicos pulados: %d\n", bons, falsos, pulados);
-    /* Diagnostico dos IDRs quebrados. Um IDR e sua propria ancora, entao cada
-     * teste custa 1 decodificacao. Nao grava patches: so mede. */
     return 0;
 }
 
+/* Diagnostico dos IDRs quebrados. Um IDR e sua propria ancora, entao cada
+ * teste custa 1 decodificacao. Nao grava patches: so mede. */
 static int modo_idr(int argc, char **argv) {
     (void)argc; (void)argv;
         int j1  = argc > 5 ? atoi(argv[5]) : 4096;   /* janela da busca de 1 bit */
@@ -2068,10 +2068,10 @@ static int modo_idr(int argc, char **argv) {
         printf("\n[+] IDRs ja bons: %d | testados: %d\n"
                "    1 bit no corte: %d | 1 bit no inicio: %d | 2 bits: %d | sem solucao: %d\n",
                n_ok, feitos, n_um, n_ini, n_dois, n_sem);
-    /* Conta TODAS as solucoes de 1 bit por IDR quebrado. Nao grava. */
     return 0;
 }
 
+/* Conta TODAS as solucoes de 1 bit por IDR quebrado. Nao grava. */
 static int modo_unico(int argc, char **argv) {
     (void)argc; (void)argv;
         int jc = argc > 5 ? atoi(argv[5]) : 1024;   /* janela em volta do corte */
@@ -2115,20 +2115,20 @@ static int modo_unico(int argc, char **argv) {
         }
         printf("\n[+] unica: %d | multipla: %d | nenhuma: %d\n",
                n_unico, n_multi, n_zero);
-    /* Duas perguntas de uma vez, em IDRs que ja decodificam limpos:
-     *
-     * 1. Quanto dano visual um bit corrompido causa de fato? Medido contra a
-     *    imagem limpa (a verdade conhecida), em pixels alterados e diferenca.
-     * 2. A blocagem detecta esse dano? Se nao subir acima do valor limpo, o
-     *    criterio visual nao serve e nao ha por que segui-lo.
-     *
-     * A versao anterior injetava um flip que QUEBRASSE o decode. Nao existe na
-     * pratica: 6.300 flips em quatro keyframes e nenhum quebrou. Este desenho
-     * usa essa tolerancia a favor -- injeta flips que nao quebram, que e o caso
-     * real, e pergunta se a imagem denuncia o que a sintaxe deixa passar. */
     return 0;
 }
 
+/* Duas perguntas de uma vez, em IDRs que ja decodificam limpos:
+ *
+ * 1. Quanto dano visual um bit corrompido causa de fato? Medido contra a
+ *    imagem limpa (a verdade conhecida), em pixels alterados e diferenca.
+ * 2. A blocagem detecta esse dano? Se nao subir acima do valor limpo, o
+ *    criterio visual nao serve e nao ha por que segui-lo.
+ *
+ * A versao anterior injetava um flip que QUEBRASSE o decode. Nao existe na
+ * pratica: 6.300 flips em quatro keyframes e nenhum quebrou. Este desenho
+ * usa essa tolerancia a favor -- injeta flips que nao quebram, que e o caso
+ * real, e pergunta se a imagem denuncia o que a sintaxe deixa passar. */
 static int modo_oraculo(int argc, char **argv) {
     (void)argc; (void)argv;
         int n_am = argc > 5 ? atoi(argv[5]) : 5;
@@ -2178,10 +2178,10 @@ static int modo_oraculo(int argc, char **argv) {
         printf("\n[+] IDRs: %d | flips: %d | com blocagem acima do limpo: %d (%.0f%%)\n",
                feitos, testes, acima, testes ? 100.0 * acima / testes : 0.0);
         free(R); free(cap_buf); cap_buf = NULL;
-    /* Recupera um frame usando um vizinho INTEGRO como gabarito. */
     return 0;
 }
 
+/* Recupera um frame usando um vizinho INTEGRO como gabarito. */
 static int modo_vizinho(int argc, char **argv) {
     (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
@@ -2232,11 +2232,11 @@ static int modo_vizinho(int argc, char **argv) {
         printf("[+] frame %d terminou com diferenca %.2f para o vizinho %d\n",
                alvo, m0, ref);
         free(ref_img); ref_img = NULL; free(cap_buf); cap_buf = NULL;
-    /* Recuperacao incremental de um frame: aceita o flip que faz a imagem
-     * crescer e repete. NAO grava patches -- imprime o que achou. */
     return 0;
 }
 
+/* Recuperacao incremental de um frame: aceita o flip que faz a imagem
+ * crescer e repete. NAO grava patches -- imprime o que achou. */
 static int modo_recupera(int argc, char **argv) {
     (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
@@ -2287,11 +2287,11 @@ static int modo_recupera(int argc, char **argv) {
         }
         printf("[+] frame %d terminou com %d linhas reais de ~850 visiveis\n", alvo, L);
         free(cap_buf); cap_buf = NULL;
-    /* Rankeia os IDRs por quanto de imagem real sobrou. Saida: <idr> <linhas>
-     * (-1 = quadro de ocultacao, nao decodificou nada). */
     return 0;
 }
 
+/* Rankeia os IDRs por quanto de imagem real sobrou. Saida: <idr> <linhas>
+ * (-1 = quadro de ocultacao, nao decodificou nada). */
 static int modo_ranking(int argc, char **argv) {
     (void)argc; (void)argv;
         int salvo = exigir_imagem; exigir_imagem = 0;   /* queremos ver todos */
@@ -2305,7 +2305,6 @@ static int modo_ranking(int argc, char **argv) {
         }
         exigir_imagem = salvo;
         free(cap_buf); cap_buf = NULL;
-    /* Despeja o plano Y de um frame como PGM, para inspecao visual. */
     return 0;
 }
 
@@ -2348,18 +2347,18 @@ static int modo_varre2(int argc, char **argv) {
      *
      * A pontuacao e o endereco linear do macrobloco onde o ALVO parou,
      * mb_y * 120 + mb_x, de 0 a 8159. Sem erro pontua 8160. */
-    /* ---- modo corta ----
-     * Onde comeca cada fileira de macrobloco, medido em vez de estimado.
-     * Trunca o NAL em k bytes e le no log ate onde o decodificador chegou: isso
-     * e exatamente "quantos macroblocos cabem em k bytes".
-     *
-     * Tem que truncar POR DENTRO, ajustando o prefixo AVCC e o tamanho do
-     * pacote juntos. Patchar so o prefixo nao serve -- o ffmpeg confere o
-     * tamanho contra o buffer e descarta o NAL inteiro, e ai o unico erro que
-     * sobra e de outro quadro da cadeia, o que parece resposta e nao e. */
     return 0;
 }
 
+/* ---- modo corta ----
+ * Onde comeca cada fileira de macrobloco, medido em vez de estimado.
+ * Trunca o NAL em k bytes e le no log ate onde o decodificador chegou: isso
+ * e exatamente "quantos macroblocos cabem em k bytes".
+ *
+ * Tem que truncar POR DENTRO, ajustando o prefixo AVCC e o tamanho do
+ * pacote juntos. Patchar so o prefixo nao serve -- o ffmpeg confere o
+ * tamanho contra o buffer e descarta o NAL inteiro, e ai o unico erro que
+ * sobra e de outro quadro da cadeia, o que parece resposta e nao e. */
 static int modo_corta(int argc, char **argv) {
     (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
@@ -2756,17 +2755,17 @@ static int modo_campo(int argc, char **argv) {
                    campos[k].imed, campos[k].ides, campos[k].ibloc);
         }
         free(campos);
-    /* ---- modo mapa ----
-     * Onde cada quadro do filme para, num arquivo so. Uma decodificacao por
-     * GOP, como o panorama: manda pacote por pacote, zera o log antes de cada
-     * um e le depois, entao o macrobloco que sobra e o DAQUELE quadro.
-     *
-     * Serve para escolher alvo por medida em vez de por ordem: quadro que para
-     * cedo tem dano de cabecalho e janela pequena; quadro que para tarde tem
-     * dessincronizacao e janela grande; e quadro que nao para esta bom. */
     return 0;
 }
 
+/* ---- modo mapa ----
+ * Onde cada quadro do filme para, num arquivo so. Uma decodificacao por
+ * GOP, como o panorama: manda pacote por pacote, zera o log antes de cada
+ * um e le depois, entao o macrobloco que sobra e o DAQUELE quadro.
+ *
+ * Serve para escolher alvo por medida em vez de por ordem: quadro que para
+ * cedo tem dano de cabecalho e janela pequena; quadro que para tarde tem
+ * dessincronizacao e janela grande; e quadro que nao para esta bom. */
 static int modo_mapa(int argc, char **argv) {
     (void)argc; (void)argv;
         cap_qualquer = 1;
@@ -3042,19 +3041,19 @@ static int modo_serie(int argc, char **argv) {
         printf("faixa %d-%d: %d de %d decodificaram -> %s\n",
                ini, fim, bons, fim - ini + 1, argv[7]);
         free(cap_buf); cap_buf = NULL;
-    /* ---- modo trinca ----
-     * Abre a caixa-preta do juiz de tres partes: para cada candidato de uma
-     * lista imprime as CINCO medidas em vez do veredito.
-     *
-     * Existe porque a etapa 2 do IDR 3047 devolveu 82 candidatos com
-     * "macrobloco 8160" -- sem erro nenhum -- e 8160 e nota maxima no `avanco`.
-     * Se forem dessincronizacao silenciosa eles vencem o feixe e a cadeia sobe
-     * num ramo falso, que foi exatamente o que aconteceu no frame 12. A unica
-     * maneira de separar os dois casos e olhar a fronteira do borrao de cada
-     * um: quadro consertado nao tem borrao, quadro dessincronizado tem. */
     return 0;
 }
 
+/* ---- modo trinca ----
+ * Abre a caixa-preta do juiz de tres partes: para cada candidato de uma
+ * lista imprime as CINCO medidas em vez do veredito.
+ *
+ * Existe porque a etapa 2 do IDR 3047 devolveu 82 candidatos com
+ * "macrobloco 8160" -- sem erro nenhum -- e 8160 e nota maxima no `avanco`.
+ * Se forem dessincronizacao silenciosa eles vencem o feixe e a cadeia sobe
+ * num ramo falso, que foi exatamente o que aconteceu no frame 12. A unica
+ * maneira de separar os dois casos e olhar a fronteira do borrao de cada
+ * um: quadro consertado nao tem borrao, quadro dessincronizado tem. */
 static int modo_trinca(int argc, char **argv) {
     (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
@@ -3150,6 +3149,7 @@ static int modo_dumpyuv(int argc, char **argv) {
     return 0;
 }
 
+/* Despeja o plano Y de um frame como PGM, para inspecao visual. */
 static int modo_dump(int argc, char **argv) {
     (void)argc; (void)argv;
         int alvo = atoi(argv[5]);
