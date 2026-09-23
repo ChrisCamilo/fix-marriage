@@ -108,6 +108,28 @@ pares, **~6,8 h** à taxa medida de 1.301 cand/s. Alargar para ±2 KB já vira
 Medidas guardadas em `medidas1773.txt` no scratchpad (26.865 linhas, 20
 colunas) — dá para refiltrar por qualquer critério sem revarrer.
 
+### IDR 1773 revarrido com o critério de ocultação — 2026-09-22
+
+Eleito de novo como melhor IDR para "decodificar até o fim": pelo `mapa` de
+hoje é o único dos 124 IDRs não inteiros que passa de 45% dos macroblocos (para
+no **MB 6.960**, byte 33.501 de 34.317 — faltam 816 bytes, e o que falta é uma
+fileira de cena e a tarja).
+
+**1 bit, NAL inteiro, critério de hoje (zero ocultados): 0 de 274.496**, 238 s.
+As 26.865 "soluções" de antes eram todas slice encerrado cedo com o resto
+ocultado — confirma a leitura pela tarja, agora pelo critério.
+
+**Avanço de 1 bit** (`avanco 1773 1`): o melhor chega ao **MB 7.470**
+(`59363268 6`, rel 32.680); nenhum a 8.160. Dos 3.000 que passam da base, 1.862
+estão em rel 32.500–33.000 e 550 em 33.250+; **nenhum em 33.000–33.249**. Foi
+isso que posicionou a janela de 2 bits em `[32500, 33501)`.
+
+**2 bits em `[32500, 33501)`: NÃO FEITO.** São 8.008 bits, ~32 M pares, ~7,7 h
+a 1.150 cand/s (taxa medida no passo de 1 bit). Disparado e interrompido a
+pedido do usuário antes de terminar, sem resultado parcial — não conta como
+varrido. Se for retomado, dá para partir ao meio (`[32500,33000)` e
+`[33250,33501)`, os dois grupos que avançam) e rodar em partes.
+
 ### Censo do GOP 1773 — consertar o IDR não destrava 29 frames
 
 Decodificados os 29 frames (1773 a 1801) com a âncora no estado atual:
