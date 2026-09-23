@@ -172,6 +172,27 @@ nenhum par se destaque — o padrão de "qualquer perturbação avança um pouco
 não de conserto. Resta a opção c (2º bit até o fim do NAL, ~9 M pares a mais,
 ~2 h); o custo de 3 bits na mesma lógica passa de dias.
 
+**Onde o melhor par age e onde volta a quebrar** (decodificado sozinho com
+`-ec 0 -skip_loop_filter all`, armadilha 60):
+
+| | age no MB | o que a imagem mostra |
+|---|---|---|
+| sem nada | — | fileira 57 boa até a coluna ~100; dali barras horizontais e ruído |
+| 1º bit `59363305 b7` (rel 32.717) | **6.939** (fil. 57, col. 99) | a moldura diagonal segue coerente até o fim da fileira 57; volta a quebrar na fileira 58, colunas ~89–95 |
+| + 2º bit `59363485 b0` (rel 32.897) | **7.046** (fil. 58, col. 86) | segue boa até a fileira 58, colunas ~100–103 (barras brancas); fileiras 59–60 viram mosaico pastel |
+
+Os bits consertam **na ordem de varredura** — da esquerda para a direita na
+fileira, depois a de baixo — até o próximo bit errado, como o CABAC exige. O
+2º bit do par cai logo antes de onde o 1º sozinho volta a quebrar, que é o
+padrão de conserto em cadeia; mas é também o padrão de disfarce, e só a tarja
+num candidato que feche decide.
+
+Curva do `corta` com o par aplicado: ~10 B/MB nos bytes 32.940–32.980 (MB
+7.060–7.064, justamente as barras brancas), ~1 B/MB até o 33.540 (MB 7.542) e
+então **380 bytes num MB só** (33.540–33.920) — o mesmo sintoma que a base tinha
+em 33.000–33.380. Se o par for real, o 3º bit está em ~`[32897, 32990)` (~90
+bytes, ~720 candidatos, segundos de busca).
+
 ### Censo do GOP 1773 — consertar o IDR não destrava 29 frames
 
 Decodificados os 29 frames (1773 a 1801) com a âncora no estado atual:

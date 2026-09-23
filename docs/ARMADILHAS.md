@@ -1168,3 +1168,20 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     1 bit dos IDRs 0 e 29 somem: eram o mesmo atalho, e a do IDR 0 o RASTREIO já
     dava como reprovada pela tarja. A regressão com `ACEITA_OCULTO=1` bate com a
     referência antiga em todos os casos que não usam a contagem nova.
+
+60. **Imagem com a ocultação do ffmpeg ligada mente sobre ONDE o dano
+    começa.** No IDR 1773 eu comparei o quadro com e sem o bit `59363305 b7`
+    decodificado do jeito normal e concluí que o bit "só recupera em parte" a
+    fileira 57. Errado: o ffmpeg reconhece o erro muito depois do bit e a
+    ocultação repinta também macroblocos **antes** do ponto do erro — e o erro
+    cai em lugares diferentes com e sem o bit, então as duas imagens têm trechos
+    repintados diferentes. O deblocking ainda espalha a diferença 3 pixels para
+    os vizinhos de cima e da esquerda (a comparação direta apontava o MB 6823,
+    uma fileira acima do bit).
+
+    **Para localizar por imagem, decodificar o quadro sozinho com
+    `-ec 0 -skip_loop_filter all`**: sem ocultação e sem deblocking, o primeiro
+    MB que muda entre duas versões é exatamente onde o bit age. Medido: o bit
+    acima age no **MB 6.939** e o segundo do par (`59363485 b0`) no **7.046** —
+    e a curva do `corta` com o 1º bit aplicado dá o byte 32.900 no MB 7.046,
+    batendo com o byte 32.897 do 2º bit. As duas réguas concordam.
