@@ -193,6 +193,32 @@ então **380 bytes num MB só** (33.540–33.920) — o mesmo sintoma que a base
 em 33.000–33.380. Se o par for real, o 3º bit está em ~`[32897, 32990)` (~90
 bytes, ~720 candidatos, segundos de busca).
 
+**3º bit em `[32897, 32990)` com o par aplicado: nenhum.** 744 candidatos, 6 s.
+Nenhum leva o decodificador além do MB 7.854 do par; 740 param antes (picos em
+7.080, 7.200 e 7.320 — início de fileira). Os 4 que empatam (rel 32.908 b1,
+32.940 b7, 32.975 b1, 32.978 b7) mudam só valores de coeficiente — diferença
+máxima de 5 a 12 níveis em 3 a 31 MBs, a partir das colunas 89–103 da fileira
+58 — e **nenhum tira as barras brancas** das colunas 100–102. Vistos a 4x, os
+cinco quadros (par e os 4) são praticamente iguais.
+
+Conclusão: dado o par, não há um 3º bit isolado onde o quadro volta a quebrar.
+Ou o 2º bit do par é disfarce, ou o dano ali é mais denso que um bit por
+quebra. Observação a 4x que enfraquece o 1º bit: mesmo com ele, a fileira 57
+nas colunas 101–105 tem blocos chapados com um traço vertical fino — pode ser o
+canto real da moldura (as bordas diagonais viram verticais ali) ou artefato; a
+imagem não decide.
+
+**2 bits, 1º em `[32560,32720)`, 2º em `[33501,34317)` (opção c): 0 fecham.**
+8.355.840 pares, 9.650 s. Nenhum chega a 8.160; o melhor chega ao **MB 7.768**
+— abaixo dos 7.854 da opção b. 3.667.197 passam da base (44%). As 5 melhores
+repetem só dois 1ºs bits (rel 32.629 b3 e 32.660 b1) com o 2º espalhado de
+33.660 a 33.808.
+
+**Com isto, 2 bits no 1773 estão esgotados** para o 1º bit na janela de 160
+bytes: as três opções somam 17,2 M pares (a, b, c) e nenhum par fecha. O dano
+tem 3 bits ou mais, ou o 1º bit está fora de `[32560,32720)`. Busca exaustiva
+de 3 bits na mesma lógica passa de um dia de máquina.
+
 ### Censo do GOP 1773 — consertar o IDR não destrava 29 frames
 
 Decodificados os 29 frames (1773 a 1801) com a âncora no estado atual:
