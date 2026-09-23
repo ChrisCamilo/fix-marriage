@@ -152,6 +152,26 @@ são dois bits, **não são dois bits juntos nesses 160 bytes**. Ficam abertas a
 opções com o segundo bit depois da janela (até o byte 33.501, ~8,8 M pares, ou
 até o fim do NAL, ~17 M), que pedem janela separada por bit no `avanco`.
 
+**2 bits, 1º em `[32560,32720)`, 2º em `[32720,33501)` (opção b,
+`JANELA2`): 0 fecham.** 7.997.440 pares, 7.081 s (os pares com os dois bits na
+janela de 160 bytes já estavam na opção a e ficaram de fora). Nenhum chega a
+8.160; o melhor chega ao **MB 7.854**. 3.511.424 passam da base (44%). As 5
+melhores não convergem — 1º bit em rel 32.617–32.717, 2º espalhado de 32.897 a
+33.375:
+
+| 1º bit (rel) | 2º bit (rel) | MB |
+|---|---|---|
+| 32.717 b7 | 32.897 b0 | 7.854 |
+| 32.657 b2 | 33.373 b0 | 7.795 |
+| 32.647 b3 | 33.033 b5 | 7.738 |
+| 32.629 b3 | 33.190 b4 | 7.705 |
+| 32.666 b7 | 33.375 b5 | 7.688 |
+
+Do melhor bit sozinho (7.470) para o melhor par (7.854) são 384 MB, sem que
+nenhum par se destaque — o padrão de "qualquer perturbação avança um pouco",
+não de conserto. Resta a opção c (2º bit até o fim do NAL, ~9 M pares a mais,
+~2 h); o custo de 3 bits na mesma lógica passa de dias.
+
 ### Censo do GOP 1773 — consertar o IDR não destrava 29 frames
 
 Decodificados os 29 frames (1773 a 1801) com a âncora no estado atual:
