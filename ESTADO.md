@@ -70,10 +70,24 @@ raiz/                   o que todo comando cita, e o que nunca se move
     molde_idr.py molde_slice.py escapes.py cabecalhos.py
     encadeia.py         busca por etapas com o modo `avanco`
     remontar.py conferir_dump.py
+    cabecalho_slice.py  acha bits trocados no cabeçalho do slice pelo que ele
+                        deveria dizer (gera dados/cabecalho_slice.txt)
+    mapa_dano.py        onde o arquivo está danificado, medido em conteúdo
+                        conhecido (gera dados/mapa_dano.txt)
+    ocultacao.py        quantos macroblocos o ffmpeg oculta em cada quadro
+    regressao.sh        prova que uma refatoração não mudou nada, modo a modo
+                        (referência em dados/regressao/)
+    confere_doc.py      confere o padrão de documentação das funções
+                        (docs/REFATORACAO.md, seção 4c)
   docs/                 os doze documentos que crescem
   dados/                registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
     deterministicos.txt remontados.txt
+    patches_cabecalho.txt  o lote de cabeçalhos que entrou no patches.txt
+    mapa_dano.txt alvos.txt alvos_ocultos.txt cabecalho_slice.txt
+                        medidas; cada um traz no topo como foi gerado
+    regressao/          hash de referência da saída de cada modo (SHA-256
+                        cortado em 16 dígitos), para o regressao.sh
     candidatos_f13.txt candidatos_f19.txt candidatos_idr3047.txt
     janela_f11.txt      candidatos e janelas de busca -- NAO sao patches,
                         cada um traz sua condicao de promocao escrita
@@ -172,6 +186,8 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 | [`INVESTIGACOES.md`](docs/INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
 | [`IDRS.md`](docs/IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |
 | [`RASTREIO.md`](docs/RASTREIO.md) | **toda varredura já feita**, por alvo — consultar antes de disparar qualquer corrida |
+| [`ALVOS.md`](docs/ALVOS.md) | mapa dos alvos: em que macrobloco cada quadro para, medido pelo modo `mapa` |
+| [`PREFIXOS.md`](docs/PREFIXOS.md) | registro de um erro: os 702 prefixos AVCC "corrompidos" já estavam consertados no `patches.txt` |
 | [`MELHORIAS.md`](docs/MELHORIAS.md) | o que foi feito, o que falta e o que foi descartado no `reparador.c` |
 | [`PARALELIZACAO.md`](docs/PARALELIZACAO.md) | por que `thread_count` fica em 1 e como a varredura paralela preserva determinismo |
 | [`REFATORACAO.md`](docs/REFATORACAO.md) | **plano de refatoração do `reparador.c`** — o que separar, o que unificar e por que quicksort não se aplica |
