@@ -85,6 +85,43 @@ depois de medido.
    quadros bons também as têm): se passar de k, a
    busca não fecha — no 1773 isso teria poupado as 5 h das opções a, b e c.
 
+   **Calibração com dano sintético (2026-09-23).** Bit aleatório trocado nos 6
+   IDRs íntegros e decodificado em modo limpo; o rótulo de cada MB (igual ou
+   diferente do original) é exato. Scripts no scratchpad: `calib.py`,
+   `mudanca.py`, `ranking2.py`.
+
+   | medida (900 bits aleatórios) | resultado |
+   |---|---|
+   | bits que dessincronizam o resto do slice | 892 (99%); 8 estragam só alguns MBs e a leitura segue igual |
+   | onde o pixel começa a mudar | **no próprio MB do bit** (dano mediano 5 níveis nele, 15+ nos seguintes) |
+   | QP/I_PCM denunciam | em 66%, com atraso de 3 / 20 / 62 MBs (p10/p50/p90) |
+   | o ffmpeg para de ler | 8 / 59 / 177 MBs depois do bit |
+   | degrau de borda, limiar fixo p99,9 | pega 82%, atraso mediano 7 MBs, **mas dispara falso nos 6 quadros íntegros** |
+   | degrau 2 de 3 MBs, p99,99 | 0 disparos falsos, pega só 43%, atraso mediano 27 |
+   | croma dentro do MB / salto de croma | pegam 3–23%, atraso de 50+ MBs — inúteis aqui |
+   | ponto de mudança (soma da razão de verossimilhança, bom calibrado no próprio quadro) | acerta ±10 MBs em ~45%; dispara falso na transição cena → tarja |
+
+   **O teste decisivo — o candidato certo ganha?** Dois bits estragados (A e B,
+   B de 30 a 400 bytes depois de A, mediana 245) em 30 casos; todos os 512
+   flips de 1 bit em ±32 bytes de A; o certo é o que desfaz A:
+
+   | critério de ranking | certo em 1º | no top 5 | no top 20 |
+   |---|---|---|---|
+   | fronteira certa (QP / I_PCM / parada) — é o "MB alcançado" | 1/30 | 3 | 6 |
+   | sequência limpa pelo degrau de borda | 4/30 | 10 | 15 |
+   | comparação pareada nos mesmos MBs | 1/30 | 2 | 6 |
+   | oráculo (MBs iguais ao original) | 30/30 | 30 | 30 |
+
+   **Por quê:** 245 bytes numa cena detalhada são poucos MBs — o candidato
+   certo ganha só **7 MBs limpos (mediana)** antes de B quebrar tudo de novo,
+   enquanto o lixo dos rivais passa **~50 MBs** pelo juiz antes de ser pego. A
+   vantagem do certo some dentro do atraso do juiz. **Com os juízes de hoje, o
+   encadeamento guloso não acha o bit certo em dano denso**, e o feixe só
+   ajuda em parte (o certo está no top 20 em metade dos casos). O que falta é
+   juiz com atraso de poucos MBs; o candidato natural é o vizinho temporal
+   íntegro (o quadro exibido logo antes ou depois tem quase a mesma imagem), a
+   medir no mesmo banco sintético antes de qualquer implementação.
+
 ### RETRATADA: "o modelo de cadeia não serve para todo GOP"
 
 **Esta seção afirmava um defeito que não existe. Fica registrada em vez de
