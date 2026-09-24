@@ -1,8 +1,8 @@
 diff --git a/source/app/ldecod/image.c b/source/app/ldecod/image.c
-index 404e268..922f029 100644
+index 404e268..6a42957 100644
 --- a/source/app/ldecod/image.c
 +++ b/source/app/ldecod/image.c
-@@ -2524,8 +2524,38 @@ void decode_one_slice(Slice *currSlice)
+@@ -2524,8 +2524,41 @@ void decode_one_slice(Slice *currSlice)
  
      // Initializes the current macroblock
      start_macroblock(currSlice, &currMB);
@@ -16,12 +16,15 @@ index 404e268..922f029 100644
 +    }
 +    /* contextos que a tarja usa, no INICIO do MB: estado*2+MPS. Ordem:
 +     * mb_type I (11), delta_qp (4), croma (4), coded_block_flag do DC 16x16 (4) */
-+    int jm_ctx[23], jm_nc = 0;
++    int jm_ctx[29], jm_nc = 0;
 +    if (currSlice->mot_ctx && currSlice->tex_ctx) {
 +      for (int k = 0; k < 11; k++) { BiContextType *c = &currSlice->mot_ctx->mb_type_contexts[0][k]; jm_ctx[jm_nc++] = c->state * 2 + c->MPS; }
 +      for (int k = 0; k < 4; k++)  { BiContextType *c = &currSlice->mot_ctx->delta_qp_contexts[k];   jm_ctx[jm_nc++] = c->state * 2 + c->MPS; }
 +      for (int k = 0; k < 4; k++)  { BiContextType *c = &currSlice->tex_ctx->cipr_contexts[k];       jm_ctx[jm_nc++] = c->state * 2 + c->MPS; }
 +      for (int k = 0; k < 4; k++)  { BiContextType *c = &currSlice->tex_ctx->bcbp_contexts[0][k];    jm_ctx[jm_nc++] = c->state * 2 + c->MPS; }
++      /* skip de P (mb_type[1][0..2]) e de B (mb_type[2][7..9]) */
++      for (int k = 0; k < 3; k++)  { BiContextType *c = &currSlice->mot_ctx->mb_type_contexts[1][k];     jm_ctx[jm_nc++] = c->state * 2 + c->MPS; }
++      for (int k = 7; k < 10; k++) { BiContextType *c = &currSlice->mot_ctx->mb_type_contexts[2][k];     jm_ctx[jm_nc++] = c->state * 2 + c->MPS; }
 +    }
      // Get the syntax elements from the NAL
      currSlice->read_one_macroblock(currMB);
@@ -33,7 +36,7 @@ index 404e268..922f029 100644
 +                currMB->c_ipred_mode, currMB->cbp, currMB->qp, jm_pos, jm_bl, jm_rng, jm_val);
 +        for (int jj = 0; jj < 4; jj++) for (int ii = 0; ii < 4; ii++)
 +          fprintf(jm_f, " %d", currSlice->ipredmode[currMB->block_y + jj][currMB->block_x + ii]);
-+        fprintf(jm_f, " |");
++        fprintf(jm_f, " %d %d |", currSlice->slice_type, currMB->skip_flag);
 +        for (int kk = 0; kk < jm_nc; kk++) fprintf(jm_f, " %d", jm_ctx[kk]);
 +        fputc(10, jm_f); fflush(jm_f);
 +      }

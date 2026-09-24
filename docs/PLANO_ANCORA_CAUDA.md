@@ -203,3 +203,51 @@ fim do `patches.txt`, registro em `dados/patches_cauda.txt` (o `verify` o
 pula, como os cabeçalhos), log em `dados/cauda_lote.log`. `verify` segue 0
 válidos / 12 falsos, agora com 1.328 pulados; o `mapa` do filme inteiro sai
 idêntico antes e depois.
+
+### Extensão aos quadros P e B (2026-09-24)
+
+**A tarja inferior de P/B é só skip.** Medido com o JM (o patch agora grava
+também o tipo de slice, o flag de skip e os contextos de skip de P e de B) nos
+28 P/B do GOP 3319: fileiras 61–67 com **840 de 840 MBs skip** em todos, o
+contexto do skip saturado (estado 62) já na fileira 62, e as fileiras 61–67
+ocupando só ~10–13 bytes. Cada MB é "skip + não é fim de slice", sempre o
+símbolo mais provável: a saída é praticamente só zeros até a terminação. Não
+há incógnita de coluna 0 — o contexto depende de o vizinho **não** ser skip,
+e na tarja todos são.
+
+`ferramentas/ancora/ancora_pb.c` recodifica as fileiras 62–67 com o
+`codIRange` de entrada **e o estado do contexto do skip** como incógnitas
+(32 mil hipóteses). O estado entrou depois de uma primeira passada que o
+fixava saturado: esse contexto só é usado de verdade a partir da fileira 62,
+e num quadro com movimento pode chegar ali sem saturar — mudaria quantos
+zeros saem e pareceria dano de 1–3 bits sem ser.
+
+- **Validação:** distância 0 nos P/B íntegros de 4 GOPs (2340, 2350, 3320–3347, 3400, 3430).
+- **Controle:** 60 caudas aleatórias ficam a **4–13**. A cauda de P/B tem só
+  ~30 bits testáveis, então o limiar aqui é **2**, não 3.
+- **Censo dos 3.314 P/B** (`dados/censo_cauda_pb.txt`): **2.541 com a cauda
+  intacta**, 330 com correção certa, 440 sem correção certa, 3 ambíguos.
+- **Teste que o IDR não permitia:** um P/B que hoje decodifica inteiro leu a
+  cauda até o fim, e bit trocado numa sequência de skips quase sempre quebraria
+  a decodificação — então correção proposta num quadro inteiro denunciaria
+  falso positivo. **Só 1 dos 330** (o quadro 10) decodifica inteiro, e ele tem
+  enchimento danificado no fim (zona de 4,5% do mapa de dano), onde o
+  alinhamento pelo stop bit não vale. Tirados da proposta os 5 com enchimento
+  no fim: 10, 11, 560, 970, 1119.
+
+| nível | critério | quadros | bits |
+|---|---|---|---|
+| A | distância 0 (só o escape restaurado) ou 1 | 189 | 196 |
+| B | distância 2 | 136 | 279 |
+
+**Aplicado em 2026-09-24**, aprovado pelo usuário (níveis A e B): 475 linhas
+no fim do `patches.txt` (2.679–3.153), registro em `dados/patches_cauda_pb.txt`
+(o `verify` o pula), log em `dados/cauda_pb.log`. `verify` com `BASE_N=1338`
+segue 0 válidos / 12 falsos, agora com 1.803 pulados. O `mapa` do filme inteiro
+muda em **um** quadro só: o 2189 (P, dist 1), cujo erro passa do MB 7356 para
+o 7358. Não é piora nem sinal de correção errada: o 2189 já decodificava lixo
+antes da tarja (o erro está na fileira 61, fora do trecho recodificado), e o
+bit corrigido fica 3 bytes antes do fim do NAL — o decodificador
+dessincronizado lê esses bytes finais antes de estourar, então o bit mexe no
+ponto em que ele desiste. Nos outros 324 quadros o erro vem antes de a cauda
+ser lida, e a imagem não muda.

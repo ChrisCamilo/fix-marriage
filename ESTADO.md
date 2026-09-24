@@ -107,7 +107,7 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 2.678 linhas:**
+**Composição do `patches.txt` — 3.153 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
@@ -118,6 +118,7 @@ conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 | 1831–2612 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `dados/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
 | 2613 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `dados/deterministicos.txt` |
 | 2614–2678 | 65 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 29 IDRs — linha a linha em `dados/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. `mapa` do filme inteiro idêntico antes e depois. Ver `docs/PLANO_ANCORA_CAUDA.md` |
+| 2679–3153 | 475 | **caudas de P/B** provadas pela tarja de skips recodificada (2026-09-24), 325 quadros — linha a linha em `dados/patches_cauda_pb.txt`, que o `verify` também pula. Nível A (dist 0–1): 189 quadros, 196 bits; nível B (dist 2): 136 quadros, 279 bits. `mapa` muda só no 2189 (erro do MB 7356 para o 7358, quadro que já era lixo antes da tarja) |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a

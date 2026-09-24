@@ -2012,11 +2012,16 @@ static int modo_verify(int argc, char **argv) {
          * As correcoes de cauda de IDR (patches_cauda, ferramentas/ancora/,
          * docs/PLANO_ANCORA_CAUDA.md) tambem: a tarja recodificada com CABAC
          * prova os bits do fim do NAL, mas o dano do meio continua e o quadro
-         * nao fecha. Mesmo tratamento, mesmo motivo. */
-        const char *listas[3] = {
+         * nao fecha. Mesmo tratamento, mesmo motivo.
+         *
+         * E as caudas de quadros P/B (patches_cauda_pb, cauda_pb.py): a tarja
+         * de baixo deles e so skip e prova os ultimos bytes do NAL do mesmo
+         * jeito. Sao 475 linhas; das quatro listas juntas saem 1.803 pulados. */
+        const char *listas[4] = {
             getenv("DET") ? getenv("DET") : "dados/deterministicos.txt",
-            "dados/patches_cabecalho.txt", "dados/patches_cauda.txt" };
-        for (int f = 0; f < 3; f++) {
+            "dados/patches_cabecalho.txt", "dados/patches_cauda.txt",
+            "dados/patches_cauda_pb.txt" };
+        for (int f = 0; f < 4; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;
             char linha[512]; long o; int b, n0 = n_det;

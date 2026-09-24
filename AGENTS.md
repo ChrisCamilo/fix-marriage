@@ -73,6 +73,14 @@ Condição de entrada aprovada pelo usuário: distância de no máximo 3 bits,
 fechando com distância 0 e sem violação de escape; o `mapa` do filme inteiro
 idêntico antes e depois. O `verify` pula este também.
 
+No mesmo dia entrou o quarto: as **caudas de quadros P/B** (`dados/patches_cauda_pb.txt`,
+gerados pelo `ferramentas/ancora/cauda_pb.py`), onde a tarja de baixo é só
+skip. Condição aprovada pelo usuário: distância de no máximo **2** (a cauda de
+P/B tem só ~30 bits testáveis; caudas aleatórias ficam a 4–13), as mesmas
+regras de hipóteses e de fechamento, e fora os quadros com enchimento no fim.
+O `mapa` muda só no 2189 (erro 2 MBs adiante, explicado no plano). O `verify`
+pula este também.
+
 A `docs/ARMADILHAS.md` lista **60** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
@@ -91,9 +99,9 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 12 falsos, 1328 determinísticos pulados`** (os 480 de
-`dados/deterministicos.txt`, os 783 de `dados/patches_cabecalho.txt` e os 65 de
-`dados/patches_cauda.txt`), e os 12 falsos são
+hoje **`0 válidos, 12 falsos, 1803 determinísticos pulados`** (os 480 de
+`dados/deterministicos.txt`, os 783 de `dados/patches_cabecalho.txt`, os 65 de
+`dados/patches_cauda.txt` e os 475 de `dados/patches_cauda_pb.txt`), e os 12 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |
