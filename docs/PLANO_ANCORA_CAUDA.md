@@ -170,3 +170,36 @@ exata em bits e o estado aritmético no início da fileira 63 — o teste
 intermediário do passo 4 (um conserto do meio só vale se chegar ali naquele
 bit e naquele estado). O que isto **não** dá: redução da busca no meio, onde
 as sondas mostraram dano denso nos 85 IDRs.
+
+### Lote de correções de cauda — proposta (2026-09-24)
+
+`ferramentas/ancora/cauda_lote.py` nos 51 IDRs quebrados cuja cauda não
+encaixou perfeitamente no censo (70 min). Regras de certeza:
+
+- trecho mais longo de tarja que encaixa com **no máximo 3** diferenças;
+- o `ancora2.exe` percorre **todas** as hipóteses na distância mínima e agrupa
+  as saídas distintas; só vale se **todas** apontam exatamente os mesmos bits;
+- a correção aplicada tem que dar distância 0 e não deixar violação de escape
+  no trecho; se exigir um escape que não existe, testa antes restaurar o
+  escape danificado (caso do 1773).
+
+**29 IDRs com correção certa, 65 bits; 22 sem.** Nenhum conflita com o
+`patches.txt`. Controle com caudas aleatórias, mesmo teste: distância mínima
+7–18 (só a última fileira), 20–32 (desde a 66), 32–47 (65), 59–79 (63) —
+nenhuma chega a 3.
+
+| nível | critério | IDRs | bits |
+|---|---|---|---|
+| A | trecho explicado > 64 bits (2+ fileiras) | 17 | 42 |
+| B | só a última fileira | 12 | 23 |
+
+O nível B é mais fraco pelo único risco que sobra: uma sintaxe diferente nos
+últimos MBs muda só bits da terminação e pareceria dano. Nos 7 IDRs íntegros e
+em 90 dos 124 quebrados a última fileira é tarja pura, então é improvável, mas
+não está excluído.
+
+**Aplicado em 2026-09-24**, aprovado pelo usuário (níveis A e B): 65 linhas no
+fim do `patches.txt`, registro em `dados/patches_cauda.txt` (o `verify` o
+pula, como os cabeçalhos), log em `dados/cauda_lote.log`. `verify` segue 0
+válidos / 12 falsos, agora com 1.328 pulados; o `mapa` do filme inteiro sai
+idêntico antes e depois.

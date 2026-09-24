@@ -3,7 +3,7 @@
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
 comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
-qualquer coisa — são **59** maneiras de medir errado que já custaram horas aqui.
+qualquer coisa — são **60** maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
 
@@ -65,7 +65,15 @@ fosse borrão** — essa faltou na primeira vez e deixou passar 6 correções er
 (armadilha 57). Medir parse, não emissão: a emissão muda com a reordenação. O
 `verify` pula os dois arquivos.
 
-A `docs/ARMADILHAS.md` lista **59** maneiras de medir errado que já produziram
+Desde 2026-09-24 há um terceiro lote do mesmo tipo: as **caudas de IDR**
+provadas pela tarja recodificada com CABAC (`dados/patches_cauda.txt`, gerados
+pelo `ferramentas/ancora/cauda_lote.py`, plano em `docs/PLANO_ANCORA_CAUDA.md`).
+Condição de entrada aprovada pelo usuário: distância de no máximo 3 bits,
+**todas** as hipóteses empatadas apontando os mesmos bits, a cauda corrigida
+fechando com distância 0 e sem violação de escape; o `mapa` do filme inteiro
+idêntico antes e depois. O `verify` pula este também.
+
+A `docs/ARMADILHAS.md` lista **60** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
@@ -83,8 +91,9 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 12 falsos, 1263 determinísticos pulados`** (os 480 de
-`dados/deterministicos.txt` mais os 783 de `dados/patches_cabecalho.txt`), e os 12 falsos são
+hoje **`0 válidos, 12 falsos, 1328 determinísticos pulados`** (os 480 de
+`dados/deterministicos.txt`, os 783 de `dados/patches_cabecalho.txt` e os 65 de
+`dados/patches_cauda.txt`), e os 12 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |

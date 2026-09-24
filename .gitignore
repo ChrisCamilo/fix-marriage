@@ -25,3 +25,4 @@ testes.exe
 saidas/*.png
 saidas/*.pgm
 saidas/*.yuv
+__pycache__/

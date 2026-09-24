@@ -107,7 +107,7 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 2.613 linhas:**
+**Composição do `patches.txt` — 2.678 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
@@ -117,6 +117,7 @@ conferida com `sha256sum -c dados/CHECKSUMS.txt`.
 | | 1 | a linha 1378, `77528961 0` — o `frame_num` do reparo antigo do 2361, que ficou. Reclassificada como cabeçalho: está em `dados/patches_cabecalho.txt` (por isso ele tem 783 linhas, não 782) e o `verify` a pula |
 | 1831–2612 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `dados/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
 | 2613 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `dados/deterministicos.txt` |
+| 2614–2678 | 65 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 29 IDRs — linha a linha em `dados/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. `mapa` do filme inteiro idêntico antes e depois. Ver `docs/PLANO_ANCORA_CAUDA.md` |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a

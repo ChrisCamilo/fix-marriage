@@ -1,0 +1,82 @@
+# patches_cauda.txt -- o lote de correcoes de cauda de IDR (plano 2) que entrou no patches.txt.
+# Aplicado em 2026-09-24, aprovado pelo usuario: niveis A e B inteiros (65 linhas, 29 IDRs).
+# Gerado em 2026-09-24 por ferramentas/ancora/cauda_lote.py; log em dados/cauda_lote.log.
+#
+# Cada linha: offset bit, e depois como comentario o IDR, a fileira a partir da
+# qual a tarja foi recodificada, a distancia (bits divergentes), quantos bits o
+# trecho explicado tem, as hipoteses empatadas e as saidas distintas -- todas as
+# saidas distintas apontam exatamente estes bits. Controle: caudas aleatorias
+# ficam a 7-18 (ultima fileira), 20-32 (desde a 66), 32-47 (65), 59-79 (63).
+#
+# NIVEL A: trecho explicado com mais de 64 bits (duas fileiras ou mais).
+# NIVEL B: so a ultima fileira. Mais fraco: uma sintaxe diferente nos ultimos
+#          MBs mudaria so alguns bits da terminacao e pareceria dano.
+
+# ===== NIVEL A: 17 IDRs, 42 bits =====
+5307634 7   # IDR 128, desde a fileira 63, dist 2 em 168 bits, 285 empatadas, 1 saidas
+5307638 5   # IDR 128, desde a fileira 63, dist 2 em 168 bits, 285 empatadas, 1 saidas
+6336575 3   # IDR 157, desde a fileira 63, dist 3 em 176 bits, 285 empatadas, 1 saidas
+6336587 3   # IDR 157, desde a fileira 63, dist 3 em 176 bits, 285 empatadas, 1 saidas
+6336590 2   # IDR 157, desde a fileira 63, dist 3 em 176 bits, 285 empatadas, 1 saidas
+14987907 2   # IDR 410, desde a fileira 66, dist 1 em 80 bits, 65 empatadas, 2 saidas
+18132665 0   # IDR 485, desde a fileira 66, dist 3 em 72 bits, 310 empatadas, 2 saidas
+18132665 4   # IDR 485, desde a fileira 66, dist 3 em 72 bits, 310 empatadas, 2 saidas
+18132669 5   # IDR 485, desde a fileira 66, dist 3 em 72 bits, 310 empatadas, 2 saidas
+26431661 2   # IDR 705, desde a fileira 65, dist 3 em 104 bits, 168 empatadas, 1 saidas
+26431662 4   # IDR 705, desde a fileira 65, dist 3 em 104 bits, 168 empatadas, 1 saidas
+26431668 6   # IDR 705, desde a fileira 65, dist 3 em 104 bits, 168 empatadas, 1 saidas
+30511529 1   # IDR 843, desde a fileira 65, dist 3 em 96 bits, 141 empatadas, 2 saidas
+30511532 0   # IDR 843, desde a fileira 65, dist 3 em 96 bits, 141 empatadas, 2 saidas
+30511538 0   # IDR 843, desde a fileira 65, dist 3 em 96 bits, 141 empatadas, 2 saidas
+32085844 2   # IDR 901, desde a fileira 66, dist 2 em 72 bits, 541 empatadas, 2 saidas
+32085850 6   # IDR 901, desde a fileira 66, dist 2 em 72 bits, 541 empatadas, 2 saidas
+32930220 1   # IDR 930, desde a fileira 65, dist 3 em 96 bits, 214 empatadas, 1 saidas
+32930220 6   # IDR 930, desde a fileira 65, dist 3 em 96 bits, 214 empatadas, 1 saidas
+32930227 2   # IDR 930, desde a fileira 65, dist 3 em 96 bits, 214 empatadas, 1 saidas
+33585297 0   # IDR 953, desde a fileira 63, dist 1 em 168 bits, 562 empatadas, 2 saidas
+37849674 0   # IDR 1106, desde a fileira 64, dist 3 em 152 bits, 285 empatadas, 1 saidas
+37849684 0   # IDR 1106, desde a fileira 64, dist 3 em 152 bits, 285 empatadas, 1 saidas
+37849686 1   # IDR 1106, desde a fileira 64, dist 3 em 152 bits, 285 empatadas, 1 saidas
+51314339 5   # IDR 1553, desde a fileira 63, dist 3 em 168 bits, 214 empatadas, 1 saidas
+51314340 1   # IDR 1553, desde a fileira 63, dist 3 em 168 bits, 214 empatadas, 1 saidas
+51314351 1   # IDR 1553, desde a fileira 63, dist 3 em 168 bits, 214 empatadas, 1 saidas
+67479176 1   # IDR 2036, desde a fileira 63, dist 2 em 184 bits, 337 empatadas, 2 saidas
+67479182 5   # IDR 2036, desde a fileira 63, dist 2 em 184 bits, 337 empatadas, 2 saidas
+68605359 0   # IDR 2065, desde a fileira 63, dist 1 em 192 bits, 142 empatadas, 1 saidas
+69593213 6   # IDR 2101, desde a fileira 65, dist 3 em 104 bits, 143 empatadas, 1 saidas
+69593219 2   # IDR 2101, desde a fileira 65, dist 3 em 104 bits, 143 empatadas, 1 saidas
+69593220 6   # IDR 2101, desde a fileira 65, dist 3 em 104 bits, 143 empatadas, 1 saidas
+74763879 3   # IDR 2275, desde a fileira 66, dist 3 em 72 bits, 321 empatadas, 2 saidas
+74763883 1   # IDR 2275, desde a fileira 66, dist 3 em 72 bits, 321 empatadas, 2 saidas
+74763883 6   # IDR 2275, desde a fileira 66, dist 3 em 72 bits, 321 empatadas, 2 saidas
+102933589 1   # IDR 3027, desde a fileira 65, dist 3 em 112 bits, 141 empatadas, 2 saidas
+102933593 6   # IDR 3027, desde a fileira 65, dist 3 em 112 bits, 141 empatadas, 2 saidas
+102933595 5   # IDR 3027, desde a fileira 65, dist 3 em 112 bits, 141 empatadas, 2 saidas
+109964072 3   # IDR 3278, desde a fileira 65, dist 3 em 96 bits, 286 empatadas, 1 saidas
+109964080 7   # IDR 3278, desde a fileira 65, dist 3 em 96 bits, 286 empatadas, 1 saidas
+109964081 5   # IDR 3278, desde a fileira 65, dist 3 em 96 bits, 286 empatadas, 1 saidas
+
+# ===== NIVEL B: 12 IDRs, 23 bits =====
+4377910 2   # IDR 99, desde a fileira 67, dist 2 em 56 bits, 195574 empatadas, 10 saidas
+4377911 1   # IDR 99, desde a fileira 67, dist 2 em 56 bits, 195574 empatadas, 10 saidas
+11649863 6   # IDR 323, desde a fileira 67, dist 1 em 40 bits, 477889 empatadas, 9 saidas
+12479418 7   # IDR 352, desde a fileira 67, dist 2 em 40 bits, 161402 empatadas, 8 saidas
+12479419 4   # IDR 352, desde a fileira 67, dist 2 em 40 bits, 161402 empatadas, 8 saidas
+16409985 2   # IDR 439, desde a fileira 67, dist 3 em 32 bits, 292885 empatadas, 3 saidas
+16409986 0   # IDR 439, desde a fileira 67, dist 3 em 32 bits, 292885 empatadas, 3 saidas
+16409986 1   # IDR 439, desde a fileira 67, dist 3 em 32 bits, 292885 empatadas, 3 saidas
+35293255 2   # IDR 1011, desde a fileira 67, dist 3 em 40 bits, 6885 empatadas, 5 saidas
+35293255 4   # IDR 1011, desde a fileira 67, dist 3 em 40 bits, 6885 empatadas, 5 saidas
+35293255 5   # IDR 1011, desde a fileira 67, dist 3 em 40 bits, 6885 empatadas, 5 saidas
+59364902 0   # IDR 1773, desde a fileira 67, dist 1 em 48 bits, 509518 empatadas, 9 saidas
+59364903 5   # IDR 1773, desde a fileira 67, dist 1 em 48 bits, 509518 empatadas, 9 saidas
+60598901 1   # IDR 1833, desde a fileira 67, dist 1 em 48 bits, 632447 empatadas, 10 saidas
+64334221 3   # IDR 1949, desde a fileira 67, dist 2 em 40 bits, 551213 empatadas, 9 saidas
+64334222 2   # IDR 1949, desde a fileira 67, dist 2 em 40 bits, 551213 empatadas, 9 saidas
+80533249 3   # IDR 2420, desde a fileira 67, dist 1 em 48 bits, 224368 empatadas, 10 saidas
+84280430 0   # IDR 2525, desde a fileira 67, dist 2 em 48 bits, 632447 empatadas, 10 saidas
+84280432 4   # IDR 2525, desde a fileira 67, dist 2 em 48 bits, 632447 empatadas, 10 saidas
+92019795 0   # IDR 2757, desde a fileira 66, dist 3 em 64 bits, 516 empatadas, 3 saidas
+92019795 1   # IDR 2757, desde a fileira 66, dist 3 em 64 bits, 516 empatadas, 3 saidas
+92019795 3   # IDR 2757, desde a fileira 66, dist 3 em 64 bits, 516 empatadas, 3 saidas
+100632916 3   # IDR 2971, desde a fileira 67, dist 1 em 40 bits, 512919 empatadas, 9 saidas
