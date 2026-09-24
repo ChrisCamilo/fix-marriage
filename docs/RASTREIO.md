@@ -474,6 +474,41 @@ seguram o delta em zero, o degrau de borda porque em área lisa o lixo pastel
 não cria degrau. **Ponto cego do juiz de borda: lixo de baixo contraste em
 região lisa.**
 
+### Quadros P e B: censo e o que dá para consertar — 2026-09-23
+
+Pelo `mapa` de hoje (um decoder só, ocultação conta como defeito) e o
+`alvos.txt`:
+
+| | P/B | quebrados |
+|---|---|---|
+| total | 3.313 | 2.336 |
+| em GOP de IDR **bom** (0, 2333, 3319, 3348, 3368, 3397, 3426) | 177 | **19** |
+| em GOP de IDR com ≥ 50% limpo | 56 | 41 |
+| IDR 20–50% limpo | 1.176 | 868 |
+| IDR < 20% limpo | 880 | 664 |
+| IDR sem imagem | 1.024 | 744 |
+
+(918 P/B são de referência, `nal_ref_idc > 0`; 2.395 não são.)
+
+**Os 19 verificáveis já estavam na mesa:** 16 no GOP 0 atrás do quadro 11 (P de
+referência, dentro da zona de 3–4% — o 11 quebra a cadeia de tudo depois dele)
+e 2359, 2360, 2361 (B sem referência, já atacados). Os GOPs 3319, 3348, 3368,
+3397 e 3426 estão inteiros.
+
+**Os outros 99% não têm conserto verificável por bits.** Quadro P/B monta a
+imagem copiando das referências; com o IDR quebrado a imagem dele herda o lixo,
+por mais certos que estejam os próprios bits — e não há gabarito, porque até a
+tarja dele é cópia da tarja da referência. Medido: 819 P/B dentro de GOP de IDR
+quebrado **leem os 8.160 MBs sem erro nem ocultação** — o dado deles está bom,
+só a referência está errada —, mas espalhados: nenhum GOP (salvo um) tem 20
+desses, porque os P de referência no meio do GOP também quebram.
+
+**Conclusão:** "P/B fora das zonas de dano" não é um alvo novo para busca de
+bits. O que é verificável são 19 quadros, todos em zona densa ou atrás do 11.
+Com os juízes e as medidas desta sessão, a busca de bits está esgotada para os
+IDRs quebrados (sondas acima) e para os P/B. O que sobra para assistir é
+reconstrução visual, do lado do `remontar.py` — que não afirma nada sobre bits.
+
 ### Nenhuma varredura de 1 bit em IDR jamais consertou um
 
 Contagem acumulada: **18 IDRs varridos, zero reparos** — 0, 734, 1143, 1524,
