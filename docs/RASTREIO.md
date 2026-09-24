@@ -412,6 +412,41 @@ A taxa também confirmou o efeito colateral da correção de cabeçalhos: **657
 cand/s** onde a estimativa era 1.750, porque os candidatos agora decodificam
 fundo em vez de morrer cedo.
 
+### Sonda de dano isolado nos IDRs quebrados — 2026-09-23
+
+Pergunta: em algum IDR o dano logo depois da fronteira é **um bit isolado**
+(o próximo a milhares de bytes)? É o regime em que encadear funciona (MELHORIAS,
+item 5). Sonda: `avanco` de 1 bit nos 2.500 bytes antes da fronteira, e os 40
+melhores de cada IDR verificados em modo limpo — onde agem, fronteira certa
+(QP / I_PCM / parada) e **sequência limpa pelo degrau de borda**.
+
+Régua, do banco sintético (mesmo juiz): com o 2º bit a ~3.300 bytes, o
+candidato certo ganha **152 MBs limpos** (mediana; p90 459) e o melhor rival
+entre 256–512 candidatos **44** (p90 99); em rajada (~245 bytes) o certo ganha
+24 e o rival 55.
+
+**36 IDRs sondados** (os que têm ponto de consumo conhecido e decodificam além
+do cabeçalho). Dois defeitos da primeira passada, corrigidos: em 4 (87, 1891,
+3027, 3249) a janela ficou depois da fronteira certa — posicioná-la pela parada
+do ffmpeg está errado, o certo é pelo byte da fronteira certa (busca binária
+com o NAL truncado); em 7 (248, 485, 647, 1524, 1712, 1831, 2391) a fronteira
+fica nas primeiras fileiras de cena e o limiar do juiz saía da tarja preta —
+com menos de 3 fileiras de cena acima, usar o limiar dos IDRs bons (5,84).
+
+| melhor sequência limpa | IDRs |
+|---|---|
+| 99–113 MBs | 1524, 1712, 1831, 2641 |
+| 60–91 MBs | 157, 248, 2391, 1069, 3027, 3076, 647 |
+| até 58 MBs | os outros 25, incluindo o 1773 (17) |
+
+**Nenhum IDR mostra a assinatura de bit isolado.** Os melhores ficam no p90 do
+melhor rival do banco sintético — e aqui cada IDR teve ~20 mil candidatos
+contra 256–512 lá, então a cauda do lixo é ainda mais alta. Em todos os 36 o
+dano logo depois da fronteira é denso, coerente com o mapa de dano (IDR
+quebrado é IDR atingido por zona). Ficam de fora os 17 que morrem no cabeçalho
+e ~20 que acabam em silêncio (sem ponto de consumo); esses se sondam pela
+fronteira certa, que agora se acha por busca binária.
+
 ### Nenhuma varredura de 1 bit em IDR jamais consertou um
 
 Contagem acumulada: **18 IDRs varridos, zero reparos** — 0, 734, 1143, 1524,
