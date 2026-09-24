@@ -122,6 +122,41 @@ depois de medido.
    íntegro (o quadro exibido logo antes ou depois tem quase a mesma imagem), a
    medir no mesmo banco sintético antes de qualquer implementação.
 
+   **Vizinho temporal, medido (2026-09-23).** Juiz: para cada MB, a menor
+   diferença média contra o quadro exibido logo antes, com busca de
+   deslocamento em ±12 px (`tempo.py`). O vizinho anterior pertence ao GOP de
+   trás e não depende do IDR — é o caso realista. Nos IDRs bons:
+
+   | par | diferença dos MBs bons (p50 / p99,9) |
+   |---|---|
+   | 3397 ← 3393 | 1,0 / 9,2 |
+   | 3426 ← 3425 | 2,2 / 15,4 |
+   | 3348 ← 3344 | 5,1 / 47,8 (movimento) |
+   | 3368 ← 3365 | **36 / 145 — corte de cena, inútil** |
+   | 2333, 3319 | vizinho anterior decodifica com erro |
+
+   No teste de 2 bits a ~245 bytes (24 casos nos 3 pares sem corte, 512
+   candidatos): **o certo fica em 1º em 0 a 4 de 24** conforme a forma de usar
+   o sinal (sequência limpa, soma contínua em 24/60/120/240 MBs, limiares p90 e
+   p99). Não resolve: o lixo dos primeiros MBs depois do bit difere 5–15
+   níveis, dentro do ruído de movimento entre quadros.
+
+   **O regime em que o encadeamento funciona.** O mesmo teste com o 2º bit a
+   1.500–4.000 bytes (mediana 3.300; 12 casos, 256 candidatos):
+
+   | critério | certo em 1º | top 5 |
+   |---|---|---|
+   | sequência limpa pelo degrau de borda | **7–9 de 12** | 11 |
+   | pareado nos mesmos MBs | 7–8 de 12 | 10 |
+   | fronteira certa (QP / parada) | 4–6 de 12 | 10 |
+
+   **Conclusão:** encadear bit a bit funciona quando os bits errados estão
+   espaçados (milhares de bytes — o certo ganha centenas de MBs e vence o
+   atraso dos juízes) e **não funciona em rajada** (centenas de bytes — o certo
+   ganha ~7–12 MBs, menos que o atraso). O 1773 está em rajada: o 1º bit em
+   ~32.700 e três violações de escape em 34.257–34.312, e o vizinho anterior
+   dele (1771) decodifica com erro, então nem o juiz temporal existe ali.
+
 ### RETRATADA: "o modelo de cadeia não serve para todo GOP"
 
 **Esta seção afirmava um defeito que não existe. Fica registrada em vez de
