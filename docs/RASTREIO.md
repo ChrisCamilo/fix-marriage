@@ -447,6 +447,23 @@ quebrado é IDR atingido por zona). Ficam de fora os 17 que morrem no cabeçalho
 e ~20 que acabam em silêncio (sem ponto de consumo); esses se sondam pela
 fronteira certa, que agora se acha por busca binária.
 
+**Os que acabam em silêncio, sondados em seguida (2026-09-23).** Não eram ~20:
+eram 71 sem sonda, dos quais 22 morrem nos primeiros MBs (cabeçalho). Os **49**
+com fronteira dentro da cena, mesmo método (janela terminando no byte da
+fronteira certa, limiar dos IDRs bons quando falta cena acima), 26 min:
+
+| melhor sequência limpa | IDRs |
+|---|---|
+| 129 | 1297 (rel 29.053 b5, age no MB 2.368) |
+| 90–106 | 814, 29, 2036 |
+| 60–83 | 3126, 2072, 2420, 439, 734, 2801, 2217, 323, 3047, 2362 |
+| até 58 | os outros 35 |
+
+**De novo nenhum com a assinatura de bit isolado.** O 1297 é o único acima de
+110, mas com ~20 mil candidatos por IDR a cauda do lixo passa de 100 — é
+limítrofe, não sinal. Somando as duas sondas: **85 IDRs quebrados com fronteira
+na cena, nenhum com dano isolado depois dela.**
+
 ### Nenhuma varredura de 1 bit em IDR jamais consertou um
 
 Contagem acumulada: **18 IDRs varridos, zero reparos** — 0, 734, 1143, 1524,
