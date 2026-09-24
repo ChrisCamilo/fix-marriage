@@ -464,6 +464,16 @@ fronteira certa, limiar dos IDRs bons quando falta cena acima), 26 min:
 limítrofe, não sinal. Somando as duas sondas: **85 IDRs quebrados com fronteira
 na cena, nenhum com dano isolado depois dela.**
 
+**O 1297 conferido a fundo — descartado.** O candidato (rel 29.053 b5) age no MB
+2.368 (fil. 19, col. 88) e mantém o QP 11 do slice até o 2.496; a base desvia
+para 14 já no 2.408. Mas na imagem em modo limpo a **fileira 20, colunas 0–96,
+é lixo igual ao da base**: listras verticais finas e blocos pastel (rosa,
+amarelo, verde) numa parede branca lisa. Os 129 MBs "limpos" eram lixo de
+baixo contraste que passou pelos dois juízes — o QP porque os contextos
+seguram o delta em zero, o degrau de borda porque em área lisa o lixo pastel
+não cria degrau. **Ponto cego do juiz de borda: lixo de baixo contraste em
+região lisa.**
+
 ### Nenhuma varredura de 1 bit em IDR jamais consertou um
 
 Contagem acumulada: **18 IDRs varridos, zero reparos** — 0, 734, 1143, 1524,
