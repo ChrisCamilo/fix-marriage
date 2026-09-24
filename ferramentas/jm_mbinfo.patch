@@ -1,0 +1,32 @@
+diff --git a/source/app/ldecod/image.c b/source/app/ldecod/image.c
+index 404e268..892df94 100644
+--- a/source/app/ldecod/image.c
++++ b/source/app/ldecod/image.c
+@@ -2524,8 +2524,27 @@ void decode_one_slice(Slice *currSlice)
+ 
+     // Initializes the current macroblock
+     start_macroblock(currSlice, &currMB);
++    // fix-marriage: JM_MBINFO=<arquivo> grava uma linha por MB (tipo, modos
++    // intra 4x4, croma, cbp, qp e o estado do decodificador aritmetico no
++    // INICIO do MB). Nao muda nada da decodificacao.
++    int jm_pos = -1, jm_bl = 0; unsigned int jm_rng = 0, jm_val = 0;
++    {
++      DecodingEnvironment *jd = &currSlice->partArr[0].de_cabac;
++      if (jd->Dcodestrm_len) { jm_pos = *jd->Dcodestrm_len; jm_bl = jd->DbitsLeft; jm_rng = jd->Drange; jm_val = jd->Dvalue; }
++    }
+     // Get the syntax elements from the NAL
+     currSlice->read_one_macroblock(currMB);
++    {
++      static FILE *jm_f = NULL; static int jm_ini = 0;
++      if (!jm_ini) { const char *n = getenv("JM_MBINFO"); jm_ini = 1; if (n) jm_f = fopen(n, "w"); }
++      if (jm_f) {
++        fprintf(jm_f, "%d %d %d %d %d %d %d %d %u %u", currMB->mbAddrX, currMB->mb_type, currMB->i16mode,
++                currMB->c_ipred_mode, currMB->cbp, currMB->qp, jm_pos, jm_bl, jm_rng, jm_val);
++        for (int jj = 0; jj < 4; jj++) for (int ii = 0; ii < 4; ii++)
++          fprintf(jm_f, " %d", currSlice->ipredmode[currMB->block_y + jj][currMB->block_x + ii]);
++        fputc(10, jm_f); fflush(jm_f);
++      }
++    }
+     decode_one_macroblock(currMB, currSlice->dec_picture);
+ 
+     if(currSlice->mb_aff_frame_flag && currMB->mb_field)

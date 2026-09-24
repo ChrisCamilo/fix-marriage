@@ -157,6 +157,11 @@ depois de medido.
    ~32.700 e três violações de escape em 34.257–34.312, e o vizinho anterior
    dele (1771) decodifica com erro, então nem o juiz temporal existe ali.
 
+   **Juiz de escolha ótima do encoder — refutado (2026-09-24).** O modo que o
+   encoder escolheu é o melhor também no lixo (a imagem se ajusta ao modo);
+   atraso mediano 52–84 MBs. Detalhes e a lição (juiz só com a saída do
+   decodificador é autoconsistente) em `docs/PLANO_JUIZ_ENCODER.md`.
+
 ### RETRATADA: "o modelo de cadeia não serve para todo GOP"
 
 **Esta seção afirmava um defeito que não existe. Fica registrada em vez de
