@@ -263,6 +263,28 @@ assistir e para ancorar. Mas **"decodifica limpo" é ausência de evidência de
 erro, não prova de integridade**, e a diferença importa no dia em que um reparo
 parecer bom e não for.
 
+## 10b. O QP é constante dentro do IDR — gabarito por macrobloco (2026-09-23)
+
+Medido com `ffmpeg -debug qp+mb_type -ec 0 -skip_loop_filter all` nos 131
+IDRs, cada um decodificado sozinho com o `patches.txt` de hoje:
+
+| | IDRs | QP |
+|---|---|---|
+| decodificam os 8.160 MBs sem ocultar | 7 (0, 2333, 3319, 3348, 3368, 3397, 3426) | **constante nos 8.160**; só I16x16 e I4x4 |
+| quebrados, o QP muda antes de parar | 60 | a mudança fica nos últimos **3 a 388 MBs** antes do fim da leitura (mediana 49) |
+| quebrados, o QP não muda antes de parar | 47 | a maioria para **no início de uma fileira** (1320, 1680, 2760...): modo intra pedindo o vizinho da esquerda na coluna 0 |
+| nada decodificado | 17 | morrem no cabeçalho |
+
+Nenhum IDR tem o QP mudando e a leitura seguindo por mais de 388 MBs; os 13
+I_PCM do filme estão todos em IDRs quebrados. O QP do slice varia de IDR para
+IDR (9 a 24), mas dentro de cada um o encoder não o mexe.
+
+Uso: todo MB com QP diferente do MB 0, ou I_PCM, é lixo certo. É detector
+**tardio** — o lixo amostra o modelo de contextos, que aprendeu "delta zero",
+e só desvia depois de dezenas de MBs; a regra semântica do vizinho na coluna 0
+pega o resto no começo da fileira seguinte. Nenhum dos dois diz onde o lixo
+começa: isso é da imagem em modo limpo (armadilha 60).
+
 ## 11. Ferramentas
 
 | arquivo | papel |

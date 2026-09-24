@@ -42,7 +42,7 @@ neste projeto, e onde houve reparo, havia um deles:
 | a tarja | medida em 16 frames íntegros: `Y=16`, `U=V=128`, linhas 962–1079 |
 | vizinho temporal | o frame 2360 tinha quadros bons dos dois lados |
 | aritmética | o nível do fade do 3435, previsto por extrapolação da reta |
-| **sintaxe por macrobloco** (2026-09-23) | o QP é **o mesmo nos 8.160 MBs** de um IDR íntegro e só há I16x16 e I4x4: todo MB com QP diferente do slice, ou I_PCM, é lixo. Medido em 2333 (13), 3319 (23) e nas fileiras 0–56 do 1773 (20); falta conferir nos 131 |
+| **sintaxe por macrobloco** (2026-09-23) | o QP é **o mesmo nos 8.160 MBs** de um IDR íntegro e só há I16x16 e I4x4: todo MB com QP diferente do slice, ou I_PCM, é lixo. Conferido nos 131 IDRs (2026-09-23): os 7 que decodificam inteiros têm QP constante nos 8.160 MBs e só I16x16/I4x4; nos quebrados o QP só muda nos últimos ≤ 388 MBs antes de o decodificador parar (mediana 49), nunca num trecho que siga decodificando, e os 13 I_PCM estão todos neles |
 
 O quarto gabarito, o de sintaxe, só diz **não**: MB com QP certo pode ser lixo,
 porque os contextos do CABAC adaptados a "delta sempre zero" fazem o lixo
