@@ -1,6 +1,7 @@
 # Plano 2 — Âncora pela cauda
 
-**Estado: não iniciado** (proposto em 2026-09-23). Um dos três planos para o
+**Estado: passos 1–3 feitos** (proposto em 2026-09-23; executado em
+2026-09-24 — ver "Resultados" no fim). Ferramentas em `ferramentas/ancora/`. Um dos três planos para o
 dano denso dos IDRs quebrados; os outros são
 [`PLANO_JUIZ_ENCODER.md`](PLANO_JUIZ_ENCODER.md) e
 [`PLANO_SUBSTITUICAO_REFERENCIA.md`](PLANO_SUBSTITUICAO_REFERENCIA.md).
@@ -74,3 +75,98 @@ estado. São ~18 bits de estado mais a posição exata: acaso na casa de 1 em
 Medidas da tarja e do codificador no CABAC.md (seção 4, "a tarja não é
 separável" — este plano é a exceção a verificar); corridas no RASTREIO.md;
 bits provados, com a prova, no `patches.txt` depois de aprovados.
+
+## Resultados
+
+### Passo 1 — a tarja nos 6 IDRs íntegros (2026-09-24)
+
+JM com o patch `ferramentas/jm_mbinfo.patch`, que grava por MB o estado do
+decodificador aritmético e dos contextos da tarja.
+
+- **Sintaxe:** fileiras 61–67 (840 MBs) todas I16x16, predição DC, croma DC,
+  CBP 0, em 4 dos 6 IDRs; 1 e 7 exceções nos outros dois (3319, 3348).
+- **Tamanho:** as fileiras 61–67 ocupam **46–55 bytes** no fim do NAL.
+- **Contextos:** na entrada da fileira 61 **não** estão saturados, e variam
+  de IDR para IDR. A partir da fileira 62, todo MB fora da coluna 0 usa
+  contextos **iguais nos 6** (saturados). Os MBs da coluna 0 usam dois
+  contextos que nunca saturam (1º bit do tipo de MB com vizinho esquerdo
+  ausente, e o flag do DC com a mesma condição): uma incógnita por fileira.
+
+### Passo 2 — codificador e validação (2026-09-24)
+
+`ancora.c` (scratchpad): recodifica com CABAC a sintaxe da tarja a partir de
+um MB de entrada, para todo estado do codificador (`codILow` 0–1023,
+`codIRange` 256–510, bits pendentes 0–8), e compara com o fim do RBSP
+alinhando pelo bit de parada. Entrada na última fileira, coluna 1 (119 MBs,
+~40 bits), onde todos os contextos são conhecidos.
+
+| | melhor distância |
+|---|---|
+| 6 IDRs íntegros | **0** em todos (vários estados empatam: 40 bits não determinam o estado) |
+| controle: 1 bit trocado de propósito | **1**, no bit trocado |
+| caudas aleatórias (12) | 9 a 18 |
+| **1773** | **2** |
+
+### O 1773: dois bits provados na cauda
+
+Todos os estados de distância mínima apontam os mesmos bits. A correção que
+deixa o fluxo válido:
+
+| rel | offset absoluto | bit | arquivo | correto |
+|---|---|---|---|---|
+| 34.314 | 59.364.902 | 0 | `02` | `03` |
+| 34.315 | 59.364.903 | 5 | `21` | `01` |
+
+`e1 00 00 02 21 6f` → `e1 00 00 03 01 6f`: o encoder tinha `00 00 01` no RBSP
+e o escapou corretamente como `00 00 03 01`; o dano trocou 2 bits. É a
+violação de escape que estava anotada em 34.312 (o `00 00 02` começa ali).
+Comparar no RBSP sem considerar o escape dá distância 2 com uma correção
+inválida (`00 00 00 01`); com o escape restaurado, distância 1 mais o próprio
+escape.
+
+**Não entraram no `patches.txt`** — precisam de aprovação e sozinhos não
+fazem o quadro decodificar (o dano da frente continua). As outras duas
+violações (34.257 e 34.285) ficam antes da última fileira, no trecho em que
+entram os MBs da coluna 0.
+
+### Passo 3 — várias fileiras, com a coluna 0 como incógnita (2026-09-24)
+
+O RBSP da tarja é **quase todo zero**: com símbolos que são o mais provável do
+contexto, o codificador só desloca o `low`, sem somar nada. Cada fileira gera
+uma pequena rajada, que vem do MB da coluna 0 — ali os dois contextos que
+nunca saturam produzem símbolos menos prováveis. Então a cauda inteira fica
+determinada por poucos números: `codIRange` na entrada, o estado dos dois
+contextos da coluna 0 e o `low` inicial.
+
+`ancora2.c` busca (`codIRange` × estado de `mb_type[1]` × estado de
+`bcbp[0][1]`, 4 milhões de hipóteses, OpenMP, ~4 s) a partir da fileira 63,
+onde todos os outros contextos já estão iguais nos IDRs íntegros.
+
+- **Validação:** 2333 e 3426 reproduzem os ~170 bits das fileiras 63–67 com
+  distância 0; no 2333 a busca **recupera o estado real** do contexto do DC
+  (45, igual ao que o JM grava). Controle aleatório: 65.
+- **Censo nos 131 IDRs** (`dados/censo_cauda.txt`, colunas: IDR, enchimento,
+  distância e bits da última fileira, distância e bits das fileiras 63–67):
+
+  | | última fileira = 0 | fileiras 63–67 = 0 |
+  |---|---|---|
+  | IDRs bons (7) | 7 | 6 (o 0 é o fade todo preto) |
+  | **IDRs quebrados (124)** | 90 | **73** |
+
+  **73 IDRs quebrados têm a cauda intacta e explicada bit a bit**, com o
+  estado de entrada da fileira 63 determinado. Os outros 51 têm dano também
+  na cauda.
+- **O 1773 é um dos 51.** Encaixa na última fileira depois dos 2 bits
+  provados, mas as fileiras 63–66 ficam a 26–28 bits do modelo, e a
+  diferença cresce a cada fileira para trás (3, 9, 22, 26). As duas outras
+  violações de escape (34.257, 34.285) ficam antes desse trecho — as
+  fileiras 63–67 ocupam só os ~21 bytes finais. Ou seja: além do dano da
+  frente e das 3 violações, há mais dano dentro das próprias fileiras de
+  tarja. Consistente com o 1773 estar numa zona de dano, e com as opções
+  a/b/c de 2 bits não poderem fechar.
+
+**O que isto dá ao projeto:** para os 73 IDRs de cauda intacta, a posição
+exata em bits e o estado aritmético no início da fileira 63 — o teste
+intermediário do passo 4 (um conserto do meio só vale se chegar ali naquele
+bit e naquele estado). O que isto **não** dá: redução da busca no meio, onde
+as sondas mostraram dano denso nos 85 IDRs.
