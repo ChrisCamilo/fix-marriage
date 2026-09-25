@@ -5,13 +5,13 @@
 trecho de sintaxe conhecida e comparar com o arquivo — da tarja para o quadro
 inteiro, num quadro cujo conteúdo é todo conhecido. Histórico do frame 11 no
 RASTREIO.md ("GOP 0, frames 10 a 12", "Frame 11 — por que nenhum par de bits
-pode funcionar", "3 bits na janela dos macroblocos") e em `dados/janela_f11.txt`.
+pode funcionar", "3 bits na janela dos macroblocos") e em `data/janela_f11.txt`.
 
 ## O dano
 
 - **Quadro P de 2.832 bytes** (amostra em 147.689), o último do fade inicial.
 - **Inteiro dentro de uma zona de dano** (0,147–0,150 MB, 4–4,5% dos bits
-  trocados — `dados/mapa_dano.txt`): **~600 bits errados**, espalhados. Na
+  trocados — `data/mapa_dano.txt`): **~600 bits errados**, espalhados. Na
   parte periódica do fluxo dá para contar direto: 66 bits fora em 240 bytes
   (~3%), contra 4–12 nos frames 3–9.
 - **Quebra no MB 15** da primeira fileira, ~50 bytes depois do início.
@@ -72,7 +72,7 @@ quais são skip, quais são inter, e o que os MBs de borda (fileiras 8 e 59, com
 
 ### 2. Codificador CABAC de quadro P
 
-Estender o `ferramentas/ancora/cabac_enc2.py` (validado no 3348) com:
+Estender o `tools/anchor/cabac_enc2.py` (validado no 3348) com:
 - `mb_skip_flag` (contextos 11–13, pelo vizinho não-skip);
 - `mb_type` de P com prefixo intra (contextos 14–20, depois os de I em 17+);
 - `ref_idx` e `mvd` para os MBs inter;
@@ -113,7 +113,7 @@ Sem isso, nada do passo 3 vale.
 - **Os 167 quadros bons** byte a byte iguais; `mapa` e regressão.
 
 Só então os ~600 bits entram no `patches.txt`, **com aprovação do usuário**,
-num registro próprio (`dados/patches_f11.txt`), com a distância de cada trecho.
+num registro próprio (`data/patches_f11.txt`), com a distância de cada trecho.
 
 ## Custo e retorno
 
@@ -143,5 +143,5 @@ num registro próprio (`dados/patches_f11.txt`), com a distância de cada trecho
 ## Onde registrar
 
 Resultados de cada passo no RASTREIO.md (seção do frame 11) e neste arquivo;
-números medidos no ESTADO.md e no RESULTADOS.md; ferramentas em
-`ferramentas/ancora/`, com bloco de documentação (AGENTS.md).
+números medidos no README.md e no RESULTADOS.md; ferramentas em
+`tools/anchor/`, com bloco de documentação (AGENTS.md).

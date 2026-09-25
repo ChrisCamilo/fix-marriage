@@ -8,7 +8,7 @@ dano denso dos IDRs quebrados; os outros são
 **Isto não é reparo de bits.** É reconstrução visual, do lado do
 `remontar.py`: não afirma nada sobre bits, não toca no MP4 e não escreve no
 `patches.txt`. Todo quadro produzido assim fica registrado no
-`dados/remontados.txt` como reconstrução.
+`data/remontados.txt` como reconstrução.
 
 ## Por que este plano existe
 
@@ -68,6 +68,6 @@ coisa que a libavcodec não permite.
 
 ## Onde registrar
 
-Ferramenta e decisões no ESTADO.md (seção de arquivos); quadros produzidos no
-`dados/remontados.txt`; segundos assistíveis no RESULTADOS.md, em linha
+Ferramenta e decisões no README.md (seção de arquivos); quadros produzidos no
+`data/remontados.txt`; segundos assistíveis no RESULTADOS.md, em linha
 própria de reconstrução.

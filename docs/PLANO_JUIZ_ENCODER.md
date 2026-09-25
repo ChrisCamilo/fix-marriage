@@ -80,14 +80,14 @@ se virar juiz do `reparador.c`, no CRITERIOS.md.
 
 **O que foi feito.**
 
-- **JM instrumentado** (`ferramentas/jm_mbinfo.patch`, em `image.c`): com
+- **JM instrumentado** (`tools/jm_mbinfo.patch`, em `image.c`): com
   `JM_MBINFO=<arquivo>` grava uma linha por MB — tipo, modo 16x16, modo de
   croma, CBP, QP, os 16 modos 4x4 **e o estado do decodificador aritmético no
   início do MB** (posição, bits restantes, `Drange`, `Dvalue`; serve ao plano
   2). Build sem trace: **0,13 s por quadro**, contra segundos do trace
   completo. Compilar com `-DENABLE_TRACING=OFF` e
   `-DCMAKE_C_STANDARD_LIBRARIES=-lws2_32`.
-- **Predições intra exatas** (`ferramentas/predicao_intra.py`): no IDR 2333,
+- **Predições intra exatas** (`tools/predicao_intra.py`): no IDR 2333,
   **8.280 de 8.280** blocos 4x4 sem resíduo batem pixel a pixel com a predição
   do modo escolhido.
 - **No quadro íntegro o encoder escolhe o melhor modo** quase sempre: 16x16 em

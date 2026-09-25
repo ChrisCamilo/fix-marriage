@@ -260,7 +260,7 @@
 # ============================================================================
 # 2026-09-18 -- O CABECALHO DO SLICE ESTA CORROMPIDO (2 bits), E O "MB 15" ERA LIXO
 #
-# Lido campo a campo com `ffmpeg -bsf:v trace_headers` (saidas/reparado.mp4):
+# Lido campo a campo com `ffmpeg -bsf:v trace_headers` (output/reparado.mp4):
 #
 #   campo                    frame 9      frame 11 hoje    frame 11 + 2 bits
 #   chroma_weight_flag[2]    1            0                1   (1,-1,1,1 = f9)

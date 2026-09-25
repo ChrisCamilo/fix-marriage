@@ -1,6 +1,6 @@
 As convenções deste repositório estão em [AGENTS.md](AGENTS.md) — leia antes de
 começar. O contexto técnico e o estado atual do reparo estão em
-[ESTADO.md](ESTADO.md).
+[README.md](README.md).
 
 Três coisas que não podem ser esquecidas:
 
@@ -13,5 +13,5 @@ Três coisas que não podem ser esquecidas:
    **toda mudança nele passa pelo usuário antes** — é fonte de verdade, e linha
    que entra afirma "este bit estava corrompido". As duas juntas são a base;
    todo o resto é derivado.
-3. **Manter o `ESTADO.md` atualizado** com números medidos depois de cada
+3. **Manter o `README.md` atualizado** com números medidos depois de cada
    corrida — separando o que foi consertado do que já estava intacto.

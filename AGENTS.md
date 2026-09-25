@@ -1,7 +1,7 @@
 # Convenções deste repositório
 
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
-`ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
+`README.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
 comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
 qualquer coisa — são **61** maneiras de medir errado que já custaram horas aqui.
 
@@ -19,7 +19,7 @@ Este repositório é **privado**. Material pessoal de família.
 - Criar público e trocar depois não resolve: o conteúdo fica em cache e
   indexado. Qualquer repositório novo tem que nascer privado.
 - **Imagem e vídeo nunca entram no git**, nem no remoto privado: o MP4, o
-  reparado e os quadros extraídos (`saidas/*.png`, `*.pgm`, `*.yuv`) estão no
+  reparado e os quadros extraídos (`output/*.png`, `*.pgm`, `*.yuv`) estão no
   `.gitignore`. O que vai para o remoto é só texto — código, patches, índices e
   documentação.
 
@@ -55,9 +55,9 @@ visualmente bons: saem o 12 (referência quebrada) e 2359, 2360, 2361, 3442 e
 
 **A outra via é a do cabeçalho provado.** Patch que prova o cabeçalho não faz o
 quadro passar — o dano segue no corpo — e por isso não passa pelo critério
-acima. Entra por invariante: os determinísticos (`dados/deterministicos.txt`) e,
+acima. Entra por invariante: os determinísticos (`data/deterministicos.txt`) e,
 desde 2026-09-18, os cabeçalhos de slice consertados por coerência
-(`dados/patches_cabecalho.txt`, gerados pelo `ferramentas/cabecalho_slice.py`).
+(`data/patches_cabecalho.txt`, gerados pelo `tools/cabecalho_slice.py`).
 Condição de entrada deste segundo lote, aprovada pelo usuário: solução **única**
 de 1 ou 2 bits, e as imagens dos 167 quadros bons **byte a byte iguais** com o
 lote aplicado. **E o parse de nenhum quadro pode piorar sem que a imagem de antes
@@ -66,8 +66,8 @@ fosse borrão** — essa faltou na primeira vez e deixou passar 6 correções er
 `verify` pula os dois arquivos.
 
 Desde 2026-09-24 há um terceiro lote do mesmo tipo: as **caudas de IDR**
-provadas pela tarja recodificada com CABAC (`dados/patches_cauda.txt`, gerados
-pelo `ferramentas/ancora/cauda_lote.py`, plano em `docs/PLANO_ANCORA_CAUDA.md`).
+provadas pela tarja recodificada com CABAC (`data/patches_cauda.txt`, gerados
+pelo `tools/anchor/cauda_lote.py`, plano em `docs/PLANO_ANCORA_CAUDA.md`).
 Condição de entrada aprovada pelo usuário: distância de no máximo 3 bits,
 **todas** as hipóteses empatadas apontando os mesmos bits, a cauda corrigida
 fechando com distância 0 e sem violação de escape; o `mapa` do filme inteiro
@@ -79,8 +79,8 @@ aprovado pelo usuário: a tarja pode ter uma coluna com outro modo de predição
 13 IDRs, todas com encaixe desde as fileiras 63–65. **Encaixe de cauda de IDR
 só vale com 3 fileiras ou mais.**
 
-No mesmo dia entrou o quarto: as **caudas de quadros P/B** (`dados/patches_cauda_pb.txt`,
-gerados pelo `ferramentas/ancora/cauda_pb.py`), onde a tarja de baixo é só
+No mesmo dia entrou o quarto: as **caudas de quadros P/B** (`data/patches_cauda_pb.txt`,
+gerados pelo `tools/anchor/cauda_pb.py`), onde a tarja de baixo é só
 skip. Condição aprovada pelo usuário: distância de no máximo **2** (a cauda de
 P/B tem só ~30 bits testáveis; caudas aleatórias ficam a 4–13), as mesmas
 regras de hipóteses e de fechamento, e fora os quadros com enchimento no fim.
@@ -106,8 +106,8 @@ Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
 hoje **`0 válidos, 12 falsos, 1771 determinísticos pulados`** (os 480 de
-`dados/deterministicos.txt`, os 783 de `dados/patches_cabecalho.txt`, os 33 de
-`dados/patches_cauda.txt` e os 475 de `dados/patches_cauda_pb.txt`), e os 12 falsos são
+`data/deterministicos.txt`, os 783 de `data/patches_cabecalho.txt`, os 33 de
+`data/patches_cauda.txt` e os 475 de `data/patches_cauda_pb.txt`), e os 12 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |
@@ -134,7 +134,7 @@ resultado, **atualizar o `docs/RESULTADOS.md`** com números medidos, não estim
 Distinguir sempre **"consertado por reparo"** de **"já estava intacto"**. Somar
 os dois num número só foi uma confusão real que aconteceu aqui.
 
-Quando um parâmetro for resolvido, escrever no `ESTADO.md` que está resolvido,
+Quando um parâmetro for resolvido, escrever no `README.md` que está resolvido,
 para ninguém reinvestigar. Quando uma hipótese for descartada, registrar que foi
 testada e o resultado — o `docs/INVESTIGACOES.md` existe para isso.
 
@@ -182,7 +182,7 @@ MP4="Caio & Lizandra - Making- Caio-Balu.mp4"
 
 UCRT64 e não MINGW64: o reparador lê `%td` das mensagens do decoder, que a
 msvcrt antiga não interpreta — a heurística falharia em silêncio. Detalhes na
-seção 3 do `ESTADO.md`.
+seção 3 do `README.md`.
 
 Python é o do Windows (`C:\Python314`), chamado como `python`. Dentro de string
 passada com `python -c`, usar caminho `C:/...`; o Git Bash só converte `/c/...`
@@ -251,7 +251,7 @@ que foi feito, provavelmente são dois commits.
 Não misturar num mesmo commit: correção de bug, funcionalidade nova, atualização
 de documento, ajuste de formatação. Mesmo que tenham nascido do mesmo trabalho,
 são ideias distintas e se revisam separado. Em particular, **atualizar o
-`ESTADO.md` com números medidos é commit próprio**, separado do código que
+`README.md` com números medidos é commit próprio**, separado do código que
 produziu os números — o código é uma ideia, o resultado é outra.
 
 **Commitar assim que a ideia fecha**, não acumular para o fim da sessão. Se o

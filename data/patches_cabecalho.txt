@@ -2,7 +2,7 @@
 # Aprovado pelo usuario: grupo A inteiro, B e C desde que nao mexam nos 167
 # quadros bons, e o par do cabecalho do frame 11.
 #
-# Origem: ferramentas/cabecalho_slice.py (juiz: cabecalho valido pela norma e
+# Origem: tools/cabecalho_slice.py (juiz: cabecalho valido pela norma e
 # igual ao esperado -- tipo, frame_num e POC pelo ctts; deblocking 0/-1/-1,
 # cabac_init 0, sem reordenacao nas constantes do filme; QP so em faixa larga).
 # So entram solucoes UNICAS de 1 ou 2 bits.

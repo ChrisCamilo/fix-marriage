@@ -8,7 +8,7 @@
 #         imagem", que o RASTREIO dava como "erra 6 linhas na borda"). Com ele,
 #         1.037 MBs ocultados; sem ele, o quadro inteiro.
 #   2360: "77496469 0" (00 00 02 -> 00 00 03 no byte 10). Tambem listado em
-#         dados/deterministicos.txt, para o verify pular: e prova de norma, nao
+#         data/deterministicos.txt, para o verify pular: e prova de norma, nao
 #         faz o quadro fechar sozinho (erro seguinte no MB 959).
 #
 # Teste obrigatorio de cada candidato, alem do parse: a CURVA DE TRUNCAMENTO

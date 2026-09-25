@@ -27,7 +27,7 @@ movimento desenha por cima das listras. Achados cruzando o `serie` com a cadeia
 de referência do GOP (IDR e P decodificados antes): 43 dos 209 têm alguma
 referência quebrada. Vistos um a um, 42 estão listrados; o único bom é o frame
 12, fade escuro onde a ocultação da referência quase não erra. A folha com os
-43 está em `saidas/suspeitos_43.png`.
+43 está em `output/suspeitos_43.png`.
 
 Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 (1140–1142, 1583–1585, 1685–1687, 1979–1981, 2161–2163): nenhum é imagem boa.
@@ -36,7 +36,7 @@ Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 
 | | |
 |---|---|
-| `patches.txt` | 3.121 linhas desde 2026-09-25 (−32 de cauda de IDR sem prova, `dados/cauda_auditoria.txt`, `mapa` idêntico). Antes: 3.153 (+475 de cauda de P/B em 325 quadros, `dados/patches_cauda_pb.txt`; `mapa` muda só no 2189, erro 2 MBs adiante; antes disso +65 de cauda de IDR, `dados/patches_cauda.txt`, `mapa` idêntico). Antes: 2.613 (+781: cabeçalhos de slice de 569 quadros, `dados/patches_cabecalho.txt`). Entraram 791; 12, de 6 quadros, estavam erradas e saíram no mesmo dia (armadilha 57); depois entraram 2 (1597 e 1610), achadas quando o 1595 deixou de contar como IDR |
+| `patches.txt` | 3.121 linhas desde 2026-09-25 (−32 de cauda de IDR sem prova, `data/cauda_auditoria.txt`, `mapa` idêntico). Antes: 3.153 (+475 de cauda de P/B em 325 quadros, `data/patches_cauda_pb.txt`; `mapa` muda só no 2189, erro 2 MBs adiante; antes disso +65 de cauda de IDR, `data/patches_cauda.txt`, `mapa` idêntico). Antes: 2.613 (+781: cabeçalhos de slice de 569 quadros, `data/patches_cabecalho.txt`). Entraram 791; 12, de 6 quadros, estavam erradas e saíram no mesmo dia (armadilha 57); depois entraram 2 (1597 e 1610), achadas quando o 1595 deixou de contar como IDR |
 | `serie 0 3444` com a cadeia de referência (`TARJA=1`) | **167** — idêntico antes e depois do lote. O conjunto é as três ilhas + o 1683 (listrado, falso positivo); o 12 fica de fora por depender do frame 11 |
 | imagens dos 167 bons | **byte a byte iguais** antes e depois do lote |
 | `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **159 / 2.133 / 1.153** (com as 12 linhas erradas eram 165: elas tiravam a imagem de 6 quadros) |
@@ -95,7 +95,7 @@ ffmpeg rejeita o cabeçalho do slice, ele não imprime erro de macrobloco, e o
 | **inteiros de verdade** | **2.006** |
 
 Os 1.439 restantes estão classificados em
-[`dados/alvos.txt`](../dados/alvos.txt): 435 com cabeçalho do slice inválido,
+[`data/alvos.txt`](../dados/alvos.txt): 435 com cabeçalho do slice inválido,
 407 que param antes de 512 bytes, 57 entre 512 B e 2 KB, 517 depois de 2 KB e
 23 sem imagem sem causa visível.
 

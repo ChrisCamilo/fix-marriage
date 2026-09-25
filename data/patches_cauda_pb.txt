@@ -3,8 +3,8 @@
 # O verify pula este arquivo. mapa do filme inteiro antes/depois: so o quadro 2189 muda
 # (erro em MB 7356 -> 7358; o quadro ja decodificava lixo antes da tarja e o decodificador
 # dessincronizado le os 3 ultimos bytes, onde esta o bit corrigido).
-# Gerado em 2026-09-24 por ferramentas/ancora/cauda_pb.py; censo em dados/censo_cauda_pb.txt,
-# log em dados/cauda_pb.log.
+# Gerado em 2026-09-24 por tools/anchor/cauda_pb.py; censo em data/censo_cauda_pb.txt,
+# log em data/cauda_pb.log.
 #
 # A tarja inferior de P/B e so skip (medido: 840/840 MBs nos 28 P/B do GOP 3319); o
 # codificador (ancora_pb.c) recodifica as fileiras 62-67 com o codIRange de entrada e o

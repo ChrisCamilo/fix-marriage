@@ -5,8 +5,8 @@
 # saida. O criterio de aceitacao do docs/REFATORACAO.md e saida BYTE A BYTE
 # identica, modo a modo, e e isto que mede.
 #
-#   bash ferramentas/regressao.sh grava <dir>    captura a referencia
-#   bash ferramentas/regressao.sh confere <dir>  compara contra a referencia
+#   bash tools/regressao.sh grava <dir>    captura a referencia
+#   bash tools/regressao.sh confere <dir>  compara contra a referencia
 #
 # Cada caso e pequeno de proposito: o arnes tem que rodar em minutos, senao nao
 # se roda. Modo que so faz sentido em corrida longa entra com janela minima --
@@ -35,13 +35,13 @@ PT_REAL=patches.txt
 PT_ANTES=$(sha256sum "$PT_REAL" | cut -c1-64)
 
 acao=${1:-confere}
-dir=${2:-dados/regressao}
+dir=${2:-data/regression}
 # Diretorio FIXO, nao mktemp. Os modos que gravam arquivo ecoam o caminho no
 # stdout, e o MSYS2 converte o caminho POSIX para a forma Windows ao passar para
 # programa nativo -- entao filtrar "$tmp" no stdout nao funciona: o programa
 # imprime C:/msys64/tmp/... e o filtro procurava /tmp/... Caminho constante
 # resolve na origem, sem filtro.
-tmp=logs/.regressao
+tmp=logs/.regression
 rm -rf "$tmp"; mkdir -p "$tmp"
 PT="$tmp/patches.txt"
 
@@ -180,4 +180,4 @@ fi
 # comentario com UM parametro por linha e o valor de retorno. O teste e
 # mecanico: o nome de cada parametro e a palavra "devolve" aparecem no bloco?
 #
-#   python ferramentas/confere_doc.py
+#   python tools/confere_doc.py

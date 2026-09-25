@@ -101,7 +101,7 @@ static int extradata_len = 0;
  *
  * Nao devolve nada; preenche o buffer global que `abre_decoder` entrega ao
  * libavcodec. Usa os corrigidos e nao os do arquivo de proposito: o SPS do MP4
- * tem 4 bits errados e o PPS 2, e sem isso nada decodifica. Ver ESTADO.md. */
+ * tem 4 bits errados e o PPS 2, e sem isso nada decodifica. Ver README.md. */
 static void monta_avcc(const char *sps_hex, const char *pps_hex) {
     uint8_t sps[64], pps[64]; int ls = 0, lp = 0;
     for (const char *p = sps_hex; p[0] && p[1]; p += 2)
@@ -1311,6 +1311,8 @@ static void gera_combos(void) {
  *
  * Le `nbits_k` (tamanho da faixa do 1o bit). Aloca `combos_k` e preenche
  * `n_combos`; a ordem e lexicografica, como no `gera_combos`.
+ *
+ * Devolve: nada -- o resultado fica em `combos_k` e `n_combos`.
  */
 static void gera_combos_janelas(int j0, int j1) {
     long total = 0;
@@ -2004,12 +2006,12 @@ static int modo_verify(int argc, char **argv) {
         int base_n = getenv("BASE_N") ? atoi(getenv("BASE_N")) : 0;
         static long det_off[4096]; static int det_bit[4096]; int n_det = 0;
         /* Os cabecalhos de slice consertados por coerencia (patches_cabecalho,
-         * ferramentas/cabecalho_slice.py) sao do mesmo tipo: provam o
+         * tools/cabecalho_slice.py) sao do mesmo tipo: provam o
          * cabecalho, nao fazem o quadro fechar -- o dano segue no corpo. Sem
          * pula-los, 791 linhas viram "falsos" e afogam o sinal. O arquivo tem
          * comentarios e texto depois do bit, entao a leitura e por linha.
          *
-         * As correcoes de cauda de IDR (patches_cauda, ferramentas/ancora/,
+         * As correcoes de cauda de IDR (patches_cauda, tools/anchor/,
          * docs/PLANO_ANCORA_CAUDA.md) tambem: a tarja recodificada com CABAC
          * prova os bits do fim do NAL, mas o dano do meio continua e o quadro
          * nao fecha. Mesmo tratamento, mesmo motivo.
@@ -2019,9 +2021,9 @@ static int modo_verify(int argc, char **argv) {
          * jeito. Sao 475 linhas; das quatro listas juntas saem 1.771 pulados (o
          * patches_cauda perdeu 32 linhas em 2026-09-25, comentadas com #). */
         const char *listas[4] = {
-            getenv("DET") ? getenv("DET") : "dados/deterministicos.txt",
-            "dados/patches_cabecalho.txt", "dados/patches_cauda.txt",
-            "dados/patches_cauda_pb.txt" };
+            getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
+            "data/patches_cabecalho.txt", "data/patches_cauda.txt",
+            "data/patches_cauda_pb.txt" };
         for (int f = 0; f < 4; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;

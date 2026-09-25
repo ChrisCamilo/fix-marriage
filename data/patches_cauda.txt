@@ -1,9 +1,9 @@
 # patches_cauda.txt -- o lote de correcoes de cauda de IDR (plano 2) que entrou no patches.txt.
 # Aplicado em 2026-09-24, aprovado pelo usuario: niveis A e B inteiros (65 linhas, 29 IDRs).
 # Em 2026-09-25 sairam 32 linhas (16 IDRs, entrada nas fileiras 66-67), aprovado pelo usuario:
-# a regra erra sob sintaxe variante (dados/cauda_auditoria.txt). Ficam 33 linhas, 13 IDRs;
+# a regra erra sob sintaxe variante (data/cauda_auditoria.txt). Ficam 33 linhas, 13 IDRs;
 # as retiradas seguem abaixo comentadas com "# RETIRADA".
-# Gerado em 2026-09-24 por ferramentas/ancora/cauda_lote.py; log em dados/cauda_lote.log.
+# Gerado em 2026-09-24 por tools/anchor/cauda_lote.py; log em data/cauda_lote.log.
 #
 # Cada linha: offset bit, e depois como comentario o IDR, a fileira a partir da
 # qual a tarja foi recodificada, a distancia (bits divergentes), quantos bits o

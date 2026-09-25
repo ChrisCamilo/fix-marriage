@@ -127,7 +127,7 @@ semântica que o dano acaba produzindo. Detectam, não localizam.
 | `00 00 01` ilegal no payload | **já explorado**, 84 bits provados |
 | `00 00 02` / `00 00 00` no payload | **ENCERRADO em 2026-09-18** — 93 NALs; ver armadilha 27 (revista). Não reabrir a classe: decide-se caso a caso, pelo critério de ocultação |
 | ocultação sem erro (`end_of_slice` cedo) | **explorado em 2026-09-18**, armadilha 59; o critério agora exige zero ocultados |
-| `codIOffset` inicial igual a 510 ou 511 | **explorado** no frame 11 — foi o que denunciou o cabeçalho corrompido (`dados/janela_f11.txt`) |
+| `codIOffset` inicial igual a 510 ou 511 | **explorado** no frame 11 — foi o que denunciou o cabeçalho corrompido (`data/janela_f11.txt`) |
 
 Um detalhe que o projeto já mediu e que agora tem explicação: o
 `bytestream N` do frame 12 aponta o byte 1.820, mas os dados reais acabam no

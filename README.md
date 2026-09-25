@@ -1,4 +1,19 @@
-# Recuperação de Caio___Lizandra_-_Making-_Caio-Balu.mp4 — estado
+# fix-marriage — recuperação de Caio___Lizandra_-_Making-_Caio-Balu.mp4
+
+Recuperação bit a bit de um vídeo de casamento de 2017 danificado por bit-rot.
+O MP4 original nunca é modificado: a correção vive no `patches.txt` (uma linha
+`offset bit` por bit trocado), e o vídeo reparado é remontado a partir dos dois.
+Repositório privado, material de família.
+
+- **Convenções de trabalho:** [AGENTS.md](AGENTS.md) — leia antes de começar.
+- **Estado do reparo e contexto técnico:** este arquivo, a partir daqui.
+- **Números medidos:** [docs/RESULTADOS.md](docs/RESULTADOS.md); planos e
+  investigações em `docs/`.
+
+Estrutura: `src/` (o reparador em C), `tools/` (Python e o arnês de
+regressão), `data/` (registros derivados, versionados), `docs/`, `output/`
+(produtos, fora do versionamento em boa parte) e `logs/` (fora do
+versionamento). Detalhe na seção de arquivos abaixo.
 
 Arquivo: 114.275.615 bytes. Falha: bit-rot. `moov` corrompido, `mdat` recuperável.
 
@@ -41,7 +56,7 @@ Ordem de exibição confirmada por duas fontes independentes (ctts × POC).
 >
 > Duas consequências práticas: **não sugerir "procurar outra cópia"** — já está
 > descartado; e tratar o original com o cuidado que isso exige, nunca
-> modificando e conferindo `sha256sum -c dados/CHECKSUMS.txt` na dúvida. Não há
+> modificando e conferindo `sha256sum -c data/CHECKSUMS.txt` na dúvida. Não há
 > segunda chance se ele for corrompido.
 
 O nome do vídeo tem espaços e `&`, então precisa vir sempre entre aspas na linha
@@ -57,7 +72,7 @@ raiz/                   o que todo comando cita, e o que nunca se move
                         mudança nele passa pelo usuário antes
   index.txt             índice `i offset size idr` das 3445 amostras
   reparador.exe         binário compilado (fora do versionamento)
-  ESTADO.md AGENTS.md CLAUDE.md
+  README.md AGENTS.md CLAUDE.md
 
   src/                  programa em C
     reparador.c         o reparador, com libavcodec -- decodificacao e politica
@@ -65,33 +80,35 @@ raiz/                   o que todo comando cita, e o que nunca se move
                         estado do decodificador. E o que da para testar sozinho
     testes_juizes.c     testa as medidas com quadros SINTETICOS, sem decodificar
                         nada:  gcc -O2 -Isrc -o testes.exe src/testes_juizes.c                                    src/juizes.c -lm && ./testes.exe
-  ferramentas/          programas em Python
+  tools/                programas em Python
     ferramentas.py      gera índice, patches base, e remonta o MP4
     molde_idr.py molde_slice.py escapes.py cabecalhos.py
     encadeia.py         busca por etapas com o modo `avanco`
     remontar.py conferir_dump.py
     cabecalho_slice.py  acha bits trocados no cabeçalho do slice pelo que ele
-                        deveria dizer (gera dados/cabecalho_slice.txt)
+                        deveria dizer (gera data/cabecalho_slice.txt)
     mapa_dano.py        onde o arquivo está danificado, medido em conteúdo
-                        conhecido (gera dados/mapa_dano.txt)
+                        conhecido (gera data/mapa_dano.txt)
     ocultacao.py        quantos macroblocos o ffmpeg oculta em cada quadro
     regressao.sh        prova que uma refatoração não mudou nada, modo a modo
-                        (referência em dados/regressao/)
+                        (referência em data/regression/)
     confere_doc.py      confere o padrão de documentação das funções
                         (docs/REFATORACAO.md, seção 4c)
+    anchor/             recodificação CABAC da tarja (plano 2): ancora*.c,
+                        cabac_enc*.py, cauda_lote.py, cauda_pb.py
   docs/                 os doze documentos que crescem
-  dados/                registros derivados, versionados
+  data/                 registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
     deterministicos.txt remontados.txt
     patches_cabecalho.txt  o lote de cabeçalhos que entrou no patches.txt
     mapa_dano.txt alvos.txt alvos_ocultos.txt cabecalho_slice.txt
                         medidas; cada um traz no topo como foi gerado
-    regressao/          hash de referência da saída de cada modo (SHA-256
+    regression/         hash de referência da saída de cada modo (SHA-256
                         cortado em 16 dígitos), para o regressao.sh
     candidatos_f13.txt candidatos_f19.txt candidatos_idr3047.txt
     janela_f11.txt      candidatos e janelas de busca -- NAO sao patches,
                         cada um traz sua condicao de promocao escrita
-  saidas/               produtos: novos_*.txt, vídeo remontado, ver_final.html
+  output/               produtos: novos_*.txt, vídeo remontado, ver_final.html
   logs/                 saída de corrida — fora do versionamento
 ```
 
@@ -105,20 +122,20 @@ Isto é material pessoal de família: nunca criar outro remoto, nunca torná-lo
 público, não publicar em lugar nenhum. **O push é sempre do usuário** — o
 agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
-conferida com `sha256sum -c dados/CHECKSUMS.txt`.
+conferida com `sha256sum -c data/CHECKSUMS.txt`.
 
 **Composição do `patches.txt` — 3.121 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
 | 1–1338 | 1.338 | base determinística (prefixos de NAL e cabeçalhos). Reconferido: regerar com `base` reproduz os mesmos 1338 byte a byte |
-| 1339–1830 | 492 | destas, **479** também estão em `dados/deterministicos.txt`. Saíram em 2026-09-18 a `77528965 2` (reparo antigo do 2361) e a `114260576 3` (reparo antigo do 3442, que era o próprio defeito) |
+| 1339–1830 | 492 | destas, **479** também estão em `data/deterministicos.txt`. Saíram em 2026-09-18 a `77528965 2` (reparo antigo do 2361) e a `114260576 3` (reparo antigo do 3442, que era o próprio defeito) |
 | | **12** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` — hoje todos "insuficientes" pelo critério de ocultação |
-| | 1 | a linha 1378, `77528961 0` — o `frame_num` do reparo antigo do 2361, que ficou. Reclassificada como cabeçalho: está em `dados/patches_cabecalho.txt` (por isso ele tem 783 linhas, não 782) e o `verify` a pula |
-| 1831–2612 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `dados/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
-| 2613 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `dados/deterministicos.txt` |
-| 2614–2646 | 33 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 13 IDRs, todas com encaixe desde as fileiras 63–65 — linha a linha em `dados/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. Entraram 65; as 32 de encaixe nas fileiras 66–67 saíram em 2026-09-25 (sintaxe variante na tarja, armadilha 61; `dados/cauda_auditoria.txt`). `mapa` idêntico nas duas mudanças. Ver `docs/PLANO_ANCORA_CAUDA.md` |
-| 2647–3121 | 475 | **caudas de P/B** provadas pela tarja de skips recodificada (2026-09-24), 325 quadros — linha a linha em `dados/patches_cauda_pb.txt`, que o `verify` também pula. Nível A (dist 0–1): 189 quadros, 196 bits; nível B (dist 2): 136 quadros, 279 bits. `mapa` muda só no 2189 (erro do MB 7356 para o 7358, quadro que já era lixo antes da tarja) |
+| | 1 | a linha 1378, `77528961 0` — o `frame_num` do reparo antigo do 2361, que ficou. Reclassificada como cabeçalho: está em `data/patches_cabecalho.txt` (por isso ele tem 783 linhas, não 782) e o `verify` a pula |
+| 1831–2612 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `data/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
+| 2613 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `data/deterministicos.txt` |
+| 2614–2646 | 33 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 13 IDRs, todas com encaixe desde as fileiras 63–65 — linha a linha em `data/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. Entraram 65; as 32 de encaixe nas fileiras 66–67 saíram em 2026-09-25 (sintaxe variante na tarja, armadilha 61; `data/cauda_auditoria.txt`). `mapa` idêntico nas duas mudanças. Ver `docs/PLANO_ANCORA_CAUDA.md` |
+| 2647–3121 | 475 | **caudas de P/B** provadas pela tarja de skips recodificada (2026-09-24), 325 quadros — linha a linha em `data/patches_cauda_pb.txt`, que o `verify` também pula. Nível A (dist 0–1): 189 quadros, 196 bits; nível B (dist 2): 136 quadros, 279 bits. `mapa` muda só no 2189 (erro do MB 7356 para o 7358, quadro que já era lixo antes da tarja) |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a
@@ -151,12 +168,12 @@ existe `python3` no UCRT64 a menos que instalado à parte.
 ```bash
 gcc -O2 -o reparador.exe src/reparador.c src/juizes.c $(pkg-config --cflags --libs libavcodec libavutil)
 
-python ferramentas/ferramentas.py base  "$MP4" patches.txt   # só na 1a vez; hoje aborta (ver abaixo)
-python ferramentas/ferramentas.py index "$MP4" index.txt patches.txt
+python tools/ferramentas.py base  "$MP4" patches.txt   # só na 1a vez; hoje aborta (ver abaixo)
+python tools/ferramentas.py index "$MP4" index.txt patches.txt
 
 ./reparador.exe "$MP4" index.txt patches.txt repair 0 500 4096
 BASE_N=1338 ./reparador.exe "$MP4" index.txt patches.txt verify
-python ferramentas/ferramentas.py build "$MP4" patches.txt saidas/reparado.mp4
+python tools/ferramentas.py build "$MP4" patches.txt output/reparado.mp4
 ```
 
 `patches.txt` é carregado inteiro na inicialização: o processo é retomável,
@@ -216,13 +233,13 @@ vez na sessão que a faixa liberada entra nessa faixa nos dois planos — 30 dos
 
 **Nada disso está no `patches.txt` e não deve entrar.** Ponto de partida de
 busca não é conserto: o quadro segue borrado da linha 316 para baixo. A cadeia
-está em [`dados/candidatos_idr3047.txt`](dados/candidatos_idr3047.txt) com a
+está em [`data/candidatos_idr3047.txt`](data/candidatos_idr3047.txt) com a
 condição de promoção escrita.
 
 Como retomar:
 
 ```bash
-cat patches.txt dados/candidatos_idr3047.txt | grep -E '^[0-9]+ [0-9]+$' > $SB/cad.txt
+cat patches.txt data/candidatos_idr3047.txt | grep -E '^[0-9]+ [0-9]+$' > $SB/cad.txt
 VISUAL=1 PISO_TRINCA=1 PISO_CROMA=1 BASE=-1 ./reparador.exe "$MP4" index.txt $SB/cad.txt avanco 3047 1 4450 20000 $SB/e3.txt
 VISUAL=1 ./reparador.exe "$MP4" index.txt $SB/cad.txt trinca 3047 <lista>   # mede os sobreviventes
 ```
@@ -231,8 +248,8 @@ VISUAL=1 ./reparador.exe "$MP4" index.txt $SB/cad.txt trinca 3047 <lista>   # me
 
 O bit-rot vem em **zonas** de 2–5% dos bits trocados; fora delas o arquivo está
 praticamente limpo. Medido em conteúdo conhecido, no MP4 original
-(`python ferramentas/mapa_dano.py`, detalhe em
-[`dados/mapa_dano.txt`](dados/mapa_dano.txt)):
+(`python tools/mapa_dano.py`, detalhe em
+[`data/mapa_dano.txt`](data/mapa_dano.txt)):
 
 | régua | limpo | danificado |
 |---|---|---|
@@ -244,7 +261,7 @@ o frame 11 tem ~600 — e nenhuma busca de 1–3 bits o conserta. **Consultar o 
 antes de escolher alvo de varredura.** Aberto: tamanho e alinhamento dos blocos
 de dano.
 
-**Os 1.439 quadros não inteiros, por onde está o dano** ([`dados/alvos.txt`](dados/alvos.txt)):
+**Os 1.439 quadros não inteiros, por onde está o dano** ([`data/alvos.txt`](data/alvos.txt)):
 435 com **cabeçalho do slice inválido** pela norma (o caso do frame 11; 151 P,
 279 B), 407 que param antes de 512 bytes, 57 entre 512 B e 2 KB, 517 depois de
 2 KB, 23 sem imagem sem causa visível. "Inteiro" = MB final **e** imagem emitida

@@ -130,10 +130,10 @@ def main():
     print(f"[+] {ruins} a corrigir, {ambiguos} ambiguos (pulados)")
     print(f"[+] {len(novos)} bits a anexar")
     if novos:
-        with open("saidas/novos_cabecalhos.txt", "w", newline="\n") as g:
+        with open("output/novos_cabecalhos.txt", "w", newline="\n") as g:
             for o, b in novos:
                 g.write(f"{o} {b}\n")
-        print("[+] gravados em saidas/novos_cabecalhos.txt (NAO anexados)")
+        print("[+] gravados em output/novos_cabecalhos.txt (NAO anexados)")
 
 if __name__ == "__main__":
     main()

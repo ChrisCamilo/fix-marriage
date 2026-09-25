@@ -1,5 +1,5 @@
 # mapa_dano.txt -- onde o arquivo esta danificado, medido em conteudo conhecido.
-# Gerado por `python ferramentas/mapa_dano.py` em 2026-09-18, sobre o MP4
+# Gerado por `python tools/mapa_dano.py` em 2026-09-18, sobre o MP4
 # ORIGINAL (dano total, inclusive o que o patches.txt ja corrigiu).
 #
 # CONCLUSAO
@@ -16,7 +16,7 @@
 #     406 e 39. Poucos quadros concentram muitas trocas -- e mistura de "limpo" e
 #     "zona de dano". Ajusta com ~1 em 4 inicios de quadro caindo em zona de ~4%.
 #  3. Dentro do frame 11 a tarja periodica tem 66 bits fora em 240 bytes (~3%),
-#     contra 4-12 nos frames 3-9 (ver dados/janela_f11.txt).
+#     contra 4-12 nos frames 3-9 (ver data/janela_f11.txt).
 #
 # A zona do frame 11 e continua de <= 147428 (patches no cabecalho do frame 10)
 # ate >= 150538 (patches no cabecalho do frame 12), e limpa de novo em 151660

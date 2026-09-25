@@ -1,5 +1,5 @@
 # alvos.txt -- todo quadro que NAO esta inteiro, classificado por onde esta o dano.
-# Gerado em 2026-09-18 sobre o patches.txt de hoje (saidas/reparado.mp4).
+# Gerado em 2026-09-18 sobre o patches.txt de hoje (output/reparado.mp4).
 #
 # "Inteiro" aqui exige TRES coisas: o `mapa` chega a 8160, o ffmpeg emite imagem
 # para o pacote (ffprobe -show_entries frame=pkt_pos), e o cabecalho do slice

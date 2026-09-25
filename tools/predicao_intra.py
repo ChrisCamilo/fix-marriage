@@ -13,7 +13,7 @@
 # zeros), entao o modo escolhido sai "o melhor" tanto no lixo quanto no bom.
 #
 # Entradas: imagem ANTES do deblocking (ffmpeg -ec 0 -skip_loop_filter all) e,
-# por MB, a saida do JM com o patch ferramentas/jm_mbinfo.patch (JM_MBINFO).
+# por MB, a saida do JM com o patch tools/jm_mbinfo.patch (JM_MBINFO).
 import numpy as np
 
 W, H = 1920, 1080

@@ -14,7 +14,7 @@ total e nao o que sobrou depois do patches.txt:
      tem conteudo 100% conhecido e sao exatamente onde caem os 1.338 patches
      deterministicos. Cobre o filme inteiro.
 
-    python ferramentas/mapa_dano.py
+    python tools/mapa_dano.py
 """
 import bisect
 from collections import Counter

@@ -3,7 +3,7 @@
 Medido em 2026-09-17 sobre 3.004 linhas. Cada item traz o critério de aceitação,
 porque refatoração sem critério é como varredura sem juiz.
 
-**Feito:** o arnês de regressão (`ferramentas/regressao.sh`) e o item 1, a tabela
+**Feito:** o arnês de regressão (`tools/regressao.sh`) e o item 1, a tabela
 de modos. O resto é plano.
 
 ## O retrato
@@ -268,7 +268,7 @@ fato de hoje não valer fica visível.
 ### O custo
 
 O programa é **um arquivo só** hoje, compilado por uma linha de `gcc` no
-`ESTADO.md`. Separar exige cabeçalho e mudar a linha de compilação — ou um
+`README.md`. Separar exige cabeçalho e mudar a linha de compilação — ou um
 `Makefile`, que o projeto não tem. É custo real, pequeno, e paga-se na primeira
 vez que uma medida for testada em vez de conferida no olho.
 
@@ -346,7 +346,7 @@ Da menor para a maior chance de quebrar coisa:
 | ~~2~~ | ~~documentar o contrato das duas `blocagem`~~ | **FEITO** | pré-processado idêntico ao `HEAD` |
 | ~~3~~ | ~~renomear as famílias do croma e da tarja~~ | **FEITO** | 37 ocorrências; o arnês pegou 2 strings trocadas por engano |
 | ~~4~~ | ~~`src/juizes.c`~~ | **FEITO** | 13 medidas puras + `testes_juizes.c`; 28/28 |
-| ~~5~~ | ~~documentar as funções no padrão~~ | **FEITO** | 46 de 46; conferido por `ferramentas/confere_doc.py` |
+| ~~5~~ | ~~documentar as funções no padrão~~ | **FEITO** | 46 de 46; conferido por `tools/confere_doc.py` |
 | 6 | `nota_do_quadro()` fora do `worker_avanco` | **PARADO** | não é refatoração: fazer os pisos valerem em `varrek` e `cresce` **muda o que esses modos fazem** |
 | 7 | motor único de varredura em `src/workers.c` | **PARADO** | a premissa estava errada — ver abaixo |
 
@@ -365,7 +365,7 @@ de índice sem ganho no relógio).
 
 ## 6. O arnês, e o que ele custou para ficar de pé
 
-`ferramentas/regressao.sh` roda um caso de cada um dos 27 modos e compara o
+`tools/regressao.sh` roda um caso de cada um dos 27 modos e compara o
 SHA-256 da saída. É ele que dá sentido a "saída byte a byte idêntica".
 
 > **Revisto em 2026-09-18 (armadilha 58).** Dois modos, `varre2` e `report`,
@@ -420,7 +420,7 @@ A segunda passada acrescentou o bloco de interface a essas 27, **sem tocar na
 justificativa** — ela entra antes do `*/` que já existia. Hoje são **46 de 46**
 funções no padrão, fora os `modo_*`.
 
-E o padrão passou a ser conferível: `ferramentas/confere_doc.py` verifica
+E o padrão passou a ser conferível: `tools/confere_doc.py` verifica
 mecanicamente que o nome de cada parâmetro e o retorno aparecem no bloco. Ele
 não garante que o texto esteja **certo** — só que existe. Garantir que está
 certo é trabalho de quem lê, e o teste mecânico é o que impede a regressão

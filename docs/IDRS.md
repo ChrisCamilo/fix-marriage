@@ -26,7 +26,7 @@ teste separa sem ambiguidade:
 | em disputa | 1595 |
 
 O `stss` mora no `moov`, que é justamente o átomo corrompido por bit-rot. O
-`ESTADO.md` só garante `stsz`, `stco`, `stsc` e `ctts` — nunca houve motivo
+`README.md` só garante `stsz`, `stco`, `stsc` e `ctts` — nunca houve motivo
 para confiar nele.
 
 Os cinco recuperados casam por **quatro sinais independentes**: distância 1–3
@@ -68,7 +68,7 @@ ferramenta deve mais contá-lo como IDR (o `cabecalho_slice.py` já não conta).
 
 Tratá-lo como IDR custou caro uma vez: o lote de cabeçalhos de 2026-09-18
 "consertou" `frame_num`/POC certos em 6 quadros contando a partir dele, e os 6
-perderam a imagem. Revertido no mesmo dia (`dados/patches_cabecalho.txt`).
+perderam a imagem. Revertido no mesmo dia (`data/patches_cabecalho.txt`).
 
 O registro anterior, mantido como estava:
 

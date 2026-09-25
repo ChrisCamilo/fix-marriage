@@ -1,7 +1,7 @@
 # Plano 2 — Âncora pela cauda
 
 **Estado: passos 1–3 feitos** (proposto em 2026-09-23; executado em
-2026-09-24 — ver "Resultados" no fim). Ferramentas em `ferramentas/ancora/`. Um dos três planos para o
+2026-09-24 — ver "Resultados" no fim). Ferramentas em `tools/anchor/`. Um dos três planos para o
 dano denso dos IDRs quebrados; os outros são
 [`PLANO_JUIZ_ENCODER.md`](PLANO_JUIZ_ENCODER.md) e
 [`PLANO_SUBSTITUICAO_REFERENCIA.md`](PLANO_SUBSTITUICAO_REFERENCIA.md).
@@ -80,7 +80,7 @@ bits provados, com a prova, no `patches.txt` depois de aprovados.
 
 ### Passo 1 — a tarja nos 6 IDRs íntegros (2026-09-24)
 
-JM com o patch `ferramentas/jm_mbinfo.patch`, que grava por MB o estado do
+JM com o patch `tools/jm_mbinfo.patch`, que grava por MB o estado do
 decodificador aritmético e dos contextos da tarja.
 
 - **Sintaxe:** fileiras 61–67 (840 MBs) todas I16x16, predição DC, croma DC,
@@ -145,7 +145,7 @@ onde todos os outros contextos já estão iguais nos IDRs íntegros.
 - **Validação:** 2333 e 3426 reproduzem os ~170 bits das fileiras 63–67 com
   distância 0; no 2333 a busca **recupera o estado real** do contexto do DC
   (45, igual ao que o JM grava). Controle aleatório: 65.
-- **Censo nos 131 IDRs** (`dados/censo_cauda.txt`, colunas: IDR, enchimento,
+- **Censo nos 131 IDRs** (`data/censo_cauda.txt`, colunas: IDR, enchimento,
   distância e bits da última fileira, distância e bits das fileiras 63–67):
 
   | | última fileira = 0 | fileiras 63–67 = 0 |
@@ -173,7 +173,7 @@ as sondas mostraram dano denso nos 85 IDRs.
 
 ### Lote de correções de cauda — proposta (2026-09-24)
 
-`ferramentas/ancora/cauda_lote.py` nos 51 IDRs quebrados cuja cauda não
+`tools/anchor/cauda_lote.py` nos 51 IDRs quebrados cuja cauda não
 encaixou perfeitamente no censo (70 min). Regras de certeza:
 
 - trecho mais longo de tarja que encaixa com **no máximo 3** diferenças;
@@ -199,8 +199,8 @@ em 90 dos 124 quebrados a última fileira é tarja pura, então é improvável, 
 não está excluído.
 
 **Aplicado em 2026-09-24**, aprovado pelo usuário (níveis A e B): 65 linhas no
-fim do `patches.txt`, registro em `dados/patches_cauda.txt` (o `verify` o
-pula, como os cabeçalhos), log em `dados/cauda_lote.log`. `verify` segue 0
+fim do `patches.txt`, registro em `data/patches_cauda.txt` (o `verify` o
+pula, como os cabeçalhos), log em `data/cauda_lote.log`. `verify` segue 0
 válidos / 12 falsos, agora com 1.328 pulados; o `mapa` do filme inteiro sai
 idêntico antes e depois.
 
@@ -215,7 +215,7 @@ símbolo mais provável: a saída é praticamente só zeros até a terminação.
 há incógnita de coluna 0 — o contexto depende de o vizinho **não** ser skip,
 e na tarja todos são.
 
-`ferramentas/ancora/ancora_pb.c` recodifica as fileiras 62–67 com o
+`tools/anchor/ancora_pb.c` recodifica as fileiras 62–67 com o
 `codIRange` de entrada **e o estado do contexto do skip** como incógnitas
 (32 mil hipóteses). O estado entrou depois de uma primeira passada que o
 fixava saturado: esse contexto só é usado de verdade a partir da fileira 62,
@@ -225,7 +225,7 @@ zeros saem e pareceria dano de 1–3 bits sem ser.
 - **Validação:** distância 0 nos P/B íntegros de 4 GOPs (2340, 2350, 3320–3347, 3400, 3430).
 - **Controle:** 60 caudas aleatórias ficam a **4–13**. A cauda de P/B tem só
   ~30 bits testáveis, então o limiar aqui é **2**, não 3.
-- **Censo dos 3.314 P/B** (`dados/censo_cauda_pb.txt`): **2.541 com a cauda
+- **Censo dos 3.314 P/B** (`data/censo_cauda_pb.txt`): **2.541 com a cauda
   intacta**, 330 com correção certa, 440 sem correção certa, 3 ambíguos.
 - **Teste que o IDR não permitia:** um P/B que hoje decodifica inteiro leu a
   cauda até o fim, e bit trocado numa sequência de skips quase sempre quebraria
@@ -241,8 +241,8 @@ zeros saem e pareceria dano de 1–3 bits sem ser.
 | B | distância 2 | 136 | 279 |
 
 **Aplicado em 2026-09-24**, aprovado pelo usuário (níveis A e B): 475 linhas
-no fim do `patches.txt` (2.679–3.153), registro em `dados/patches_cauda_pb.txt`
-(o `verify` o pula), log em `dados/cauda_pb.log`. `verify` com `BASE_N=1338`
+no fim do `patches.txt` (2.679–3.153), registro em `data/patches_cauda_pb.txt`
+(o `verify` o pula), log em `data/cauda_pb.log`. `verify` com `BASE_N=1338`
 segue 0 válidos / 12 falsos, agora com 1.803 pulados. O `mapa` do filme inteiro
 muda em **um** quadro só: o 2189 (P, dist 1), cujo erro passa do MB 7356 para
 o 7358. Não é piora nem sinal de correção errada: o 2189 já decodificava lixo
@@ -300,12 +300,12 @@ busca de dois lados.
 
 ### Auditoria com o modelo de coluna variante (2026-09-25)
 
-**Modelo estendido.** `ferramentas/ancora/cabac_enc2.py` codifica a tarja com
+**Modelo estendido.** `tools/anchor/cabac_enc2.py` codifica a tarja com
 o modo I16x16 e o modo de croma livres por MB, com a seleção de contexto do JM
 (`mb_type[0][a+b]`, 4, 5, 7, 8; `cipr[a+b]` e `cipr[3]`; `dqp[0]`;
 `bcbp[0][left+2·upper]`). Com os estados e a sintaxe que o JM grava, dá
 **distância 0** no 3348 (coluna 1 em croma 2) desde a fileira 63, e no 2333 e
-no 3319; o modelo puro dá 23 no 3348. `ferramentas/ancora/ancora3.c` é a busca
+no 3319; o modelo puro dá 23 no 3348. `tools/anchor/ancora3.c` é a busca
 em C: range, k1 e k20 exaustivos, os dois estados de `cipr` sorteados (ou
 fixos), uma coluna variante dada.
 
@@ -343,8 +343,8 @@ entram. Entrada 63–65: seguro, como previsto.
 - Fileira 66 (410, 485, 901, 2275): 4,7% sob variante.
 
 **Retiradas em 2026-09-25**, aprovado pelo usuário: as 32 linhas saíram do
-`patches.txt` (3.153 → 3.121), registro em `dados/cauda_auditoria.txt`, e
-ficam comentadas com `# RETIRADA` no `dados/patches_cauda.txt`. `mapa` do
+`patches.txt` (3.153 → 3.121), registro em `data/cauda_auditoria.txt`, e
+ficam comentadas com `# RETIRADA` no `data/patches_cauda.txt`. `mapa` do
 filme inteiro idêntico antes e depois; `verify` 0 válidos, 12 falsos, 1.771
 pulados. Ficam 33 bits de cauda de IDR, em 13 IDRs, todos com encaixe desde
 as fileiras 63–65.

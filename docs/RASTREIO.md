@@ -681,7 +681,7 @@ estava errada: aquele `MB 15 0, bytestream 2778` é do frame **11**
 | ~~3435~~ | 3426 | 963 | NAL inteiro | 7.664 | 28 s | 14 | **DESFEITO** — `114237506 4` estragava a tarja; ver o fim deste arquivo |
 | ~~3439~~ | 3426 | 988 | NAL inteiro | 7.864 | 36 s | 349 | **DESFEITO** — `114244542 6` estragava a tarja; ver o fim deste arquivo |
 | 3441 | 3426 | 940 | NAL inteiro | 7.480 | 38 s | 1 | reprovado — campo 16–19, devia ser 21 |
-| **3442** | 3426 | 2.939 | NAL inteiro | 23.472 | 125 s | 959 | ~~reparado — `114260576 3`, erra 6 linhas na borda~~ **REMOVIDO em 2026-09-18**: com esse bit o slice acabava cedo e 1.037 MBs eram ocultados (as "6 linhas na borda"). Sem ele o quadro decodifica inteiro, zero ocultados, usando todo o dado (`dados/alvos_ocultos.txt`) |
+| **3442** | 3426 | 2.939 | NAL inteiro | 23.472 | 125 s | 959 | ~~reparado — `114260576 3`, erra 6 linhas na borda~~ **REMOVIDO em 2026-09-18**: com esse bit o slice acabava cedo e 1.037 MBs eram ocultados (as "6 linhas na borda"). Sem ele o quadro decodifica inteiro, zero ocultados, usando todo o dado (`data/alvos_ocultos.txt`) |
 | 3443 | 3426 | 261 | NAL inteiro | 2.048 | 12 s | **0** | sem solução |
 | 3444 | 3426 | 266 | NAL inteiro | 2.088 | 12 s | 2 | reprovado — campo 19–21, não uniforme |
 
@@ -777,7 +777,7 @@ armadilha 17.
 > "passa em tudo" é interpolação das referências. Com aprovação do usuário saiu
 > `77528965 2` e entrou `77528966 4` — cabeçalho válido e igual ao esperado; o
 > `77528961 0` é o `frame_num` e ficou. O dado real decodifica até o MB 989; o
-> resto é ocultação. Ver `dados/patches_cabecalho.txt`.
+> resto é ocultação. Ver `data/patches_cabecalho.txt`.
 >
 > **Candidato `77529030 2` (achado pelo `repair`), REJEITADO em 2026-09-18.** Com
 > ele o 2361 "decodifica limpo", mas o ffmpeg oculta 7.108 macroblocos: o bit
@@ -1045,7 +1045,7 @@ verdadeiro dá distância **0 a 3**, frame comum dá **8 a 14**.
 seja, a regra é exata e o que sobra de desvio é dano meu, não do arquivo.
 
 O `stss` mora no `moov`, que é o átomo corrompido. Nada garantia que ele
-estivesse íntegro; o `ESTADO.md` só vouchsafe `stsz`, `stco`, `stsc` e `ctts`.
+estivesse íntegro; o `README.md` só vouchsafe `stsz`, `stco`, `stsc` e `ctts`.
 
 Os cinco não marcados casam por quatro sinais independentes: distância 1–3,
 tamanho de quadro intra (67–229 KB contra 8–70 KB dos comuns ao redor),

@@ -8,7 +8,7 @@ O teste e mecanico -- o nome de cada parametro e a palavra "devolve" aparecem no
 comentario? -- entao ele nao garante que o texto esteja CERTO, so que existe.
 Garantir que esta certo e trabalho de quem le.
 
-  python ferramentas/confere_doc.py
+  python tools/confere_doc.py
 """
 import re, sys, os
 

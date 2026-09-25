@@ -1,4 +1,4 @@
-# cabecalho_slice.txt -- saida de `python ferramentas/cabecalho_slice.py`, 2026-09-18.
+# cabecalho_slice.txt -- saida de `python tools/cabecalho_slice.py`, 2026-09-18.
 # NAO SAO PATCHES. Nada disto esta no patches.txt.
 #
 # Cada linha: quadro | estado do cabecalho hoje | solucoes de 1 ou 2 bits que

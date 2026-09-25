@@ -20,7 +20,7 @@ hipótese de bit rot:
 | `stsz` conferido contra os offsets de chunk de vídeo **e** áudio | 345 de 345 fecham exatamente |
 | amostras com mais de um NAL | zero em 3.445 |
 
-Tudo isso está correto. **E tudo isso já era sabido.** O `ESTADO.md` diz, na
+Tudo isso está correto. **E tudo isso já era sabido.** O `README.md` diz, na
 linha 85, que os **1.338 primeiros patches são determinísticos, "prefixos de NAL
 e cabeçalhos"**, e o `INVESTIGACOES.md` registra "20% dos prefixos de NAL
 corrompidos" — 20% de 3.445 são exatamente esses ~700 quadros.

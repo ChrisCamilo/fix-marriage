@@ -519,7 +519,7 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     > caso, e só com o critério de ocultação (`reparador.c` desde `3e25fec`) e a
     > curva de truncamento do `corta` — reparo real usa todo o dado do quadro.
     > Aplicado assim no 2360 (`77496469 0`), com aprovação do usuário. Detalhe em
-    > `dados/alvos_ocultos.txt`.
+    > `data/alvos_ocultos.txt`.
 
 
 28. **`cabac_zero_word` vem em pares — e o invariante detecta sem consertar.**
@@ -904,7 +904,7 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     (1,6 bits por quadro, mediana 1). Numa região que o `avanco` nunca toca,
     porque tem `ini_k >= 5` cravado.
 
-    Tudo verdade, e tudo já sabido. O `ESTADO.md` diz na linha 85 que os **1.338
+    Tudo verdade, e tudo já sabido. O `README.md` diz na linha 85 que os **1.338
     primeiros patches são determinísticos, "prefixos de NAL e cabeçalhos"**. Com
     o `patches.txt` aplicado, **os 3.445 prefixos estão corretos, zero divergem.**
 
@@ -935,8 +935,8 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     | `AGENTS.md` | "treze maneiras de medir errado" / "seis maneiras" | 51 |
     | `AGENTS.md` | `verify`: 7 válidos, 4 falsos, 74 pulados | 5, 10, 479 |
     | `AGENTS.md` | modo `unico` sobre "os 71 IDRs" | 132 |
-    | `ESTADO.md` | "os seguintes são reparos reais — hoje são apenas 5" | 15 |
-    | `ESTADO.md` | "os nove documentos" em `docs/` | 11 |
+    | `README.md` | "os seguintes são reparos reais — hoje são apenas 5" | 15 |
+    | `README.md` | "os nove documentos" em `docs/` | 11 |
     | `docs/IDRS.md` | `patches.txt` 1467 linhas, `deterministicos.txt` 118 | 1.832 e 479 |
     | `docs/RESULTADOS.md` | medida com o modo `report` | o modo não existe mais |
 
@@ -1067,7 +1067,7 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     cópia exata da de cima, e o teste de propagação aprova.
 
     Medido em 2026-09-18: 43 dos 209 "bons" vêm depois de alguma referência
-    quebrada no próprio GOP. Vistos um a um (`saidas/suspeitos_43.png`), **42
+    quebrada no próprio GOP. Vistos um a um (`output/suspeitos_43.png`), **42
     estão listrados**; só o frame 12 é bom, porque num fade escuro a ocultação
     da referência quase não erra. Os quadros bons de verdade são 167: as três
     ilhas e o frame 12. Todos os "trechos de 3 quadros" que o `RESULTADOS.md`
@@ -1108,7 +1108,7 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     reiniciam a sequência ou continuam a anterior —, não pelo byte.
 
 58. **O arnes de regressão escrevia na fonte de verdade — e media saída
-    cortada.** Dois defeitos no `ferramentas/regressao.sh`, achados no mesmo dia:
+    cortada.** Dois defeitos no `tools/regressao.sh`, achados no mesmo dia:
 
     - O caso `repair 2360 2361 256` recebia o `patches.txt` VERDADEIRO, e o modo
       `repair` **grava** o que acha. Enquanto o 2361 decodificava "limpo", nunca
@@ -1142,7 +1142,7 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     2361. Parecem perfeitos porque a ocultação copia de vizinhos bons (ou de um
     quadro quase preto, no fade final do 3442).
 
-    Medir com `python ferramentas/ocultacao.py <scratch> patches.txt <gop>...`:
+    Medir com `python tools/ocultacao.py <scratch> patches.txt <gop>...`:
     cada GOP vira um stream Annex B e o `-debug pict` do ffmpeg dá uma linha por
     slice, com a ocultação logo depois. Cuidado: quadro com cabeçalho rejeitado
     não tem linha, e a atribuição por ordem desalinha depois dele — o script

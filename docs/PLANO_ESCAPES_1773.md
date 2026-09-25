@@ -84,10 +84,10 @@ Por isso o plano **mede antes de buscar**.
 ### Etapa 0 — medir o dano (~1–2 h). Portão de decisão.
 
 **0a. Geometria dos blocos de dano.** Em aberto desde o mapa de dano
-(ESTADO.md, seção 6). Medir o comprimento e a nitidez das bordas dos blocos
+(README.md, seção 6). Medir o comprimento e a nitidez das bordas dos blocos
 onde há conteúdo conhecido:
 - frame 11: tarja periódica, 66 bits trocados em 240 bytes (~3%) —
-  `dados/janela_f11.txt`;
+  `data/janela_f11.txt`;
 - enchimento `00 00 03` do 1802 e do 1831 (zona de 59,8–60,4 MB);
 - os 5 primeiros bytes de quadros consecutivos (a distribuição por quadro não é
   binomial: blocos);
@@ -109,7 +109,7 @@ escape ~1.700 bytes adiante, e medir:
 
 **Sincronia** = do MB da frente até o byte de corte, nenhum MB com:
 QP ≠ 20; `mb_qp_delta` ≠ 0; I_PCM; modo intra que usa vizinho indisponível;
-`end_of_slice` antes da hora. O JM instrumentado (`ferramentas/jm_mbinfo.patch`,
+`end_of_slice` antes da hora. O JM instrumentado (`tools/jm_mbinfo.patch`,
 `JM_MBINFO`) grava QP, tipo, modos e a posição CABAC de cada MB; 0,14 s por
 decodificação do 1773 cortado.
 
@@ -200,6 +200,6 @@ fileira) pode servir de fonte visual para o substituto — **nunca** para o
 ## Onde registrar
 
 Resultados de cada etapa no RASTREIO.md (seção do 1773) e neste arquivo;
-números medidos no ESTADO.md; a geometria dos blocos de dano no ESTADO.md,
-seção 6, e em `dados/mapa_dano.txt`. Ferramentas novas em `ferramentas/ancora/`
+números medidos no README.md; a geometria dos blocos de dano no README.md,
+seção 6, e em `data/mapa_dano.txt`. Ferramentas novas em `tools/anchor/`
 com bloco de documentação (AGENTS.md).

@@ -16,9 +16,9 @@
 # NAO escreve no patches.txt: grava a proposta para o usuario aprovar.
 #
 # uso (da raiz do projeto):
-#   python ferramentas/ancora/cauda_lote.py <scratch> <saida.txt> [IDR ...]
+#   python tools/anchor/cauda_lote.py <scratch> <saida.txt> [IDR ...]
 # <scratch> tem que ter o ancora2.exe compilado e o JM com o patch
-# ferramentas/jm_mbinfo.patch (ver calib_enc.py).
+# tools/jm_mbinfo.patch (ver calib_enc.py).
 import sys, os, re, subprocess
 S = sys.argv[1]; SAIDA = sys.argv[2]; ALVOS = list(map(int, sys.argv[3:]))
 sys.path.insert(0, S); sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

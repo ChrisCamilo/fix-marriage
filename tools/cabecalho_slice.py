@@ -3,20 +3,20 @@
 O cabecalho do slice deste filme e quase todo previsivel:
 
   slice_type, frame_num, pic_order_cnt_lsb   saem do ctts (ordem de exibicao),
-                                             que o ESTADO.md da como integro
+                                             que o README.md da como integro
   first_mb, pps_id, cabac_init, deblocking   sao constantes no filme inteiro
   reordenacao, marcacao, num_ref_idx         seguem poucos padroes fixos
 
 Isso da um juiz que nao depende do decodificador: um candidato so passa se o
 cabecalho que ele produz e VALIDO pela norma e bate com o esperado. Foi assim
-que os 2 bits do cabecalho do frame 11 apareceram (dados/janela_f11.txt).
+que os 2 bits do cabecalho do frame 11 apareceram (data/janela_f11.txt).
 
 Pega os dois casos:
   - cabecalho INVALIDO (o ffmpeg rejeita o quadro ou decodifica lixo);
   - cabecalho valido mas ERRADO (POC 168 onde deveria ser 40: um bit, e nenhum
     validador acusa).
 
-    python ferramentas/cabecalho_slice.py [saida.txt]
+    python tools/cabecalho_slice.py [saida.txt]
 
 Le o MP4 ORIGINAL com o patches.txt aplicado em memoria. NAO escreve no
 patches.txt: a saida e uma lista de candidatos para o usuario decidir.
@@ -29,7 +29,7 @@ from itertools import combinations
 MP4 = 'Caio & Lizandra - Making- Caio-Balu.mp4'
 V_N = 3445
 
-# ---- parametros do SPS/PPS corrigidos (ESTADO.md, secao 1) ----
+# ---- parametros do SPS/PPS corrigidos (README.md, secao 1) ----
 LOG2_MAX_FN = 8          # log2_max_frame_num_minus4 = 4
 LOG2_MAX_POC = 8         # log2_max_pic_order_cnt_lsb_minus4 = 4
 NREF_L0_PADRAO = 3       # num_ref_idx_l0_default_active_minus1 = 2
@@ -227,7 +227,7 @@ def esperado_por_ctts(d, pos):
     # O byte NAL diz quem e IDR, mas ele tambem sofre bit-rot. O 1595 tem 0x65
     # (IDR) e NAO e IDR: os 9 cabecalhos legiveis de 1596-1610 continuam a
     # sequencia do IDR 1582, nenhum reinicia. Contar a partir dele "consertou"
-    # frame_num/POC certos em 6 quadros (dados/patches_cabecalho.txt). Entao um
+    # frame_num/POC certos em 6 quadros (data/patches_cabecalho.txt). Entao um
     # candidato so vira IDR se os quadros seguintes REINICIAM a partir dele.
     cand = [t for t in range(V_N) if eh_idr(d, pos[t])]
     idr = [cand[0]]
@@ -295,7 +295,7 @@ def desvios(h, esp):
 
 
 def main():
-    saida = sys.argv[1] if len(sys.argv) > 1 else 'dados/cabecalho_slice.txt'
+    saida = sys.argv[1] if len(sys.argv) > 1 else 'data/cabecalho_slice.txt'
     d = bytearray(open(MP4, 'rb').read())
     for l in open('patches.txt'):
         p = l.split()

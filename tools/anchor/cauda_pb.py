@@ -12,8 +12,8 @@
 #
 # NAO escreve no patches.txt. A saida e a proposta; a versao aprovada e aplicada
 # (2026-09-24, niveis A e B, sem os quadros com enchimento no fim: 10, 11, 560,
-# 970, 1119) esta em dados/patches_cauda_pb.txt.
-# uso (da raiz): python ferramentas/ancora/cauda_pb.py <scratch> <saida.txt> <censo.txt>
+# 970, 1119) esta em data/patches_cauda_pb.txt.
+# uso (da raiz): python tools/anchor/cauda_pb.py <scratch> <saida.txt> <censo.txt>
 import sys, os, subprocess
 S = sys.argv[1]; SAIDA = sys.argv[2]; CENSO = sys.argv[3]
 sys.argv = [sys.argv[0], S, 'x']
