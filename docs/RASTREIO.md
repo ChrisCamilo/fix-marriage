@@ -1850,6 +1850,19 @@ aceita os 5 candidatos da janela A (bytes 8 a 11), então ele não é vazio.
 Somado ao que já estava fechado, **1, 2 e 3 bits estão esgotados** na janela dos
 primeiros macroblocos do frame 11.
 
+
+### Frame 11 — o molde dos irmãos no trace do JM (2026-09-25)
+
+Passo 1 do `docs/PLANO_RECODIFICA_F11.md`. Nos quadros P do fade com o tamanho
+do 11 (1, 7, 9), **7.919 dos 8.160 MBs são o mesmo MB**: I16x16 DC, croma DC,
+sem resíduo — na tarja e no campo. Fogem só o MB 0 (inter com resíduo) e as
+fileiras 8 e 59 (coluna 0 inter com resíduo, o resto I16x16 horizontal). Os
+quadros P pequenos (3 e 5, ~950 bytes) têm o campo em skip; o 11 (2.832 bytes)
+não. Esse MB repetido é o padrão `11000` do fluxo: 74–76% das janelas de 40
+bits dos irmãos batem exato, contra **16%** no 11, que tem 658 bits fora do
+padrão nas janelas próximas dele (99–140 nos irmãos). O 11 tem ainda **4
+violações de escape** (bytes 2.682–2.778) e o 10 tem 6 — é por isso que o JM
+recusava o GOP 0 depois do 9.
 ### E a corrida revelou por que o ataque estava mal posto
 
 Os 14 bits de 1 flip que fazem o frame 11 "decodificar inteiro" não consomem o

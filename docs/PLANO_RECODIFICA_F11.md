@@ -1,6 +1,7 @@
 # Plano 5 — Frame 11: recodificar o quadro inteiro
 
-**Estado: não iniciado** (proposto em 2026-09-25). Generaliza o método do
+**Estado: passo 1 feito** (proposto e iniciado em 2026-09-25 — ver
+"Resultados do passo 1" no fim). Generaliza o método do
 [`PLANO_ANCORA_CAUDA.md`](PLANO_ANCORA_CAUDA.md) — recodificar com CABAC um
 trecho de sintaxe conhecida e comparar com o arquivo — da tarja para o quadro
 inteiro, num quadro cujo conteúdo é todo conhecido. Histórico do frame 11 no
@@ -34,16 +35,13 @@ pode funcionar", "3 bits na janela dos macroblocos") e em `data/janela_f11.txt`.
    rampa do fade (`16 18 21 23 25 27 29 32 34 36 38 41 43` em ordem de
    exibição; RASTREIO.md, "A rampa decide entre 43 e 44"). Nenhum pixel é
    desconhecido.
-2. **A sintaxe se lê nos irmãos.** No mapa de tipos do ffmpeg
-   (`-debug mb_type`) dos quadros P do fade: a tarja (fileiras 0–8 e 59–67,
-   ~2.160 MBs) é **intra 16×16**; o campo (fileiras 9–58, 6.000 MBs) é
-   **skip** — a predição ponderada sozinha leva o campo da referência ao valor
-   novo; sobram poucos MBs inter (`>`) no começo das fileiras 0, 8 e 59. O
-   frame 9, o irmão P anterior, tem 2.834 bytes contra 2.832.
-   *A conferir no passo 1:* o mapa do ffmpeg mostrou blocos P com o campo
-   todo intra em vez de skip, e a correspondência bloco → quadro não ficou
-   clara; o JM, por sua vez, parou depois de 9 quadros do GOP 0. O trace do JM
-   decide.
+2. **A sintaxe se lê nos irmãos.** Medido no trace do JM (passo 1): nos
+   quadros P do fade com o tamanho do 11, **7.919 dos 8.160 MBs** são o mesmo
+   MB — I16x16 com predição DC, croma DC, sem resíduo —, na tarja **e no
+   campo**: a imagem uniforme se propaga pela predição DC. Só 241 MBs fogem
+   disso, sempre nos mesmos lugares (MB 0 e as fileiras de borda 8 e 59).
+   Detalhe em "Resultados do passo 1". (A primeira versão deste plano dizia
+   que o campo era skip; isso vale só para os quadros P pequenos do fade.)
 3. **O fluxo é quase todo um padrão fixo.** Autocorrelação de bytes com período
    5: **75%** no frame 9, 73% no 7, **40%** no 11. O padrão é `c6 31 8c 63 18`
    — em bits, `11000` repetido — os MBs de tarja idênticos com contextos
@@ -145,3 +143,55 @@ num registro próprio (`data/patches_f11.txt`), com a distância de cada trecho.
 Resultados de cada passo no RASTREIO.md (seção do frame 11) e neste arquivo;
 números medidos no README.md e no RESULTADOS.md; ferramentas em
 `tools/anchor/`, com bloco de documentação (AGENTS.md).
+
+## Resultados do passo 1 (2026-09-25)
+
+JM 19.1 com trace (build `release` do scratchpad de 2026-09-23), GOP 0 do
+quadro 0 ao 9; leitor em `tools/anchor/jm_trace.py`.
+
+**O molde dos quadros P do fade.** Duas estruturas, e o tamanho do NAL diz qual:
+
+| quadros P | POC | bytes | campo (fileiras 9–58) | fora do padrão |
+|---|---|---|---|---|
+| 1, 7, 9 | 4, 16, 20 | 2.816–2.964 | I16x16 DC, sem resíduo | 241–242 MBs |
+| 3, 5 | 8, 12 | 942–952 | **skip** | 6.241 (os skips) |
+
+O frame 11 tem 2.832 bytes: é da primeira estrutura. Nela, o que foge do
+padrão (I16x16 DC, croma DC, `mb_qp_delta` 0, CBF do DC 0):
+- **MB 0:** inter (P16x16) com resíduo — não há vizinho para a predição DC;
+- **fileiras 8 e 59** (a borda tarja/campo: 2 linhas de uma, 14 da outra): a
+  coluna 0 é inter com resíduo (referência 0 ou 2, CBP 3–35) e as colunas
+  1–119 são I16x16 com predição **horizontal**, croma horizontal, sem resíduo
+  (o conteúdo da coluna 0 se propaga para a direita). O 7 usa inter em metade
+  dessas fileiras;
+- às vezes o último MB (8.159).
+
+**O padrão periódico é esse MB repetido.** Em janelas de 40 bits contra
+`11000` repetido (qualquer fase):
+
+| quadro | bytes | janelas exatas | a 1–4 bits | bits fora nelas | longe (> 4) | violações de escape |
+|---|---|---|---|---|---|---|
+| 1 | 2.820 | 76% | 10% | 140 | 13% | 0 |
+| 7 | 2.964 | 75% | 6% | 99 | 19% | 0 |
+| 9 | 2.834 | 74% | 8% | 110 | 18% | 0 |
+| **11** | 2.832 | **16%** | **58%** | **658** | 26% | **4** |
+
+Nos irmãos, os ~100–140 bits "fora" são eventos reais (a rajada da coluna 0
+de cada fileira, as bordas). No 11 sobram ~550 bits a mais só nas janelas
+próximas do padrão — compatível com os ~600 bits de dano da zona de 4%.
+Visto em bytes, o dano no padrão é troca de 1 bit isolada: `63 18 c6 31 8c`
+aparece como `62 18 c6 35 8c 63 28` etc.
+
+**Por que o JM parava no GOP 0:** ele recusa NAL com violação de escape
+(`Invalid startcode emulation prevention found`). O frame 10 (B, 262 bytes)
+tem 6, nos bytes 15–205; o **frame 11 tem 4, nos bytes 2.682, 2.733, 2.745 e
+2.778** — dano certo, no fim do quadro. Com o GOP cortado no 9, os 10
+quadros decodificam.
+
+**O que isso muda no passo 2.** O codificador precisa de: `mb_skip_flag`;
+`mb_type` de P com prefixo intra e os bins de I16x16 nos contextos de P;
+modo de croma; `mb_qp_delta`; CBF do DC; `end_of_slice`. Isso cobre 7.919
+MBs. Os 241 inter com resíduo (MB 0 e coluna 0 das bordas) precisam também de
+`ref_idx`, `mvd`, CBP e resíduo — mas são poucos e as fileiras são
+uniformes: a sintaxe deles no 11 deve repetir a do 9 com outros valores, e
+entra como hipótese local. Validar primeiro no 9, bit a bit.
