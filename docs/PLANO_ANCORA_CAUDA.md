@@ -251,3 +251,49 @@ bit corrigido fica 3 bytes antes do fim do NAL — o decodificador
 dessincronizado lê esses bytes finais antes de estourar, então o bit mexe no
 ponto em que ele desiste. Nos outros 324 quadros o erro vem antes de a cauda
 ser lida, e a imagem não muda.
+
+### Diagnóstico das 26–28 divergências do 1773: é o modelo, não dano (2026-09-24)
+
+**A tarja pura na imagem não é tarja pura na sintaxe.** O IDR 3348 é íntegro
+(decodifica os 8.160 MBs, imagem boa) e a tarja dele é 16,00 em todos os
+pixels — mas no JM a **coluna 1 de todas as fileiras de tarja (61–67) usa
+predição de croma modo 2**, não DC. O resultado é o mesmo pixel; o encoder só
+escolheu outro modo de custo igual, e a escolha desce pela coluna. O modelo
+(tudo DC) não prevê isso, e o 3348 fica a **23 bits** do modelo desde a
+fileira 63 — a mesma ordem dos 26 do 1773. Os outros 5 IDRs bons e o 0 e o 29
+têm a tarja pura também na sintaxe e encaixam com distância 0.
+
+**O desenho das divergências é o mesmo nos dois.** Byte a byte, a cauda
+observada do 1773 é zero com **uma rajada por fileira** (rel 34.296–298,
+34.301–303, 34.306–307), com o mesmo espaçamento e o mesmo comprimento total
+do modelo; as rajadas só são maiores que as que o modelo gera na coluna 0.
+Dano aleatório não se alinha a uma rajada por fileira. No 3348 as 23
+divergências caem do mesmo jeito, ~uma a cada 4 MBs na segunda metade de
+cada fileira. E a tarja **de cima** do 1773, que decodifica certa, é pura na
+sintaxe (fileiras 0–7, os 120 MBs `(I16x16, DC, croma DC, cbp 0)`) — o
+desvio é só embaixo, onde a cena de cima escolhe os modos.
+
+Conclusão: as 26–28 divergências das fileiras 63–66 do 1773 **não indicam
+dano** — são, com alta probabilidade, uma coluna (ou poucas) com modo de
+predição diferente, como no 3348. O dano provado da cauda do 1773 segue sendo
+só o escape da última fileira (os 2 bits aplicados, que o escape sozinho já
+determina: `00 00 02 21` só vira válido com `02→03` e `21→01`).
+
+**Consequência para o lote aplicado.** No 3348, a partir da fileira 66 o
+modelo acha **distância 1** — uma "correção" num quadro sem dano. O lote não
+a propõe só porque as 3 saídas distintas discordam (a regra de unicidade
+barrou). Mas o mesmo mecanismo pode ter passado nos IDRs corrigidos só com as
+fileiras 66–67, que são justamente os que não encaixam desde a 63: **16 IDRs,
+32 bits** (fileira 66: 410, 485, 901, 2275, 2757; fileira 67: 99, 323, 352,
+439, 1011, 1773, 1833, 1949, 2420, 2525, 2971). Os 2 do 1773 estão garantidos
+pelo escape. Os de entrada 63–65 (13 IDRs) são seguros: uma coluna variante
+acumula divergência a cada fileira, e eles fecham com ≤ 3 em 100+ bits. Nos
+P/B o risco foi medido: dos ~980 P/B que decodificam inteiros, só o 10 (já
+excluído) recebeu proposta.
+
+**Próximo passo:** estender o codificador com colunas de modo variante
+(croma 1–3, luma 0–3), validar no 3348 com os estados de contexto que o JM
+grava, e com ele (a) auditar os 30 bits de entrada 66–67 — correção que o
+modelo estendido explica sem troca sai, com aprovação do usuário — e (b)
+reencaixar o 1773 desde a fileira 61, o que daria a âncora de trás para a
+busca de dois lados.

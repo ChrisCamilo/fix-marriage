@@ -1185,3 +1185,14 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     acima age no **MB 6.939** e o segundo do par (`59363485 b0`) no **7.046** —
     e a curva do `corta` com o 1º bit aplicado dá o byte 32.900 no MB 7.046,
     batendo com o byte 32.897 do 2º bit. As duas réguas concordam.
+
+61. **Tarja com pixel certo não tem sintaxe certa.** O modelo da tarja do
+    plano 2 assume que todo MB dela é `I16x16, DC, croma DC, cbp 0`, e a imagem
+    parece confirmar: 16,00 em todos os pixels. No IDR íntegro 3348 a coluna 1
+    de todas as fileiras de tarja usa croma **modo 2** — mesmo pixel, outra
+    sintaxe, escolhida pelo encoder por empate e herdada pela coluna. O modelo
+    fica a 23 bits dele desde a fileira 63, e desde a 66 acha **1 bit
+    "errado" num quadro sem dano**. Eu li as 26–28 divergências do 1773 como
+    dano denso na cauda; eram, com alta probabilidade, isto. Pixel não
+    valida sintaxe: validar o modelo contra o JM, e desconfiar de encaixe curto
+    (só as últimas fileiras) em quadro que não encaixa desde a fileira 63.

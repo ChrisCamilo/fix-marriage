@@ -3,7 +3,7 @@
 Recuperação de um vídeo de casamento de 2017 danificado por bit-rot. Leia o
 `ESTADO.md` antes de qualquer coisa: ele tem os parâmetros já resolvidos, os
 comandos e o mapa dos outros documentos. E leia o `docs/ARMADILHAS.md` antes de medir
-qualquer coisa — são **60** maneiras de medir errado que já custaram horas aqui.
+qualquer coisa — são **61** maneiras de medir errado que já custaram horas aqui.
 
 ## 1. Privacidade — inegociável
 
@@ -81,7 +81,7 @@ regras de hipóteses e de fechamento, e fora os quadros com enchimento no fim.
 O `mapa` muda só no 2189 (erro 2 MBs adiante, explicado no plano). O `verify`
 pula este também.
 
-A `docs/ARMADILHAS.md` lista **60** maneiras de medir errado que já produziram
+A `docs/ARMADILHAS.md` lista **61** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
