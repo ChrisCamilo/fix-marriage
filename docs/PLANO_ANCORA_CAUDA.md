@@ -275,9 +275,11 @@ desvio é só embaixo, onde a cena de cima escolhe os modos.
 
 Conclusão: as 26–28 divergências das fileiras 63–66 do 1773 **não indicam
 dano** — são, com alta probabilidade, uma coluna (ou poucas) com modo de
-predição diferente, como no 3348. O dano provado da cauda do 1773 segue sendo
-só o escape da última fileira (os 2 bits aplicados, que o escape sozinho já
-determina: `00 00 02 21` só vira válido com `02→03` e `21→01`).
+predição diferente, como no 3348. O escape da última fileira (`00 00 02 21`)
+prova que **há** dano ali, mas não qual: `02→06` (1 bit) também deixa o NAL
+válido. Quem escolheu `02→03` + `21→01` foi o modelo puro na última fileira
+— ver a auditoria abaixo. (Corrigido em 2026-09-25: a primeira versão desta
+seção dizia que o escape sozinho determinava os 2 bits.)
 
 **Consequência para o lote aplicado.** No 3348, a partir da fileira 66 o
 modelo acha **distância 1** — uma "correção" num quadro sem dano. O lote não
@@ -285,9 +287,7 @@ a propõe só porque as 3 saídas distintas discordam (a regra de unicidade
 barrou). Mas o mesmo mecanismo pode ter passado nos IDRs corrigidos só com as
 fileiras 66–67, que são justamente os que não encaixam desde a 63: **16 IDRs,
 32 bits** (fileira 66: 410, 485, 901, 2275, 2757; fileira 67: 99, 323, 352,
-439, 1011, 1773, 1833, 1949, 2420, 2525, 2971). Os 2 do 1773 estão garantidos
-pelo escape. Os de entrada 63–65 (13 IDRs) são seguros: uma coluna variante
-acumula divergência a cada fileira, e eles fecham com ≤ 3 em 100+ bits. Nos
+439, 1011, 1773, 1833, 1949, 2420, 2525, 2971). Nos
 P/B o risco foi medido: dos ~980 P/B que decodificam inteiros, só o 10 (já
 excluído) recebeu proposta.
 
@@ -297,3 +297,56 @@ grava, e com ele (a) auditar os 30 bits de entrada 66–67 — correção que o
 modelo estendido explica sem troca sai, com aprovação do usuário — e (b)
 reencaixar o 1773 desde a fileira 61, o que daria a âncora de trás para a
 busca de dois lados.
+
+### Auditoria com o modelo de coluna variante (2026-09-25)
+
+**Modelo estendido.** `ferramentas/ancora/cabac_enc2.py` codifica a tarja com
+o modo I16x16 e o modo de croma livres por MB, com a seleção de contexto do JM
+(`mb_type[0][a+b]`, 4, 5, 7, 8; `cipr[a+b]` e `cipr[3]`; `dqp[0]`;
+`bcbp[0][left+2·upper]`). Com os estados e a sintaxe que o JM grava, dá
+**distância 0** no 3348 (coluna 1 em croma 2) desde a fileira 63, e no 2333 e
+no 3319; o modelo puro dá 23 no 3348. `ferramentas/ancora/ancora3.c` é a busca
+em C: range, k1 e k20 exaustivos, os dois estados de `cipr` sorteados (ou
+fixos), uma coluna variante dada.
+
+**Uma fileira só não distingue.** No 3348 às cegas, a última fileira encaixa
+com distância 0 em qualquer variante testada (colunas 1, 5, 50); desde a 63,
+a certa fica a 6 e as erradas a 10–11.
+
+**Falso positivo da regra do lote, medido.** Caudas sintéticas **sem dano**,
+cada uma com uma coluna variante sorteada (modo de croma 1–3 ou modo luma 0,
+1, 3; estados e range sorteados), passadas pela mesma regra que aprovou o lote
+(modelo puro, distância ≤ 3, todas as saídas distintas nos mesmos bits).
+Controle: tarja pura com 1 bit trocado.
+
+| entrada | variante, sem dano: propõe correção | controle: propõe | controle: acerta |
+|---|---|---|---|
+| fileira 67 | **33 de 150 (22%)** | 130 de 150 | 130 |
+| fileira 66 | **7 de 150 (4,7%)** | 115 de 150 | 115 |
+| fileira 65 | 1 de 100 | — | — |
+| fileira 63 | 0 de 100 | — | — |
+
+A regra é certeira em tarja pura (245 de 245 correções certas no controle) e
+falha só diante da sintaxe variante, e muito mais quanto menos fileiras
+entram. Entrada 63–65: seguro, como previsto.
+
+**Os 32 bits de entrada 66–67 não estão provados.**
+- Fileira 67 (11 IDRs, 20 bits): 22% de falso positivo sob variante, e o
+  critério de seleção deles — não encaixar desde a 63 — é exatamente o sinal
+  de variante.
+- **2757: a correção é inválida.** Ela cria `00 00 00 01` dentro do NAL, o que
+  o encoder nunca grava (teria escapado para `00 00 03 00 01`, um byte a mais,
+  que troca de bit não produz). A checagem de escape do lote começava 1 byte
+  depois do início da violação.
+- 1773 e 2420: a violação de escape prova dano naqueles bytes, mas não qual
+  bit — `02→06` no 1773 e trocar o `03` no 2420 também validam o NAL com 1 bit.
+- Fileira 66 (410, 485, 901, 2275): 4,7% sob variante.
+
+A proposta de retirada está em `dados/cauda_auditoria.txt`; nenhuma linha saiu
+do `patches.txt` sem aprovação.
+
+**Para o 1773 (âncora de trás):** o modelo estendido explica o tipo de
+divergência, mas achar a configuração exata desde a fileira 63 custa
+~6×10¹⁰ hipóteses por configuração (range × k1 × k20 × dois estados de
+`cipr`). O refinamento por coordenadas leva a configuração certa do 3348 a 3
+(as erradas ficam em 10) e não chega a 0. Fica em aberto.

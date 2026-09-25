@@ -1,0 +1,45 @@
+# cauda_auditoria.txt -- proposta de RETIRADA de correcoes de cauda de IDR (2026-09-25). NAO aplicada.
+# Motivo: o modelo de tarja pura nao ve sintaxe variante (coluna com outro modo de predicao,
+# mesmo pixel -- IDR integro 3348, armadilha 61). Medido em caudas sinteticas sem dano com
+# coluna variante, a regra do lote propoe correcao falsa em 22% (entrada na fileira 67) e
+# 4,7% (fileira 66); 1% na 65 e 0% na 63. Ver docs/PLANO_ANCORA_CAUDA.md, "Auditoria".
+# Retirar = apagar a linha do patches.txt (nao duplicar: estas linhas aparecem uma vez so).
+# Nenhuma afeta imagem: sao caudas de IDRs que quebram antes (conferir com o mapa ao aplicar).
+#
+# Colunas: offset bit   # linha no patches.txt, IDR, fileira de entrada, motivo
+
+# ===== entrada na fileira 67 =====
+4377910 2   # linha 2656, IDR 99, fileira 67, 22% de falso positivo sob variante
+4377911 1   # linha 2657, IDR 99, fileira 67, 22% de falso positivo sob variante
+11649863 6   # linha 2658, IDR 323, fileira 67, 22% de falso positivo sob variante
+12479418 7   # linha 2659, IDR 352, fileira 67, 22% de falso positivo sob variante
+12479419 4   # linha 2660, IDR 352, fileira 67, 22% de falso positivo sob variante
+16409985 2   # linha 2661, IDR 439, fileira 67, 22% de falso positivo sob variante
+16409986 0   # linha 2662, IDR 439, fileira 67, 22% de falso positivo sob variante
+16409986 1   # linha 2663, IDR 439, fileira 67, 22% de falso positivo sob variante
+35293255 2   # linha 2664, IDR 1011, fileira 67, 22% de falso positivo sob variante
+35293255 4   # linha 2665, IDR 1011, fileira 67, 22% de falso positivo sob variante
+35293255 5   # linha 2666, IDR 1011, fileira 67, 22% de falso positivo sob variante
+59364902 0   # linha 2667, IDR 1773, fileira 67, escape prova dano, nao o bit (02->06 tambem valida)
+59364903 5   # linha 2668, IDR 1773, fileira 67, escape prova dano, nao o bit (02->06 tambem valida)
+60598901 1   # linha 2669, IDR 1833, fileira 67, 22% de falso positivo sob variante
+64334221 3   # linha 2670, IDR 1949, fileira 67, 22% de falso positivo sob variante
+64334222 2   # linha 2671, IDR 1949, fileira 67, 22% de falso positivo sob variante
+80533249 3   # linha 2672, IDR 2420, fileira 67, escape prova dano, nao o bit
+84280430 0   # linha 2673, IDR 2525, fileira 67, 22% de falso positivo sob variante
+84280432 4   # linha 2674, IDR 2525, fileira 67, 22% de falso positivo sob variante
+100632916 3   # linha 2678, IDR 2971, fileira 67, 22% de falso positivo sob variante
+
+# ===== entrada na fileira 66 =====
+14987907 2   # linha 2619, IDR 410, fileira 66, 4,7% de falso positivo sob variante
+18132665 0   # linha 2620, IDR 485, fileira 66, 4,7% de falso positivo sob variante
+18132665 4   # linha 2621, IDR 485, fileira 66, 4,7% de falso positivo sob variante
+18132669 5   # linha 2622, IDR 485, fileira 66, 4,7% de falso positivo sob variante
+32085844 2   # linha 2629, IDR 901, fileira 66, 4,7% de falso positivo sob variante
+32085850 6   # linha 2630, IDR 901, fileira 66, 4,7% de falso positivo sob variante
+74763879 3   # linha 2647, IDR 2275, fileira 66, 4,7% de falso positivo sob variante
+74763883 1   # linha 2648, IDR 2275, fileira 66, 4,7% de falso positivo sob variante
+74763883 6   # linha 2649, IDR 2275, fileira 66, 4,7% de falso positivo sob variante
+92019795 0   # linha 2675, IDR 2757, fileira 66, INVALIDA: cria 00 00 00 01 no NAL
+92019795 1   # linha 2676, IDR 2757, fileira 66, INVALIDA: cria 00 00 00 01 no NAL
+92019795 3   # linha 2677, IDR 2757, fileira 66, INVALIDA: cria 00 00 00 01 no NAL
