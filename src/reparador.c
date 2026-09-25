@@ -2016,7 +2016,8 @@ static int modo_verify(int argc, char **argv) {
          *
          * E as caudas de quadros P/B (patches_cauda_pb, cauda_pb.py): a tarja
          * de baixo deles e so skip e prova os ultimos bytes do NAL do mesmo
-         * jeito. Sao 475 linhas; das quatro listas juntas saem 1.803 pulados. */
+         * jeito. Sao 475 linhas; das quatro listas juntas saem 1.771 pulados (o
+         * patches_cauda perdeu 32 linhas em 2026-09-25, comentadas com #). */
         const char *listas[4] = {
             getenv("DET") ? getenv("DET") : "dados/deterministicos.txt",
             "dados/patches_cabecalho.txt", "dados/patches_cauda.txt",

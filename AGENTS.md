@@ -71,7 +71,13 @@ pelo `ferramentas/ancora/cauda_lote.py`, plano em `docs/PLANO_ANCORA_CAUDA.md`).
 Condição de entrada aprovada pelo usuário: distância de no máximo 3 bits,
 **todas** as hipóteses empatadas apontando os mesmos bits, a cauda corrigida
 fechando com distância 0 e sem violação de escape; o `mapa` do filme inteiro
-idêntico antes e depois. O `verify` pula este também.
+idêntico antes e depois. O `verify` pula este também. **Em 2026-09-25 saíram
+32 das 65 linhas** (16 IDRs cujo encaixe começava nas fileiras 66–67),
+aprovado pelo usuário: a tarja pode ter uma coluna com outro modo de predição
+(armadilha 61), e sob ela a regra propõe correção falsa em 22% (fileira 67) e
+4,7% (66) — medido em caudas sintéticas; 1% na 65 e 0% na 63. Ficam 33 linhas,
+13 IDRs, todas com encaixe desde as fileiras 63–65. **Encaixe de cauda de IDR
+só vale com 3 fileiras ou mais.**
 
 No mesmo dia entrou o quarto: as **caudas de quadros P/B** (`dados/patches_cauda_pb.txt`,
 gerados pelo `ferramentas/ancora/cauda_pb.py`), onde a tarja de baixo é só
@@ -99,8 +105,8 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 12 falsos, 1803 determinísticos pulados`** (os 480 de
-`dados/deterministicos.txt`, os 783 de `dados/patches_cabecalho.txt`, os 65 de
+hoje **`0 válidos, 12 falsos, 1771 determinísticos pulados`** (os 480 de
+`dados/deterministicos.txt`, os 783 de `dados/patches_cabecalho.txt`, os 33 de
 `dados/patches_cauda.txt` e os 475 de `dados/patches_cauda_pb.txt`), e os 12 falsos são
 todos explicados — nenhum é patch ruim:
 

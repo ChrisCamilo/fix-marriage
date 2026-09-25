@@ -342,8 +342,12 @@ entram. Entrada 63–65: seguro, como previsto.
   bit — `02→06` no 1773 e trocar o `03` no 2420 também validam o NAL com 1 bit.
 - Fileira 66 (410, 485, 901, 2275): 4,7% sob variante.
 
-A proposta de retirada está em `dados/cauda_auditoria.txt`; nenhuma linha saiu
-do `patches.txt` sem aprovação.
+**Retiradas em 2026-09-25**, aprovado pelo usuário: as 32 linhas saíram do
+`patches.txt` (3.153 → 3.121), registro em `dados/cauda_auditoria.txt`, e
+ficam comentadas com `# RETIRADA` no `dados/patches_cauda.txt`. `mapa` do
+filme inteiro idêntico antes e depois; `verify` 0 válidos, 12 falsos, 1.771
+pulados. Ficam 33 bits de cauda de IDR, em 13 IDRs, todos com encaixe desde
+as fileiras 63–65.
 
 **Para o 1773 (âncora de trás):** o modelo estendido explica o tipo de
 divergência, mas achar a configuração exata desde a fileira 63 custa
