@@ -1,7 +1,7 @@
 # Plano 5 — Frame 11: recodificar o quadro inteiro
 
-**Estado: passo 1 feito** (proposto e iniciado em 2026-09-25 — ver
-"Resultados do passo 1" no fim). Generaliza o método do
+**Estado: passos 1 e 2 feitos** (proposto e iniciado em 2026-09-25 — ver
+"Resultados" no fim). Generaliza o método do
 [`PLANO_ANCORA_CAUDA.md`](PLANO_ANCORA_CAUDA.md) — recodificar com CABAC um
 trecho de sintaxe conhecida e comparar com o arquivo — da tarja para o quadro
 inteiro, num quadro cujo conteúdo é todo conhecido. Histórico do frame 11 no
@@ -195,3 +195,38 @@ MBs. Os 241 inter com resíduo (MB 0 e coluna 0 das bordas) precisam também de
 `ref_idx`, `mvd`, CBP e resíduo — mas são poucos e as fileiras são
 uniformes: a sintaxe deles no 11 deve repetir a do 9 com outros valores, e
 entra como hipótese local. Validar primeiro no 9, bit a bit.
+
+## Resultados do passo 2 (2026-09-25)
+
+**O codificador de slice P reproduz os quadros do arquivo bit a bit.**
+`tools/anchor/cabac_p.py` recebe a sintaxe de cada MB (no formato do
+`jm_trace.py`) e escreve o slice data como um codificador da norma, com a
+escolha de contexto de cada elemento copiada da função de leitura
+correspondente do JM (`source/app/ldecod/cabac.c`) e a inicialização dos
+contextos extraída do `ctx_tables.h` para `tools/anchor/ctx_init.json`.
+QP, `cabac_init_idc` e o byte de início vêm do cabeçalho de slice que o
+próprio trace registra (`jm_trace.cabecalhos`).
+
+| quadro | POC | estrutura | QP | bits | diferenças |
+|---|---|---|---|---|---|
+| 3 | 8 | campo em skip | 11 | 6.322 | **0** |
+| 7 | 16 | campo I16x16 DC, bordas meio inter | 10 | 21.578 | **0** |
+| 9 | 20 | campo I16x16 DC (o molde do 11) | 10 | 21.172 | **0** |
+
+Slice inteiro, do primeiro bit depois do alinhamento até o stop bit. Os três
+cobrem tudo o que o molde do 11 usa: skip, I16x16 com modos DC e horizontal,
+croma com resíduo DC e AC, inter 16x16 com `ref_idx` 0–2, `mvd`, CBP e
+blocos 4x4 de luma com níveis positivos, negativos e maiores que 1.
+
+Dois erros apareceram e foram corrigidos na validação: o DC de croma 4:2:0
+usa o mapa de significância 4x4 comum (o `4x4c` é de outro formato), e o
+trace do JM não registra o `end_of_slice_flag = 1` do último MB — sem forçá-lo
+não havia o flush final.
+
+**Fora do alcance, com erro explícito:** partições 16x8/8x16/8x8 e MB I4x4
+(o 5 tem 16x8; o 1 tem dois I4x4, nos MBs 960 e 7080). O molde do 11 não usa
+nenhum dos dois.
+
+**Próximo (passo 3):** gerar a sintaxe do 11 a partir do molde do 9 — os
+7.919 MBs do padrão são fixos; os 241 de borda e o cabeçalho viram hipóteses —
+e comparar a saída do `cabac_p.py` com o arquivo.

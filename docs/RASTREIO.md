@@ -1863,6 +1863,11 @@ bits dos irmãos batem exato, contra **16%** no 11, que tem 658 bits fora do
 padrão nas janelas próximas dele (99–140 nos irmãos). O 11 tem ainda **4
 violações de escape** (bytes 2.682–2.778) e o 10 tem 6 — é por isso que o JM
 recusava o GOP 0 depois do 9.
+
+**Passo 2: o codificador reproduz os irmãos bit a bit.** `tools/anchor/cabac_p.py`
+(CABAC de slice P espelhando as funções de leitura do JM) recodifica os quadros
+3, 7 e 9 a partir do trace com **0 diferenças** em 6.322, 21.578 e 21.172 bits
+— o slice inteiro, até o stop bit.
 ### E a corrida revelou por que o ataque estava mal posto
 
 Os 14 bits de 1 flip que fazem o frame 11 "decodificar inteiro" não consomem o

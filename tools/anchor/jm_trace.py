@@ -2,6 +2,7 @@
 # sintaxe de cada MB, por quadro.
 #
 #   le(caminho) -> {poc: {'tipo': t, 'mbs': {mb: [(elemento, (valores...)), ...]}}}
+#   cabecalhos(caminho) -> {poc: {'campos': {...}, 'byte_ini': n}}
 #
 # `tipo` e o Type do cabecalho de MB do trace (0 = P, 1 = B, 2 = I). Os valores
 # sao os numeros que o JM imprime depois do nome: para elementos de cabecalho de
@@ -28,6 +29,30 @@ def le(path):
         m = re.match(r'@(\d+)\s+(.+?)\s{2,}(.*)$', l.rstrip())
         if m: cur.append((m.group(2).strip(), tuple(int(x) for x in re.findall(r'-?\d+', m.group(3)))))
     return q
+
+def cabecalhos(path):
+    """Cabecalho de cada slice no trace: {poc: dict(campos, byte_ini)}.
+
+      path  o trace_dec.txt
+
+    Devolve: por POC (o pic_order_cnt_lsb), os campos do cabecalho do slice
+    (nome -> valor) e `byte_ini`, o byte do NAL (contando o byte de cabecalho
+    do NAL) onde comeca o slice data do CABAC -- depois dos
+    cabac_alignment_one_bit. O @ do trace conta bits de forma continua; o
+    primeiro campo (first_mb_in_slice) comeca logo depois do byte do NAL."""
+    out = {}; cur = None
+    for l in open(path, errors='replace'):
+        m = re.match(r'@(\d+)\s+SH: (\w+)\s+([01]+)\s+\(\s*(-?\d+)\)', l)
+        if not m: continue
+        pos, nome, bits, val = int(m.group(1)), m.group(2), m.group(3), int(m.group(4))
+        if nome == 'first_mb_in_slice':
+            cur = {'_ini': pos, 'campos': {}}
+        if cur is None: continue
+        cur['campos'].setdefault(nome, val); cur['_fim'] = pos + len(bits)
+        if nome == 'pic_order_cnt_lsb': out[val] = cur
+    for c in out.values():
+        c['byte_ini'] = (8 + c['_fim'] - c['_ini'] + 7) // 8
+    return out
 
 PADRAO = [('mb_skip_flag', (1,)), ('mb_type', (9,)), ('intra_chroma_pred_mode', (0,)),
           ('mb_qp_delta', (0,)), ('DC luma 16x16', (0, 0))]
