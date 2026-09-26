@@ -1,7 +1,7 @@
 # Plano 5 — Frame 11: recodificar o quadro inteiro
 
-**Estado: passos 1 e 2 feitos** (proposto e iniciado em 2026-09-25 — ver
-"Resultados" no fim). Generaliza o método do
+**Estado: passos 1 e 2 feitos; passo 3 em andamento** (proposto e iniciado
+em 2026-09-25 — ver "Resultados" no fim). Generaliza o método do
 [`PLANO_ANCORA_CAUDA.md`](PLANO_ANCORA_CAUDA.md) — recodificar com CABAC um
 trecho de sintaxe conhecida e comparar com o arquivo — da tarja para o quadro
 inteiro, num quadro cujo conteúdo é todo conhecido. Histórico do frame 11 no
@@ -230,3 +230,52 @@ nenhum dos dois.
 **Próximo (passo 3):** gerar a sintaxe do 11 a partir do molde do 9 — os
 7.919 MBs do padrão são fixos; os 241 de borda e o cabeçalho viram hipóteses —
 e comparar a saída do `cabac_p.py` com o arquivo.
+
+## Passo 3 — em andamento (2026-09-26)
+
+O `cabac_p.py` passou a decodificar também: cada elemento é escrito uma vez
+contra um objeto de E/S que escreve (`Enc`) ou lê (`Dec`) bits. Validado nos
+dois sentidos: codifica os quadros 3, 7 e 9 com 0 diferenças e decodifica os
+8.160 MBs de cada um com a sintaxe exata do trace do JM.
+
+**Cabeçalho do 11** (JM com o NAL cortado antes das violações de escape):
+`frame_num` 6, POC 24, QP 10 (`slice_qp_delta` −16), `cabac_init_idc` 0,
+slice data no byte 21 — coerente com os irmãos.
+
+**O frame 11 é o molde do 9 com ~4% de dano, fora três regiões.** Encaixando
+trechos do molde com o estado aritmético livre (no regime do padrão o range de
+entrada quase não importa — o estado converge):
+
+| trecho | começa no 11 (no 9) | discordância |
+|---|---|---|
+| MBs 1–959 (tarja de cima) | bit 39 (100) | 4,4% |
+| MBs 988–1079 (fim da fileira 8) | desloc. −38/−40 | 1–4% por janela |
+| MBs 1080–7079 (campo) | desloc. −38/−39 constante | 2,7–4,3% por janela de 2 fileiras |
+| MBs 7082–8159 (fim da 59 e tarja de baixo) | desloc. −62/−63 | 2,2–3,8% |
+
+A zona de dano medida no mapa é 4–4,5%. Os "1.140 bits a mais" do 11 não são
+conteúdo: são o enchimento `00 00 03` do fim do NAL, danificado — as 4
+violações de escape (bytes 2.682–2.778) caem nele.
+
+**As três regiões que faltam** (comprimento exato, pelos encaixes vizinhos):
+
+| região | bits no 11 | no 9 | estado |
+|---|---|---|---|
+| MB 0 | 39 | 100 | hipótese: P16x16, ref 2, `mvd` 0, CBP 16, DC de croma U +3 V −3 (6 bits fora nos primeiros 100, 5 deles juntos nos bits 11–20); provisória |
+| MBs 960–987 | ~282 | 260 | MB 960: ref 0, CBP 35, luma dos 4 blocos de cima `(1,0)(1,1)` — o que a física da borda prevê — com 3 bits trocados (+28, +50, +64); o croma dele e os MBs 961–987 ainda não |
+| MBs 7080–7081 | ~170 | 193 | não atacado |
+
+Com o prefixo recodificado até o MB 959 emendado no arquivo, o JM passa a ler o
+11 até o MB 966.
+
+**Lições desta etapa:**
+- Sintaxe decodificada do próprio arquivo, recodificada, reproduz o arquivo:
+  não pode ser juiz de si mesma. O juiz é o trecho de molde conhecido
+  **depois** dela (armadilha de autoconsistência, a mesma do plano 1).
+- A fileira 8 do 11 não é igual à de nenhum irmão (1, 3, 5, 7 ou 9) nos MBs
+  961–987; do 988 em diante é a do 9.
+
+**Próximo:** busca por bloco nas duas regiões de borda — decodificador a partir
+do estado exato, trocas de bit onde a comparação mostra desvio isolado, e o
+comprimento exato da região (o molde recomeça num bit conhecido) como fecho.
+Depois, a prova do passo 4 decide também a hipótese do MB 0.

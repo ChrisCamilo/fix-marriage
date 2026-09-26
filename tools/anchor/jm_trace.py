@@ -27,7 +27,10 @@ def le(path):
             cur = []; q[poc]['mbs'][mb] = cur; continue
         if cur is None or not l.startswith('@'): continue
         m = re.match(r'@(\d+)\s+(.+?)\s{2,}(.*)$', l.rstrip())
-        if m: cur.append((m.group(2).strip(), tuple(int(x) for x in re.findall(r'-?\d+', m.group(3)))))
+        if not m: continue
+        if re.match(r'(SH|PPS|SPS|SEI):', m.group(2)):
+            cur = None; continue                 # cabecalho seguinte: o MB acabou
+        cur.append((m.group(2).strip(), tuple(int(x) for x in re.findall(r'-?\d+', m.group(3)))))
     return q
 
 def cabecalhos(path):
