@@ -1875,7 +1875,8 @@ inter com resíduo calculado; 961 e 7081 horizontais com resíduo de croma). O
 slice recodificado difere do arquivo em 873 bits (3,87%, uniforme) e o NAL
 corrigido fecha no tamanho exato; o JM o decodifica sem erro, a imagem sai
 16/43 exata, e pelo critério rigoroso o GOP 0 passa de 11 para 13 quadros bons.
-Proposta em `data/patches_f11_proposta.txt`, aguardando aprovação.
+Aplicado em 2026-09-28, aprovado pelo usuário: 873 linhas no `patches.txt`
+(3.122–3.994), registradas em `data/patches_f11.txt`.
 ### E a corrida revelou por que o ataque estava mal posto
 
 Os 14 bits de 1 flip que fazem o frame 11 "decodificar inteiro" não consomem o

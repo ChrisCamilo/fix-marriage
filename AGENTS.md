@@ -49,9 +49,10 @@ com zero linhas de log**. Nada mais conta.
 Desde 2026-09-18 o critério tem mais duas partes: a **cadeia de referência boa**
 (quadro sem erro sobre referência borrada não conta, armadilha 56) e **zero
 macroblocos ocultados** no alvo (slice que acaba cedo sem erro não conta,
-armadilha 59). Com as duas, o `serie` dá **162**, subconjunto exato dos 167
-visualmente bons: saem o 12 (referência quebrada) e 2359, 2360, 2361, 3442 e
-1683 (slice encerrado cedo). `ACEITA_OCULTO=1` desliga a parte da ocultação.
+armadilha 59). Com as duas, o `serie 0 3444` (`TARJA=1`) dá **165** (medido
+em 2026-09-28, depois do frame 11), subconjunto exato dos 168 visualmente bons
+(os 167 de antes mais o 11): saem 2359, 2360 e 2361 (slice encerrado cedo).
+Antes do frame 11 eram 163 — o 11 e o 12 entraram juntos. `ACEITA_OCULTO=1` desliga a parte da ocultação.
 
 **A outra via é a do cabeçalho provado.** Patch que prova o cabeçalho não faz o
 quadro passar — o dano segue no corpo — e por isso não passa pelo critério
@@ -87,6 +88,17 @@ regras de hipóteses e de fechamento, e fora os quadros com enchimento no fim.
 O `mapa` muda só no 2189 (erro 2 MBs adiante, explicado no plano). O `verify`
 pula este também.
 
+Em 2026-09-28 entrou o quinto, de outra natureza: **o frame 11 inteiro**
+(`data/patches_f11.txt`, 873 linhas, gerado pelo `python tools/anchor/f11.py
+nal`, plano em `docs/PLANO_RECODIFICA_F11.md`). O conteúdo do quadro é todo
+conhecido (fade: tarja 16, campo 43), então a sintaxe foi reconstruída pela
+física — resíduo = alvo − predição da referência, quantizado como um encoder
+faz — e recodificada com CABAC; o que difere do arquivo é o dano. Prova
+aprovada pelo usuário: 3,87% de bits fora, uniforme e com estatística de trocas
+independentes; o NAL corrigido fecha no tamanho exato; JM e ffmpeg sem erro;
+imagem 16/43 exata; o `mapa` do filme muda só no 11. Uma a uma as linhas não
+fecham nada — só as 873 juntas —, por isso o `verify` pula este também.
+
 A `docs/ARMADILHAS.md` lista **61** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
@@ -105,19 +117,21 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 12 falsos, 1771 determinísticos pulados`** (os 480 de
+hoje **`0 válidos, 12 falsos, 2644 determinísticos pulados`** (os 480 de
 `data/deterministicos.txt`, os 783 de `data/patches_cabecalho.txt`, os 33 de
-`data/patches_cauda.txt` e os 475 de `data/patches_cauda_pb.txt`), e os 12 falsos são
+`data/patches_cauda.txt`, os 475 de `data/patches_cauda_pb.txt` e os 873 de
+`data/patches_f11.txt`), e os 12 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |
 |---|---|---|
 | 6 | 2360, 2362, 2363, 2364, 2365, 2366 | `com=1 sem=1` — insuficientes, não errados: o quadro segue com dano adiante. 2360 e 2363 contavam como "válidos" até 2026-09-18 só porque o critério antigo aceitava slice encerrado cedo (armadilha 59) |
-| 2 | 12 | `com=1 sem=1` — a cadeia do GOP 0 sempre erra por causa do frame 11; o `verify` não usa `ERROS_BASE` |
+| 2 | 12 | `com=1 sem=1` — o `verify` usa o critério rigoroso, que recusa todo o fade do GOP 0 (sem `TARJA=1` o `serie 0 13` dá 0 de 14, até o 0–10); com o 11 consertado, o `serie` com `TARJA=1` já aceita o 12 |
 | 4 | 3435, 3439 | `com=1 sem=1` — pares **cancelados de propósito**; o `verify` testa cada ocorrência e não entende cancelamento |
 
-**Nenhum reparo hoje faz um quadro fechar sozinho pelo critério honesto** — o
-último que fazia, o do 3442, era ele mesmo o defeito e saiu. **Qualquer falso
+**Nenhum reparo de 1 linha hoje faz um quadro fechar sozinho pelo critério
+honesto** — o último que fazia, o do 3442, era ele mesmo o defeito e saiu. O
+único quadro que um reparo fez fechar é o 11, e com as 873 linhas juntas. **Qualquer falso
 além desses 12 é problema.** Rodar `verify` **sem** `BASE_N`
 acusa ~1328 falsos por construção, o que é esperado e não é bug.
 

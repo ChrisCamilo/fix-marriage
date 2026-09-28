@@ -98,12 +98,15 @@ raiz/                   o que todo comando cita, e o que nunca se move
                         cabac_enc*.py, cauda_lote.py, cauda_pb.py (a tarja);
                         cabac_p.py (CABAC de slice P nos dois sentidos, com
                         ctx_init.json), jm_trace.py (lê o trace do JM) e
-                        f11.py (encaixe, leitura e feixe do frame 11)
+                        f11.py (encaixe, leitura, feixe e o NAL
+                        corrigido do frame 11: gera o patches_f11.txt)
   docs/                 os doze documentos que crescem
   data/                 registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
     deterministicos.txt remontados.txt
     patches_cabecalho.txt  o lote de cabeçalhos que entrou no patches.txt
+    patches_cauda.txt patches_cauda_pb.txt patches_f11.txt
+                        os lotes de cauda e o frame 11 (idem; o verify pula)
     mapa_dano.txt alvos.txt alvos_ocultos.txt cabecalho_slice.txt
                         medidas; cada um traz no topo como foi gerado
     regression/         hash de referência da saída de cada modo (SHA-256
@@ -112,7 +115,8 @@ raiz/                   o que todo comando cita, e o que nunca se move
     janela_f11.txt      candidatos e janelas de busca -- NAO sao patches,
                         cada um traz sua condicao de promocao escrita
     f11/                sintaxe dos quadros P do fade (trace do JM) e as
-                        hipóteses provisórias do frame 11 -- NÃO são patches
+                        hipóteses do frame 11 -- a sintaxe de onde sai o
+                        patches_f11.txt (python tools/anchor/f11.py nal)
   output/               produtos: novos_*.txt, vídeo remontado, ver_final.html
   logs/                 saída de corrida — fora do versionamento
 ```
@@ -129,7 +133,7 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c data/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 3.121 linhas:**
+**Composição do `patches.txt` — 3.994 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
@@ -141,6 +145,7 @@ conferida com `sha256sum -c data/CHECKSUMS.txt`.
 | 2613 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `data/deterministicos.txt` |
 | 2614–2646 | 33 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 13 IDRs, todas com encaixe desde as fileiras 63–65 — linha a linha em `data/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. Entraram 65; as 32 de encaixe nas fileiras 66–67 saíram em 2026-09-25 (sintaxe variante na tarja, armadilha 61; `data/cauda_auditoria.txt`). `mapa` idêntico nas duas mudanças. Ver `docs/PLANO_ANCORA_CAUDA.md` |
 | 2647–3121 | 475 | **caudas de P/B** provadas pela tarja de skips recodificada (2026-09-24), 325 quadros — linha a linha em `data/patches_cauda_pb.txt`, que o `verify` também pula. Nível A (dist 0–1): 189 quadros, 196 bits; nível B (dist 2): 136 quadros, 279 bits. `mapa` muda só no 2189 (erro do MB 7356 para o 7358, quadro que já era lixo antes da tarja) |
+| 3122–3994 | 873 | **o frame 11 recodificado inteiro** (plano 5, 2026-09-28): a sintaxe do quadro reconstruída pela física do fade e recodificada com CABAC; 818 bits no slice, 55 no enchimento, 3,87% uniforme; o NAL corrigido fecha no tamanho exato — linha a linha em `data/patches_f11.txt`, que o `verify` também pula (só as 873 juntas fecham o quadro). `mapa` muda só no 11 (MB 1 → 8.160 inteiro); `serie` do filme de 163 para **165** (o 11 e o 12). Ver `docs/PLANO_RECODIFICA_F11.md` |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a
@@ -262,7 +267,8 @@ praticamente limpo. Medido em conteúdo conhecido, no MP4 original
 | 5 primeiros bytes de cada quadro | 2.669 quadros sem troca | 776 com 1–5; distribuição **não binomial** (39 quadros com 4 trocas; uniforme daria 2) |
 
 Consequência: quadro com payload em zona de ~4% tem centenas de bits trocados —
-o frame 11 tem ~600 — e nenhuma busca de 1–3 bits o conserta. **Consultar o mapa
+o frame 11 tinha 873 — e nenhuma busca de 1–3 bits o consertava (entrou
+inteiro em 2026-09-28, recodificado a partir do conteúdo conhecido: plano 5). **Consultar o mapa
 antes de escolher alvo de varredura.** Aberto: tamanho e alinhamento dos blocos
 de dano.
 

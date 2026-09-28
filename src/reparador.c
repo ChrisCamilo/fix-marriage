@@ -2018,13 +2018,18 @@ static int modo_verify(int argc, char **argv) {
          *
          * E as caudas de quadros P/B (patches_cauda_pb, cauda_pb.py): a tarja
          * de baixo deles e so skip e prova os ultimos bytes do NAL do mesmo
-         * jeito. Sao 475 linhas; das quatro listas juntas saem 1.771 pulados (o
-         * patches_cauda perdeu 32 linhas em 2026-09-25, comentadas com #). */
-        const char *listas[4] = {
+         * jeito. Sao 475 linhas (o patches_cauda perdeu 32 linhas em
+         * 2026-09-25, comentadas com #).
+         *
+         * E o frame 11 recodificado inteiro (patches_f11, plano 5,
+         * tools/anchor/f11.py): as 873 linhas so fecham o quadro juntas;
+         * uma por uma, cada uma sairia "falsa". Das cinco listas juntas
+         * saem 2.644 pulados. */
+        const char *listas[5] = {
             getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
             "data/patches_cabecalho.txt", "data/patches_cauda.txt",
-            "data/patches_cauda_pb.txt" };
-        for (int f = 0; f < 4; f++) {
+            "data/patches_cauda_pb.txt", "data/patches_f11.txt" };
+        for (int f = 0; f < 5; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;
             char linha[512]; long o; int b, n0 = n_det;

@@ -1,6 +1,27 @@
 # Resultados medidos
 
-## Estado de hoje — 2026-09-18
+## Estado de hoje — 2026-09-28: o frame 11 consertado
+
+**Quadros bons de verdade: 168** de 3.445 — as três ilhas (0–12, 2333–2361,
+3319–3444), agora contínua no GOP 0 do 0 ao 12. O `serie 0 3444` com `TARJA=1`
+dá **165** (eram 163): os 168 menos 2359, 2360 e 2361, de slice encerrado cedo.
+
+| | antes | depois |
+|---|---|---|
+| `patches.txt` | 3.121 linhas | **3.994** (+873 do frame 11, `data/patches_f11.txt`) |
+| `serie 0 3444` (`TARJA=1`) | 163 | **165** — entram o 11 e o 12; nenhum outro muda |
+| `mapa` do filme | frame 11 para no MB 1 | frame 11 **inteiro** (8.160 MBs); nenhum outro quadro muda |
+| `panorama`, frame 11 | tarja 15, campo 43 | tarja **16,000**, campo **43,000** — o fade exato |
+| `verify` com `BASE_N=1338` | 0 válidos, 12 falsos, 1.771 pulados | 0 válidos, 12 falsos, **2.644** pulados |
+
+**Consertado por reparo: 1 quadro, o 11** — 818 bits trocados no slice e 55 no
+enchimento, 3,87% uniforme (a densidade da zona de dano), achados
+recodificando o quadro inteiro a partir do conteúdo conhecido
+([`PLANO_RECODIFICA_F11.md`](PLANO_RECODIFICA_F11.md)). **Destravado por
+consequência: o 12**, cujos bits não mudaram — ele era bom e só caía pela
+referência quebrada. **Já eram bons antes deste lote:** os outros 166.
+
+## Estado de 2026-09-18
 
 **Quadros bons de verdade: 167** de 3.445 — as três ilhas (0–10, 2333–2361,
 3319–3444, somando 166) mais o frame 12. São **5,57 s** de 114,95 s, em 4
@@ -36,11 +57,11 @@ Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 
 | | |
 |---|---|
-| `patches.txt` | 3.121 linhas desde 2026-09-25 (−32 de cauda de IDR sem prova, `data/cauda_auditoria.txt`, `mapa` idêntico). Antes: 3.153 (+475 de cauda de P/B em 325 quadros, `data/patches_cauda_pb.txt`; `mapa` muda só no 2189, erro 2 MBs adiante; antes disso +65 de cauda de IDR, `data/patches_cauda.txt`, `mapa` idêntico). Antes: 2.613 (+781: cabeçalhos de slice de 569 quadros, `data/patches_cabecalho.txt`). Entraram 791; 12, de 6 quadros, estavam erradas e saíram no mesmo dia (armadilha 57); depois entraram 2 (1597 e 1610), achadas quando o 1595 deixou de contar como IDR |
+| `patches.txt` | 3.994 linhas desde 2026-09-28 (+873 do frame 11, `data/patches_f11.txt`, `mapa` muda só no 11). Antes: 3.121 linhas desde 2026-09-25 (−32 de cauda de IDR sem prova, `data/cauda_auditoria.txt`, `mapa` idêntico). Antes: 3.153 (+475 de cauda de P/B em 325 quadros, `data/patches_cauda_pb.txt`; `mapa` muda só no 2189, erro 2 MBs adiante; antes disso +65 de cauda de IDR, `data/patches_cauda.txt`, `mapa` idêntico). Antes: 2.613 (+781: cabeçalhos de slice de 569 quadros, `data/patches_cabecalho.txt`). Entraram 791; 12, de 6 quadros, estavam erradas e saíram no mesmo dia (armadilha 57); depois entraram 2 (1597 e 1610), achadas quando o 1595 deixou de contar como IDR |
 | `serie 0 3444` com a cadeia de referência (`TARJA=1`) | **167** — idêntico antes e depois do lote. O conjunto é as três ilhas + o 1683 (listrado, falso positivo); o 12 fica de fora por depender do frame 11 |
 | imagens dos 167 bons | **byte a byte iguais** antes e depois do lote |
 | `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **159 / 2.133 / 1.153** (com as 12 linhas erradas eram 165: elas tiravam a imagem de 6 quadros) |
-| `verify` com `BASE_N=1338` | **0 válidos, 12 falsos** explicados, 1.771 pulados (desde 2026-09-25, com os 33 de cauda de IDR e os 475 de cauda de P/B) — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
+| `verify` com `BASE_N=1338` | **0 válidos, 12 falsos** explicados, 2.644 pulados (desde 2026-09-28, com os 33 de cauda de IDR, os 475 de cauda de P/B e os 873 do frame 11) — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
 
 **Frame 2361 (aprovado pelo usuário):** o reparo antigo (`77528961 0` +
 `77528965 2`) dava cabeçalho inválido e o B decodificava "tudo skip" em 8 bytes —
