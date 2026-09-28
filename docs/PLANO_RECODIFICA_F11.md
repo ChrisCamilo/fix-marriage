@@ -1,6 +1,6 @@
 # Plano 5 — Frame 11: recodificar o quadro inteiro
 
-**Estado: passos 1 e 2 feitos; passo 3 em andamento** (proposto e iniciado
+**Estado: passos 1–4 feitos — proposta de 873 bits aguardando aprovação** (proposto e iniciado
 em 2026-09-25 — ver "Resultados" no fim). Generaliza o método do
 [`PLANO_ANCORA_CAUDA.md`](PLANO_ANCORA_CAUDA.md) — recodificar com CABAC um
 trecho de sintaxe conhecida e comparar com o arquivo — da tarja para o quadro
@@ -346,3 +346,33 @@ o 961 inteiro não se determinam com o dano da zona: nos ~200 bits deles cabem
 ~8 trocas, e qualquer gramática com liberdade suficiente para conter a verdade
 contém também um lixo que encaixa melhor. Falta um gabarito de croma — o valor
 de croma da tarja e do campo no fade, que ninguém mediu ainda.
+
+## Resultado: o frame 11 inteiro (2026-09-28)
+
+**O croma dos irmãos destravou.** Medido no decode do GOP 0: o campo do fade
+muda de croma em passos de 1 (U 128 → 127 → 126, V 128 → 129 → 130 até o 9); a
+tarja fica 128. Com isso o croma dos MBs de borda deixa de ser livre: é o
+alvo (fonte uniforme por faixa) menos a predição da referência, quantizado
+como um encoder faz (`tools/anchor/residuo.py`: transformada, quantização e
+reconstrução da norma, validadas reconstruindo exato MBs do frame 9).
+
+- **Fileira 8:** MB 960 inter ref 0 com a fonte U 128/125, V 128/131 (linha 64 /
+  resto) e arredondamento 1/6: 149 bits com 5 fora. MB 961 I16x16 horizontal
+  com resíduo de croma a partir da reconstrução do 960 (como o 7081 do 9). A
+  fileira inteira: 16 de 497 bits fora.
+- **Fileira 59:** a tarja de baixo começa na linha 950 (130 linhas, simétrica à
+  de cima) — com isso, MB 7080 16x8 (ref 0 no campo, ref 2 na tarja) e 7081
+  horizontal com resíduo de croma: do 7080 ao fim, 96 de 2.937 bits fora. O
+  `cabac_p.py` ganhou 16x8/8x16 (validado no frame 5).
+- **MB 0 confirmado pela física:** ref 2 com peso (64,−16) leva a tarja a 16
+  exato; o croma dela (127/129 com os offsets) pede DC U +1 / V −1 — o CBP 16
+  com DC U +3, V −3 da hipótese.
+
+**A prova (passo 4):** slice inteiro com 3,87% de bits fora, uniforme, com a
+estatística de trocas independentes; NAL corrigido fechando exatamente no
+tamanho do arquivo; JM sem erro com a sintaxe das hipóteses; imagem tarja
+16,000 e campo 43,000 exatos; ffmpeg sem erro no GOP 0; mapa do filme inteiro
+só muda o 11 (0% → 100%); `serie` no GOP 0 de 11 para 13 quadros bons (o 11 e o
+12). Proposta em `data/patches_f11_proposta.txt` — **873 linhas**, não aplicada.
+
+Reproduzir: `python tools/anchor/f11.py nal <saida.txt>`.

@@ -22,6 +22,9 @@
 #                      com 0..MAXF trocas novas numa janela de JAN bits,
 #                      filtro de fisica da borda, fecho pelo molde depois.
 #                      Ponto de retomada a cada MB; PROCS e JAN0 no ambiente.
+#   nal [saida.txt]    monta o NAL do 11 a partir das hipoteses (cabecalho do
+#                      arquivo + slice recodificado + cabac_zero_word) e lista
+#                      os bits que diferem do arquivo (offset bit)
 #   sintaxe K KF KT LARG
 #                      feixe sobre VALORES de sintaxe na regiao [K, KF), elemento
 #                      a elemento, pontuado pelos bits emitidos (metrica de
@@ -602,6 +605,41 @@ def busca_fileira8(larg=48, procs=8, KT=1320):
     return res
 
 
+# ---------------------------------------------------------------- NAL corrigido e trocas
+def _escapa(rbsp):
+    """RBSP -> NAL: 03 de escape depois de 00 00 antes de 00-03, e o 03 final
+    quando o RBSP termina em 00 (so acontece com cabac_zero_word)."""
+    out = bytearray(); z = 0
+    for b in rbsp:
+        if z >= 2 and b <= 3: out.append(3); z = 0
+        out.append(b); z = z + 1 if b == 0 else 0
+    if out and out[-1] == 0: out.append(3)
+    return bytes(out)
+
+
+def nal_corrigido():
+    """NAL do frame 11 recodificado a partir das hipoteses.
+
+    O cabecalho do slice (bytes 0-20) fica como esta no arquivo: bate com o
+    molde dos irmaos bit a bit (so o peso da ref 1, que nenhum MB usa, nao se
+    verifica). O slice data vem do cabac_p a partir de data/f11/hipoteses.json;
+    depois, cabac_zero_word ate o NAL fechar no tamanho do arquivo -- se nenhum
+    numero de palavras fecha, o modelo esta errado.
+
+    Devolve: (nal do arquivo, nal corrigido, lista de (offset absoluto, bit))."""
+    d, ix = buffer(); o, s = ix[11][1], ix[11][2]; nal = bytes(d[o + 4:o + s])
+    rb, _ = rbsp(nal)
+    bits = rb[:8 * BYTE_INI] + ''.join(map(str, C.codifica(hipoteses(), QP, MODELO)))
+    bits += '0' * (-len(bits) % 8)
+    base = bytes(int(bits[i:i + 8], 2) for i in range(0, len(bits), 8))
+    for k in range(0, 1000):
+        cand = _escapa(base + b'\x00\x00' * k)
+        if len(cand) >= len(nal): break
+    if len(cand) != len(nal): raise ValueError('o NAL corrigido nao fecha no tamanho do arquivo (%d != %d)' % (len(cand), len(nal)))
+    trocas = [(o + 4 + i, bit) for i, (a, b) in enumerate(zip(nal, cand)) for bit in range(8) if (a ^ b) >> bit & 1]
+    return nal, cand, trocas
+
+
 def _txt(se):
     cab = [x for x in se if x[0] not in ('mb_skip_flag', 'end_of_slice_flag') and x[0] not in C.NOME_BLOCO]
     res = ' '.join(('|' if v == (0, 0) else '%s%s' % (k[0], v)) for k, v in se if k in C.NOME_BLOCO)
@@ -634,6 +672,11 @@ if __name__ == '__main__':
             print('regiao %d de %d fora, depois %d de %d fora; trocas novas %s' % (reg, nr, dep, nd, tr))
         if res:
             for i, se in enumerate(res[0][5]): print(K + i, _txt(se)[:220])
+    elif sub == 'nal':
+        nal, cand, trocas = nal_corrigido()
+        print('NAL de %d bytes; %d bits trocados' % (len(nal), len(trocas)))
+        if a:
+            open(a[0], 'w').write(''.join('%d %d\n' % t for t in trocas)); print('trocas gravadas em', a[0])
     elif sub == 'fileira8':
         res = busca_fileira8(int(a[0]) if a else 48, int(os.environ.get('PROCS', '8')))
         for pts, p1080, fr, fc, nc, e960, s961, c in res[:8]:

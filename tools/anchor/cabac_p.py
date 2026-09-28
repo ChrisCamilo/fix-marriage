@@ -11,16 +11,17 @@
 # codificar e decodificar nao podem divergir.
 #
 # Cobre o que um quadro P de fluxo progressivo 4:2:0 sem 8x8 usa: mb_skip_flag,
-# mb_type de P (inter 16x16 e o prefixo intra com I16x16), ref_idx (omitido
-# quando o slice tem uma referencia ativa so), mvd, coded_block_pattern,
+# mb_type de P (inter 16x16, 16x8 e 8x16, e o prefixo intra com I16x16),
+# ref_idx (por particao; omitido quando o slice tem uma referencia ativa so),
+# mvd (por particao; contexto pelos blocos 4x4 vizinhos), coded_block_pattern,
 # mb_qp_delta, intra_chroma_pred_mode e o residuo (DC luma de I16x16, blocos
-# 4x4 de luma, DC e AC de croma), mais o end_of_slice_flag. Nao cobre 16x8,
-# 8x16, P8x8, I4x4, AC de luma em I16x16 nem I_PCM (erro explicito).
+# 4x4 de luma, DC e AC de croma), mais o end_of_slice_flag. Nao cobre P8x8,
+# I4x4, AC de luma em I16x16 nem I_PCM (erro explicito).
 #
-# Validado: codifica os quadros P 3, 7 e 9 do GOP 0 a partir do trace do JM
-# com 0 diferencas, slice inteiro com o stop bit (o 3 com o campo em skip; o 7
-# e o 9 com o campo em I16x16); decodifica o 9 e devolve a sintaxe do trace.
-# O 1 (tem MB I4x4) e o 5 (tem 16x8) ficam fora do alcance.
+# Validado: codifica os quadros P 3, 5, 7 e 9 do GOP 0 a partir do trace do JM
+# com 0 diferencas, slice inteiro com o stop bit (o 3 e o 5 com o campo em
+# skip, o 5 com um MB 16x8; o 7 e o 9 com o campo em I16x16); decodifica os
+# quatro e devolve a sintaxe do trace. O 1 (tem MB I4x4) fica fora do alcance.
 #
 #   codifica(sintaxe, qp, modelo, n_mb=None, posicoes=None, reinicio=None)
 #     -> lista de bits (0/1) do slice data, do primeiro bit depois do
@@ -192,7 +193,7 @@ class MB:
     """O que um MB ja processado deixa para os vizinhos."""
     def __init__(self):
         self.skip = False; self.intra = False; self.cbp = 0; self.cipr = 0
-        self.sbits = 0; self.ref = -1; self.mvd = [[0, 0]] * 16
+        self.sbits = 0; self.ref = -1; self.mvd = [[0, 0]] * 16; self.ref4 = [-1] * 16
 
 
 def _blocos(elems):
@@ -299,7 +300,7 @@ def processa_mb(io, ctx, mbs, m, se, st, fim, marca=None):
     pul = io.bin(ctx['mb_type'][1][a + b], E(1 if enc and d['mb_skip_flag'] == 0 else 0))
     out.append(('mb_skip_flag', (0 if pul else 1,)))
     if pul:
-        cur.skip = True; cur.ref = 0; st['dq'] = 0
+        cur.skip = True; cur.ref = 0; cur.ref4 = [0] * 16; st['dq'] = 0
         eos = io.term(E(fim)); out.append(('end_of_slice_flag', (eos,))); return out, eos
     # --- mb_type de P
     mt = ctx['mb_type'][1]; t = d.get('mb_type')
@@ -319,7 +320,7 @@ def processa_mb(io, ctx, mbs, m, se, st, fim, marca=None):
             t = 2 if io.bin(mt[7], E(1 if enc and t == 2 else 0)) else 3
         else:
             t = 4 if io.bin(mt[6], E(1 if enc and t == 4 else 0)) else 1
-        if t != 1: raise ForaDoAlcance('particao %d' % t)
+        if t == 4: raise ForaDoAlcance('particao 8x8')
     out.append(('mb_type', (t,)))
     if cur.intra:
         # --- intra_chroma_pred_mode
@@ -332,40 +333,60 @@ def processa_mb(io, ctx, mbs, m, se, st, fim, marca=None):
                 v = 3 if io.bin(ctx['cipr'][3], E(1 if enc and cm > 2 else 0)) else 2
         cur.cipr = v; out.append(('intra_chroma_pred_mode', (v,)))
     else:
-        # --- ref_idx (P16x16: bloco 0,0; vizinhos 4x4 esquerdo e de cima)
+        # --- particoes: 16x16 (1), 16x8 (2: cima, baixo), 8x16 (3: esquerda, direita).
+        # Cada particao e dada pelo bloco 4x4 do canto (bx, by) e pelos blocos que cobre.
+        if t == 1: parts = [((0, 0), range(16))]
+        elif t == 2: parts = [((0, 0), range(8)), ((0, 2), range(8, 16))]
+        else: parts = [((0, 0), [i for i in range(16) if i % 4 < 2]), ((2, 0), [i for i in range(16) if i % 4 >= 2])]
+        def viz_bloco(bx, by):
+            """(MB, indice do bloco) do vizinho esquerdo e de cima de um bloco 4x4 do MB atual."""
+            a = (cur, by * 4 + bx - 1) if bx > 0 else ((esq, by * 4 + 3) if esq else (None, None))
+            b = (cur, (by - 1) * 4 + bx) if by > 0 else ((cima, 12 + bx) if cima else (None, None))
+            return a, b
+        # --- ref_idx de todas as particoes, depois os mvd (ordem do JM)
         codificado = ('ref_idx_l0' in d) if enc else st['nref'] > 1
-        ref = 0
-        if codificado:
-            rv = d.get('ref_idx_l0')
-            a = 1 if esq and esq.ref > 0 else 0; b = 2 if cima and cima.ref > 0 else 0
-            rn = ctx['ref_no'][0]
-            if io.bin(rn[a + b], E(1 if enc and rv else 0)):
-                ref = 1
-                if io.bin(rn[4], E(1 if enc and rv > 1 else 0)):
-                    ref = 2
-                    while io.bin(rn[5], E(1 if enc and ref < rv else 0)): ref += 1
-            out.append(('ref_idx_l0', (ref,)))
-        cur.ref = ref
-        # --- mvd (x e y)
-        mv = []
-        for k in range(2):
-            s = (abs(esq.mvd[3][k]) if esq else 0) + (abs(cima.mvd[12][k]) if cima else 0)
-            ci = 5 * k if s < 3 else (5 * k + 3 if s > 32 else 5 * k + 2)
-            v = d.get('mvd%d_l0' % k); val = 0
-            if io.bin(ctx['mv_res'][0][ci], E(1 if enc and v else 0)):
-                u = abs(v) - 1 if enc else None
-                base = ctx['mv_res'][1]; b0 = 5 * k; uu = 0
-                if io.bin(base[b0], E(1 if enc and u > 0 else 0)):
-                    seq = [b0 + 1, b0 + 2] + [b0 + 3] * 10
-                    it = 0; l = 1
-                    while l and it < 7:
-                        l = io.bin(base[seq[it]], E(1 if enc and it + 1 < u else 0)); it += 1
-                    uu = it
-                    if l: uu = 7 + io.eg((u - 8) if enc else None, 3) + 1
-                mag = uu + 1
-                val = -mag if io.bypass(E(1 if enc and v < 0 else 0)) else mag
-            mv.append(val); out.append(('mvd%d_l0' % k, (val,)))
-        cur.mvd = [mv] * 16
+        refs_dados = [v[0] for k, v in se if k == 'ref_idx_l0'] if enc else []
+        for pi, ((bx, by), blocos) in enumerate(parts):
+            ref = 0
+            if codificado:
+                rv = refs_dados[pi] if enc else None
+                (ma, ia), (mb_, ib) = viz_bloco(bx, by)
+                a = 1 if ma is not None and ma.ref4[ia] > 0 else 0
+                b = 2 if mb_ is not None and mb_.ref4[ib] > 0 else 0
+                rn = ctx['ref_no'][0]
+                if io.bin(rn[a + b], E(1 if enc and rv else 0)):
+                    ref = 1
+                    if io.bin(rn[4], E(1 if enc and rv > 1 else 0)):
+                        ref = 2
+                        while io.bin(rn[5], E(1 if enc and ref < rv else 0)): ref += 1
+                out.append(('ref_idx_l0', (ref,)))
+            for i in blocos: cur.ref4[i] = ref
+        cur.ref = cur.ref4[0]
+        # --- mvd (x e y) de cada particao
+        if t == 1: mvds_dados = [d.get('mvd0_l0'), d.get('mvd1_l0')] if enc else []
+        else: mvds_dados = [v[0] for k, v in se if k == 'mvd_l0'] if enc else []
+        cur.mvd = [[0, 0] for _ in range(16)]
+        for pi, ((bx, by), blocos) in enumerate(parts):
+            mv = []
+            (ma, ia), (mb_, ib) = viz_bloco(bx, by)
+            for k in range(2):
+                s = (abs(ma.mvd[ia][k]) if ma is not None else 0) + (abs(mb_.mvd[ib][k]) if mb_ is not None else 0)
+                ci = 5 * k if s < 3 else (5 * k + 3 if s > 32 else 5 * k + 2)
+                v = mvds_dados[2 * pi + k] if enc else None; val = 0
+                if io.bin(ctx['mv_res'][0][ci], E(1 if enc and v else 0)):
+                    u = abs(v) - 1 if enc else None
+                    base = ctx['mv_res'][1]; b0 = 5 * k; uu = 0
+                    if io.bin(base[b0], E(1 if enc and u > 0 else 0)):
+                        seq = [b0 + 1, b0 + 2] + [b0 + 3] * 10
+                        it = 0; l = 1
+                        while l and it < 7:
+                            l = io.bin(base[seq[it]], E(1 if enc and it + 1 < u else 0)); it += 1
+                        uu = it
+                        if l: uu = 7 + io.eg((u - 8) if enc else None, 3) + 1
+                    mag = uu + 1
+                    val = -mag if io.bypass(E(1 if enc and v < 0 else 0)) else mag
+                mv.append(val); out.append((('mvd%d_l0' % k) if t == 1 else 'mvd_l0', (val,)))
+            for i in blocos: cur.mvd[i] = mv
         # --- coded_block_pattern
         cbp_v = d.get('coded_block_pattern'); cc = ctx['cbp']; acum = 0
         for my in (0, 2):

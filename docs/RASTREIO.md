@@ -1868,6 +1868,14 @@ recusava o GOP 0 depois do 9.
 (CABAC de slice P espelhando as funções de leitura do JM) recodifica os quadros
 3, 7 e 9 a partir do trace com **0 diferenças** em 6.322, 21.578 e 21.172 bits
 — o slice inteiro, até o stop bit.
+
+**Frame 11 recodificado inteiro (2026-09-28).** Com o croma do fade medido nos
+irmãos, as bordas deixaram de ser livres e fecharam pela física (MB 960 e 7080
+inter com resíduo calculado; 961 e 7081 horizontais com resíduo de croma). O
+slice recodificado difere do arquivo em 873 bits (3,87%, uniforme) e o NAL
+corrigido fecha no tamanho exato; o JM o decodifica sem erro, a imagem sai
+16/43 exata, e pelo critério rigoroso o GOP 0 passa de 11 para 13 quadros bons.
+Proposta em `data/patches_f11_proposta.txt`, aguardando aprovação.
 ### E a corrida revelou por que o ataque estava mal posto
 
 Os 14 bits de 1 flip que fazem o frame 11 "decodificar inteiro" não consomem o

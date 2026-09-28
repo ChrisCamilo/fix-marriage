@@ -78,15 +78,1046 @@
      0
     ]
    ]
+  ],
+  "960": [
+   [
+    "mb_skip_flag",
+    [
+     1
+    ]
+   ],
+   [
+    "mb_type",
+    [
+     1
+    ]
+   ],
+   [
+    "ref_idx_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "mvd0_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "mvd1_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "coded_block_pattern",
+    [
+     35
+    ]
+   ],
+   [
+    "mb_qp_delta",
+    [
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     -2,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     2,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     5
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     5
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     5
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     5
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "end_of_slice_flag",
+    [
+     0
+    ]
+   ]
+  ],
+  "961": [
+   [
+    "mb_skip_flag",
+    [
+     1
+    ]
+   ],
+   [
+    "mb_type",
+    [
+     16
+    ]
+   ],
+   [
+    "intra_chroma_pred_mode",
+    [
+     1
+    ]
+   ],
+   [
+    "mb_qp_delta",
+    [
+     0
+    ]
+   ],
+   [
+    "DC luma 16x16",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "end_of_slice_flag",
+    [
+     0
+    ]
+   ]
+  ],
+  "7080": [
+   [
+    "mb_skip_flag",
+    [
+     1
+    ]
+   ],
+   [
+    "mb_type",
+    [
+     2
+    ]
+   ],
+   [
+    "ref_idx_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "ref_idx_l0",
+    [
+     2
+    ]
+   ],
+   [
+    "mvd_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "mvd_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "mvd_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "mvd_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "coded_block_pattern",
+    [
+     35
+    ]
+   ],
+   [
+    "mb_qp_delta",
+    [
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "Luma sng",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     -2,
+     1
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     2,
+     1
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     5
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     5
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     5
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     5
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "end_of_slice_flag",
+    [
+     0
+    ]
+   ]
+  ],
+  "7081": [
+   [
+    "mb_skip_flag",
+    [
+     1
+    ]
+   ],
+   [
+    "mb_type",
+    [
+     16
+    ]
+   ],
+   [
+    "intra_chroma_pred_mode",
+    [
+     1
+    ]
+   ],
+   [
+    "mb_qp_delta",
+    [
+     0
+    ]
+   ],
+   [
+    "DC luma 16x16",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     1,
+     1
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     -1,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "AC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "end_of_slice_flag",
+    [
+     0
+    ]
+   ]
   ]
  },
  "trocas": [],
- "trocas_provaveis": {
-  "960": [
-   2655,
-   2677,
-   2696,
-   2699
-  ]
- }
+ "trocas_provaveis": {},
+ "_fileira8": "MB 960: inter ref 0, residuo pela fisica (fonte de croma U 128/125, V 128/131, f 1/6); MB 961: I16x16 horizontal com residuo de croma (croma 1), a partir da reconstrucao do 960; 962-1079 como no frame 9. Fileira: 16 de 497 bits fora.",
+ "_fileira59": "MB 7080: 16x8, ref 0 em cima (campo) e ref 2 embaixo (tarja, desde a linha 950), mvd 0, residuo pela fisica (croma U 125/128, V 131/128, f 1/6); MB 7081: I16x16 horizontal com residuo de croma (croma 1). Do 7080 ao fim do slice: 96 de 2.937 bits fora."
 }
