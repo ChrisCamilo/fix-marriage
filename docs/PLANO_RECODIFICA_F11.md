@@ -279,3 +279,23 @@ Com o prefixo recodificado até o MB 959 emendado no arquivo, o JM passa a ler o
 do estado exato, trocas de bit onde a comparação mostra desvio isolado, e o
 comprimento exato da região (o molde recomeça num bit conhecido) como fecho.
 Depois, a prova do passo 4 decide também a hipótese do MB 0.
+
+### Ferramentas no repositório (2026-09-28)
+
+`tools/anchor/f11.py` junta o que estava no scratchpad: `encaixe` (trecho do
+molde com o range livre), `perfil` (janelas curtas), `le` (decodifica do
+estado exato com trocas dadas) e `feixe` (decodificação em feixe sobre trocas
+de bit, com ponto de retomada e memória limitada — só os sobreviventes carregam
+estado completo). Os dados que vinham do JM ficam em `data/f11/`: a sintaxe dos
+quadros P do fade (`sintaxe_pocNN.json.gz`) e as hipóteses provisórias do 11
+(`hipoteses.json`: o MB 0 e as trocas prováveis do MB 960).
+
+**Borda da fileira 8, até aqui.** O MB 960 é inter, ref 0, CBP 35, com a luma
+da física e DC de croma U = +3; os primeiros 84 bits dele batem com o arquivo
+com 4 trocas isoladas (bits 2.655, 2.677, 2.696, 2.699 — as duas últimas ainda
+incertas). O feixe sobre trocas morre nos MBs grandes (4–5 trocas por MB de
+~100 bits, acima do limite de 2 por MB), e o MB 961 é outro inter grande (~90
+bits: a região 960–987 tem 282 bits no 11 contra 260 no 9, e os MBs horizontais
+da borda custam 3–5 bits cada). Próximo: feixe sobre **valores de sintaxe**,
+elemento a elemento, pontuado pelas discordâncias dos bits já emitidos — as
+trocas viram só custo, sem enumerá-las.

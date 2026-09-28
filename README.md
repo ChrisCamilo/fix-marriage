@@ -94,8 +94,11 @@ raiz/                   o que todo comando cita, e o que nunca se move
                         (referência em data/regression/)
     confere_doc.py      confere o padrão de documentação das funções
                         (docs/REFATORACAO.md, seção 4c)
-    anchor/             recodificação CABAC da tarja (plano 2): ancora*.c,
-                        cabac_enc*.py, cauda_lote.py, cauda_pb.py
+    anchor/             recodificação CABAC (planos 2 e 5): ancora*.c,
+                        cabac_enc*.py, cauda_lote.py, cauda_pb.py (a tarja);
+                        cabac_p.py (CABAC de slice P nos dois sentidos, com
+                        ctx_init.json), jm_trace.py (lê o trace do JM) e
+                        f11.py (encaixe, leitura e feixe do frame 11)
   docs/                 os doze documentos que crescem
   data/                 registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
@@ -108,6 +111,8 @@ raiz/                   o que todo comando cita, e o que nunca se move
     candidatos_f13.txt candidatos_f19.txt candidatos_idr3047.txt
     janela_f11.txt      candidatos e janelas de busca -- NAO sao patches,
                         cada um traz sua condicao de promocao escrita
+    f11/                sintaxe dos quadros P do fade (trace do JM) e as
+                        hipóteses provisórias do frame 11 -- NÃO são patches
   output/               produtos: novos_*.txt, vídeo remontado, ver_final.html
   logs/                 saída de corrida — fora do versionamento
 ```

@@ -1,0 +1,92 @@
+{
+ "_nota": "Hipoteses do frame 11 (plano 5). PROVISORIAS: nada disto esta provado nem entra no patches.txt.",
+ "mb": {
+  "0": [
+   [
+    "mb_skip_flag",
+    [
+     1
+    ]
+   ],
+   [
+    "mb_type",
+    [
+     1
+    ]
+   ],
+   [
+    "ref_idx_l0",
+    [
+     2
+    ]
+   ],
+   [
+    "mvd0_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "mvd1_l0",
+    [
+     0
+    ]
+   ],
+   [
+    "coded_block_pattern",
+    [
+     16
+    ]
+   ],
+   [
+    "mb_qp_delta",
+    [
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     3,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     -3,
+     0
+    ]
+   ],
+   [
+    "2x2 DC Chroma",
+    [
+     0,
+     0
+    ]
+   ],
+   [
+    "end_of_slice_flag",
+    [
+     0
+    ]
+   ]
+  ]
+ },
+ "trocas": [],
+ "trocas_provaveis": {
+  "960": [
+   2655,
+   2677,
+   2696,
+   2699
+  ]
+ }
+}
