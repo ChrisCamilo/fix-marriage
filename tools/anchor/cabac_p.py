@@ -18,12 +18,16 @@
 # 4x4 de luma, DC e AC de croma), mais o end_of_slice_flag. Nao cobre P8x8,
 # I4x4, AC de luma em I16x16 nem I_PCM (erro explicito).
 #
+# Slices I e B, so o que a tarja usa (censo da cabeca, tools/anchor/cabeca.py):
+# em I, o mb_type do slice I (I16x16; I4x4 e I_PCM sao erro explicito) e o
+# mesmo caminho intra do P; em B, so o MB pulado (qualquer outro e erro).
+#
 # Validado: codifica os quadros P 3, 5, 7 e 9 do GOP 0 a partir do trace do JM
 # com 0 diferencas, slice inteiro com o stop bit (o 3 e o 5 com o campo em
 # skip, o 5 com um MB 16x8; o 7 e o 9 com o campo em I16x16); decodifica os
 # quatro e devolve a sintaxe do trace. O 1 (tem MB I4x4) fica fora do alcance.
 #
-#   codifica(sintaxe, qp, modelo, n_mb=None, posicoes=None, reinicio=None)
+#   codifica(sintaxe, qp, modelo, n_mb=None, posicoes=None, reinicio=None, tipo='P')
 #     -> lista de bits (0/1) do slice data, do primeiro bit depois do
 #        alinhamento ate o stop bit, inclusive
 #     sintaxe  {mb: [(elemento, (valores...)), ...]} para os MBs 0..N-1 em ordem
@@ -36,14 +40,16 @@
 #              e poe o range dado, mantendo os contextos -- para encaixar um
 #              trecho cujo estado aritmetico de entrada e desconhecido (os
 #              ~12 primeiros bits dali dependem do low e nao valem)
+#     tipo     'P', 'I' ou 'B' (tipo do slice)
 #
-#   decodifica(bits, qp, modelo, n_mb=8160, nref=3, posicoes=None)
+#   decodifica(bits, qp, modelo, n_mb=8160, nref=3, posicoes=None, tipo='P')
 #     -> {mb: sintaxe} dos MBs lidos ate o fim do slice, o n_mb ou o primeiro
 #        elemento fora do alcance (esse MB fica de fora)
 #     bits     lista de 0/1 do slice data (do primeiro bit depois do alinhamento)
 #     nref     referencias ativas da lista 0 (ref_idx so e lido se > 1)
 #     posicoes lista que recebe, por MB, quantos bits o decodificador ja tinha
 #              lido ao comecar o MB (inclui os 9 da inicializacao)
+#     tipo     como no codifica
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from cabac_enc import RL, MPS, LPS
@@ -268,14 +274,15 @@ def _bloco(io, ctx, tipo, up, lf, coef):
 
 
 def processa_mb(io, ctx, mbs, m, se, st, fim, marca=None):
-    """Um MB de slice P, codificado (se dado) ou decodificado (se None).
+    """Um MB de slice P (ou I, ou B pulado), codificado (se dado) ou decodificado (se None).
 
       io   Enc ou Dec
       ctx  contextos do slice (mudam)
       mbs  {mb: MB} dos ja processados (recebe o atual)
       m    endereco do MB
       se   sintaxe do MB no formato do trace (Enc) ou None (Dec)
-      st   estado do slice: 'dq' (ultimo mb_qp_delta) e 'nref'
+      st   estado do slice: 'dq' (ultimo mb_qp_delta), 'nref' e 'tipo'
+           ('P', 'I' ou 'B'; ausente = 'P')
       fim  end_of_slice_flag a codificar (Enc; ignorado no Dec)
       marca  funcao chamada sem argumentos ao fim do cabecalho do MB (depois do
            mb_qp_delta, ou do CBP quando ele e 0) e ao fim de cada bloco de
@@ -295,32 +302,51 @@ def processa_mb(io, ctx, mbs, m, se, st, fim, marca=None):
             if k not in NOME_BLOCO: d.setdefault(k, v[0] if v else None)
         fila = _blocos([(k, v) for k, v in se if k in NOME_BLOCO])
     E = lambda x: x if enc else None
-    # --- mb_skip_flag (no trace: 1 = NAO pulado)
-    a = 1 if esq and not esq.skip else 0; b = 1 if cima and not cima.skip else 0
-    pul = io.bin(ctx['mb_type'][1][a + b], E(1 if enc and d['mb_skip_flag'] == 0 else 0))
-    out.append(('mb_skip_flag', (0 if pul else 1,)))
-    if pul:
-        cur.skip = True; cur.ref = 0; cur.ref4 = [0] * 16; st['dq'] = 0
-        eos = io.term(E(fim)); out.append(('end_of_slice_flag', (eos,))); return out, eos
-    # --- mb_type de P
-    mt = ctx['mb_type'][1]; t = d.get('mb_type')
-    if io.bin(mt[4], E(1 if enc and t >= 6 else 0)):
-        if not io.bin(mt[7], E(1 if enc and t >= 7 else 0)): raise ForaDoAlcance('I4x4 em P')
+    tipo = st.get('tipo', 'P')
+    if tipo == 'I':
+        # --- mb_type de I (readMB_typeInfo_CABAC_i_slice): vizinho conta se existe
+        # e nao e I4x4 -- e I4x4 aqui nunca e processado
+        mt = ctx['mb_type'][0]; t = d.get('mb_type')
+        a = 1 if esq else 0; b = 1 if cima else 0
+        if not io.bin(mt[a + b], E(1)): raise ForaDoAlcance('I4x4 em I')
         if io.term(E(0)): raise ForaDoAlcance('I_PCM')
-        v = t - 7 if enc else 0
-        ac = io.bin(mt[8], E(v // 12))
+        v = t - 1 if enc else 0
+        ac = io.bin(mt[4], E(v // 12))
         croma = 0
-        if io.bin(mt[9], E(1 if (v % 12) // 4 else 0)):
-            croma = 2 if io.bin(mt[9], E(1 if (v % 12) // 4 == 2 else 0)) else 1
-        pred = 2 * io.bin(mt[10], E((v % 4) >> 1)) + io.bin(mt[10], E((v % 4) & 1))
-        t = 7 + pred + 4 * croma + 12 * ac
+        if io.bin(mt[5], E(1 if (v % 12) // 4 else 0)):
+            croma = 2 if io.bin(mt[6], E(1 if (v % 12) // 4 == 2 else 0)) else 1
+        pred = 2 * io.bin(mt[7], E((v % 4) >> 1)) + io.bin(mt[8], E((v % 4) & 1))
+        t = 1 + pred + 4 * croma + 12 * ac
         cur.intra = True; cur.cbp = croma * 16 + (15 if ac else 0)
     else:
-        if io.bin(mt[5], E(1 if enc and t in (2, 3) else 0)):
-            t = 2 if io.bin(mt[7], E(1 if enc and t == 2 else 0)) else 3
+        # --- mb_skip_flag (no trace: 1 = NAO pulado); em B, contextos 7-9 da linha 2
+        a = 1 if esq and not esq.skip else 0; b = 1 if cima and not cima.skip else 0
+        cs = ctx['mb_type'][2][7 + a + b] if tipo == 'B' else ctx['mb_type'][1][a + b]
+        pul = io.bin(cs, E(1 if enc and d['mb_skip_flag'] == 0 else 0))
+        out.append(('mb_skip_flag', (0 if pul else 1,)))
+        if pul:
+            cur.skip = True; cur.ref = 0; cur.ref4 = [0] * 16; st['dq'] = 0
+            eos = io.term(E(fim)); out.append(('end_of_slice_flag', (eos,))); return out, eos
+        if tipo == 'B': raise ForaDoAlcance('MB de B nao pulado')
+        # --- mb_type de P
+        mt = ctx['mb_type'][1]; t = d.get('mb_type')
+        if io.bin(mt[4], E(1 if enc and t >= 6 else 0)):
+            if not io.bin(mt[7], E(1 if enc and t >= 7 else 0)): raise ForaDoAlcance('I4x4 em P')
+            if io.term(E(0)): raise ForaDoAlcance('I_PCM')
+            v = t - 7 if enc else 0
+            ac = io.bin(mt[8], E(v // 12))
+            croma = 0
+            if io.bin(mt[9], E(1 if (v % 12) // 4 else 0)):
+                croma = 2 if io.bin(mt[9], E(1 if (v % 12) // 4 == 2 else 0)) else 1
+            pred = 2 * io.bin(mt[10], E((v % 4) >> 1)) + io.bin(mt[10], E((v % 4) & 1))
+            t = 7 + pred + 4 * croma + 12 * ac
+            cur.intra = True; cur.cbp = croma * 16 + (15 if ac else 0)
         else:
-            t = 4 if io.bin(mt[6], E(1 if enc and t == 4 else 0)) else 1
-        if t == 4: raise ForaDoAlcance('particao 8x8')
+            if io.bin(mt[5], E(1 if enc and t in (2, 3) else 0)):
+                t = 2 if io.bin(mt[7], E(1 if enc and t == 2 else 0)) else 3
+            else:
+                t = 4 if io.bin(mt[6], E(1 if enc and t == 4 else 0)) else 1
+            if t == 4: raise ForaDoAlcance('particao 8x8')
     out.append(('mb_type', (t,)))
     if cur.intra:
         # --- intra_chroma_pred_mode
@@ -458,10 +484,10 @@ def processa_mb(io, ctx, mbs, m, se, st, fim, marca=None):
     return out, eos
 
 
-def codifica(sintaxe, qp, modelo, n_mb=None, posicoes=None, reinicio=None):
-    ctx = contextos(qp, modelo); e = Enc()
+def codifica(sintaxe, qp, modelo, n_mb=None, posicoes=None, reinicio=None, tipo='P'):
+    ctx = contextos(qp, modelo, 'I' if tipo == 'I' else 'P'); e = Enc()
     n = n_mb if n_mb is not None else len(sintaxe)
-    mbs = {}; st = {'dq': 0, 'nref': 3}
+    mbs = {}; st = {'dq': 0, 'nref': 3, 'tipo': tipo}
     for m in range(n):
         if reinicio is not None and m == reinicio[0]:
             e.low, e.rng, e.outst, e.primeiro = 0, reinicio[1], 0, False
@@ -473,9 +499,9 @@ def codifica(sintaxe, qp, modelo, n_mb=None, posicoes=None, reinicio=None):
     return e.bits
 
 
-def decodifica(bits, qp, modelo, n_mb=8160, nref=3, posicoes=None):
-    ctx = contextos(qp, modelo); dcd = Dec(bits)
-    mbs = {}; st = {'dq': 0, 'nref': nref}; out = {}
+def decodifica(bits, qp, modelo, n_mb=8160, nref=3, posicoes=None, tipo='P'):
+    ctx = contextos(qp, modelo, 'I' if tipo == 'I' else 'P'); dcd = Dec(bits)
+    mbs = {}; st = {'dq': 0, 'nref': nref, 'tipo': tipo}; out = {}
     for m in range(n_mb):
         if posicoes is not None: posicoes.append(dcd.p)
         try: se, eos = processa_mb(dcd, ctx, mbs, m, None, st, None)

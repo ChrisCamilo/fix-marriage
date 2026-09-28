@@ -1921,3 +1921,14 @@ Então consumo baixo não prova nada sozinho — é a armadilha 36 outra vez. O 
 separa os dois casos não é quanto se consome, é se o resultado bate com a rampa
 **e** com a tarja ao mesmo tempo, que é o que o frame 12 faz e os 14 bits do
 frame 11 não fazem.
+
+## Censo da cabeça — a tarja de cima recodificada (2026-09-28)
+
+Todos os 3.445 quadros: os MBs 0–959 recodificados com CABAC a partir do estado
+exato do começo do slice (`tools/anchor/cabeca.py`, `cabac_p.py` estendido para
+slices I e B) e comparados com o arquivo byte a byte no NAL. Resultado em
+`data/censo_cabeca.txt`; distância 0 passa da tarja, distância ≥ 1 para nela,
+quase sem exceção. Aplicados os níveis A (197 P/B) e I (35 IDRs): 943 bits em
+232 quadros; o B (362 P/B, folga curta) ficou de fora. Fora do censo: 184 com
+cabeçalho inválido, 4 IDRs divergentes (901, 1011, 1437, 2130), P/B com
+distância 4+, B com MB não pulado na cabeça. Detalhe em `docs/CENSO_CABECA.md`.

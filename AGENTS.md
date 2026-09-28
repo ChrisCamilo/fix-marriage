@@ -99,6 +99,20 @@ independentes; o NAL corrigido fecha no tamanho exato; JM e ffmpeg sem erro;
 imagem 16/43 exata; o `mapa` do filme muda só no 11. Uma a uma as linhas não
 fecham nada — só as 873 juntas —, por isso o `verify` pula este também.
 
+No mesmo dia entrou o sexto: a **tarja de cima** (`data/patches_cabeca.txt`,
+943 linhas em 232 quadros, gerado pelo `tools/anchor/cabeca.py`, censo em
+`docs/CENSO_CABECA.md`). No começo do slice o estado do CABAC é exato, e a
+sintaxe da tarja de cima foi medida (I16x16 DC nos IDRs, skip nos P/B); o que
+difere da recodificação é dano. **A comparação é no NAL, byte a byte**: a
+cabeça de P/B é quase só zeros e um terço dos bytes é escape — comparar no
+RBSP deu um falso "11" em ~310 quadros B (escape trocado desloca o RBSP).
+Condição aprovada pelo usuário: nível A (P/B com distância 1–3, 16+ bits
+iguais depois da última troca, trocas a 8+ bits uma da outra) e nível I (IDRs
+com dano uniforme, no máximo 12 diferenças por janela de 64 bits); só quadro
+que parava na tarja e que o `mapa` faz avançar. O nível B (362 quadros, folga
+curta) ficou de fora: no controle, as correções falsas eram todas assim. O
+`mapa` muda só nesses 232, todos para a frente; o `serie` fica em 165.
+
 A `docs/ARMADILHAS.md` lista **61** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
@@ -117,10 +131,10 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 12 falsos, 2644 determinísticos pulados`** (os 480 de
+hoje **`0 válidos, 12 falsos, 3587 determinísticos pulados`** (os 480 de
 `data/deterministicos.txt`, os 783 de `data/patches_cabecalho.txt`, os 33 de
-`data/patches_cauda.txt`, os 475 de `data/patches_cauda_pb.txt` e os 873 de
-`data/patches_f11.txt`), e os 12 falsos são
+`data/patches_cauda.txt`, os 475 de `data/patches_cauda_pb.txt`, os 873 de
+`data/patches_f11.txt` e os 943 de `data/patches_cabeca.txt`), e os 12 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |

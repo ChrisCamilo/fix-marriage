@@ -2023,13 +2023,18 @@ static int modo_verify(int argc, char **argv) {
          *
          * E o frame 11 recodificado inteiro (patches_f11, plano 5,
          * tools/anchor/f11.py): as 873 linhas so fecham o quadro juntas;
-         * uma por uma, cada uma sairia "falsa". Das cinco listas juntas
-         * saem 2.644 pulados. */
-        const char *listas[5] = {
+         * uma por uma, cada uma sairia "falsa".
+         *
+         * E a tarja de cima recodificada (patches_cabeca, docs/CENSO_CABECA.md,
+         * tools/anchor/cabeca.py): prova os bits da cabeca, o dano do meio
+         * continua, como nas caudas. Das seis listas juntas saem 3.587
+         * pulados -- perto do teto de 4.096 do det_off. */
+        const char *listas[6] = {
             getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
             "data/patches_cabecalho.txt", "data/patches_cauda.txt",
-            "data/patches_cauda_pb.txt", "data/patches_f11.txt" };
-        for (int f = 0; f < 5; f++) {
+            "data/patches_cauda_pb.txt", "data/patches_f11.txt",
+            "data/patches_cabeca.txt" };
+        for (int f = 0; f < 6; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;
             char linha[512]; long o; int b, n0 = n_det;
