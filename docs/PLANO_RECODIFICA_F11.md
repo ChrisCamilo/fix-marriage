@@ -299,3 +299,29 @@ bits: a região 960–987 tem 282 bits no 11 contra 260 no 9, e os MBs horizonta
 da borda custam 3–5 bits cada). Próximo: feixe sobre **valores de sintaxe**,
 elemento a elemento, pontuado pelas discordâncias dos bits já emitidos — as
 trocas viram só custo, sem enumerá-las.
+
+### Feixe sobre valores de sintaxe (2026-09-28)
+
+`f11.py sintaxe` enumera a sintaxe elemento a elemento (cabeçalho do MB, depois
+cada bloco de resíduo) e pontua pelos bits já emitidos com a métrica de Fano
+(ε = 4%), mais um custo de complexidade (inter 8, coeficiente 4, troca de modo
+de croma 6 bits) e o molde depois da região como MBs fixos no próprio feixe.
+O `cabac_p.processa_mb` ganhou o gancho `marca` (bits emitidos ao fim de cada
+elemento).
+
+**Validado no frame 9** (`F11_VALIDA=9`, resposta conhecida): acha sozinho a
+sintaxe exata da borda da fileira 8 (960: ref 2, CBP 3; 961: ref 2, CBP 35;
+962+: horizontal, croma 1) — 0 de 260 bits fora, 0 no molde depois; a segunda
+colocada fica em ~40% no molde (506 contra 280 pontos).
+
+**No frame 11 ainda não fecha.** O feixe acumula pontos até o MB 961 e depois
+perde ~1,3 ponto por MB horizontal — ritmo de bits aleatórios: nenhum caminho
+fica em sincronia depois do 961, ou seja, a escolha para 960/961 está errada e
+a verdadeira foi podada antes que o molde a julgasse. Com ~4% de bits trocados,
+dois MBs grandes de sintaxe livre sempre têm um lixo que casa melhor que a
+verdade com dano dentro do próprio MB.
+
+Medidas que entram na próxima tentativa: a região certa é a fileira 8
+inteira (o fim dela também difere do 9: o trecho 988–1079 é ~3 bits mais curto
+no 11), o campo começa no bit 3.122, e a primeira fileira do campo depende do
+modo de croma da fileira 8 (contexto) — indício de croma ≠ 1 na fileira 8 do 11.

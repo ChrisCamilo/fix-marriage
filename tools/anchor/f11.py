@@ -22,6 +22,14 @@
 #                      com 0..MAXF trocas novas numa janela de JAN bits,
 #                      filtro de fisica da borda, fecho pelo molde depois.
 #                      Ponto de retomada a cada MB; PROCS e JAN0 no ambiente.
+#   sintaxe K KF KT LARG
+#                      feixe sobre VALORES de sintaxe na regiao [K, KF), elemento
+#                      a elemento, pontuado pelos bits emitidos (metrica de
+#                      Fano, EPS = 4%) mais um custo de complexidade; o molde de
+#                      KF a KT e o juiz final
+#
+# F11_VALIDA=9 no ambiente troca o 11 pelo 9 (sem dano, sintaxe conhecida):
+# para validar as buscas num caso de resposta sabida.
 #
 # Constantes do 11 (medidas no passo 3): QP 10, cabac_init_idc 0, slice data a
 # partir do byte 21 do NAL, 3 referencias ativas.
@@ -59,10 +67,11 @@ def rbsp(nal):
 
 
 def obs11():
-    """Bits do slice data do frame 11 como estao no arquivo (remendado).
+    """Bits do slice data do frame 11 como estao no arquivo (remendado). Com
+    F11_VALIDA=9 no ambiente, os do frame 9 (sem dano, resposta conhecida).
 
     Devolve: lista de 0/1 a partir do byte 21 do NAL (inclui o enchimento do fim)."""
-    d, ix = buffer(); o, s = ix[11][1], ix[11][2]
+    d, ix = buffer(); t = 9 if os.environ.get('F11_VALIDA') == '9' else 11; o, s = ix[t][1], ix[t][2]
     bits, _ = rbsp(bytes(d[o + 4:o + s]))
     return [int(c) for c in bits[8 * BYTE_INI:]]
 
@@ -83,6 +92,7 @@ def hipoteses():
 
     Devolve: {mb: sintaxe} para os 8.160 MBs."""
     S = sintaxe(20)
+    if os.environ.get('F11_VALIDA') == '9': return S
     h = json.load(open(os.path.join(RAIZ, 'data', 'f11', 'hipoteses.json')))
     for m, se in h['mb'].items(): S[int(m)] = [(k, tuple(v)) for k, v in se]
     return S
@@ -282,6 +292,245 @@ def feixe(K, KF, largura, jan, maxf, fixas=(), jan0=None, procs=8, ponto=None):
         return sorted(ex.map(_fecho, [(cfg, b) for b in beam[:60]]), key=lambda r: r[2] / max(r[3], 1))
 
 
+# ---------------------------------------------------------------- feixe sobre valores de sintaxe
+# Em vez de enumerar trocas de bit, enumera a SINTAXE elemento a elemento e
+# pontua pelos bits ja emitidos: os bits trocados viram so custo. Metrica de
+# Fano para um canal com EPS de bits trocados: bit que bate soma
+# log2((1-EPS)/0,5), bit que diverge soma log2(EPS/0,5). Sintaxe errada diverge
+# ~50% e afunda em poucos bits; caminhos de comprimentos diferentes ficam
+# comparaveis. Bits ja emitidos nao mudam com os simbolos seguintes, entao um MB
+# parcial (blocos ainda nao escolhidos = zero) pode ser pontuado ate a marca do
+# ultimo elemento escolhido.
+import math
+EPS = 0.04
+GANHO, PERDA = math.log2((1 - EPS) / 0.5), math.log2(EPS / 0.5)
+# Custo de complexidade (log2 do prior, em bits): sem ele a gramatica rica
+# "explica" qualquer sequencia de bits -- vira um decodificador, e a sintaxe
+# lida do arquivo reproduz o arquivo (armadilha da autoconsistencia). A borda e
+# quase toda intra horizontal; inter e coeficiente nao nulo custam.
+CUSTO_INTER = float(os.environ.get('F11_CUSTO_INTER', '8'))
+CUSTO_COEF = float(os.environ.get('F11_CUSTO_COEF', '4'))
+# numa fileira uniforme o encoder repete a escolha: trocar o modo de croma entre
+# vizinhos intra custa (sem isso a liberdade de croma absorve bits trocados)
+CUSTO_CROMA = float(os.environ.get('F11_CUSTO_CROMA', '6'))
+
+
+def _custo(h, esc, ant):
+    """log2 do prior (negativo) de um MB de borda com as escolhas feitas.
+
+      h, esc  cabecalho e escolhas do MB
+      ant     sintaxe do MB anterior (para a troca de modo de croma)"""
+    if h is None or h[0] == 'F': return 0.0
+    if h[0] == 'I':
+        d = dict(ant) if ant else {}
+        if d.get('mb_type', (0,))[0] == 8 and d.get('intra_chroma_pred_mode', (h[1],))[0] != h[1]: return -CUSTO_CROMA
+        return 0.0
+    return -CUSTO_INTER - CUSTO_COEF * sum(1 for v in esc if v for x in v if x)
+
+
+def _vetores(n_pos, max_nz, valores, n_total):
+    """Vetores de coeficientes (em ordem de varredura) com ate max_nz nao nulos
+    nas n_pos primeiras posicoes, valores do conjunto dado.
+
+    Devolve: lista de tuplas de comprimento n_total (a primeira e toda zero)."""
+    out = [tuple([0] * n_total)]
+    for k in range(1, max_nz + 1):
+        for ps in itertools.combinations(range(n_pos), k):
+            for vs in itertools.product(valores, repeat=k):
+                v = [0] * n_total
+                for p_, x in zip(ps, vs): v[p_] = x
+                out.append(tuple(v))
+    return out
+
+
+GRAMATICA = {
+    'zero': [None],
+    'luma_topo': _vetores(6, 2, (1, -1, 2, -2), 16),
+    'dc': _vetores(4, 2, (1, -1, 2, -2, 3, -3), 4),
+    'ac': _vetores(10, 2, (1, -1, 2, -2), 15),
+}
+
+
+# Restricoes medidas (opcionais, pelo ambiente):
+#   F11_INTER_ATE  ultimo MB onde inter e permitido (nos irmaos, so as colunas 0-1)
+#   F11_FIM_BIT    bit do slice data onde o MB KF comeca (pelo encaixe do molde):
+#                  caminho que passa dele e podado, e o fecho tem que cair nele
+INTER_ATE = int(os.environ['F11_INTER_ATE']) if 'F11_INTER_ATE' in os.environ else None
+FIM_BIT = int(os.environ['F11_FIM_BIT']) if 'F11_FIM_BIT' in os.environ else None
+
+
+def cabecalhos_borda(m=None):
+    """MBs possiveis numa fileira de borda tarja/campo (a borda nas 2 primeiras
+    linhas do MB): intra horizontal sem residuo (croma 0-3), ou inter 16x16 com
+    ref 0-2, mvd 0 e CBP de luma so na metade de cima.
+
+    Devolve: lista de ('I', croma) e ('P', ref, cbp)."""
+    hs = [('I', cm) for cm in range(4)]
+    if INTER_ATE is not None and m is not None and m > INTER_ATE: return hs
+    hs += [('P', r, cl + cc) for r in range(3) for cl in (0, 1, 2, 3) for cc in (0, 16, 32)]
+    return hs
+
+
+def blocos_de(h):
+    """Blocos de residuo do MB na ordem de codificacao do JM.
+
+      h  cabecalho ('I', croma) ou ('P', ref, cbp)
+
+    Devolve: lista de (restricao, tipo de bloco); restricao e a chave da GRAMATICA."""
+    if h[0] == 'F': return []
+    if h[0] == 'I': return [('zero', C.LUMA_16DC)]
+    cbp = h[2]; out = []
+    for b8 in range(4):
+        if not (cbp >> b8) & 1: continue
+        for j in range(2):
+            for i in range(2): out.append(('luma_topo' if (b8 < 2 and j == 0) else 'zero', C.LUMA_4x4))
+    if cbp > 15: out += [('dc', C.CHROMA_DC)] * 2
+    if cbp >> 4 == 2:
+        for comp in range(2): out += [('ac', C.CHROMA_AC)] * 2 + [('zero', C.CHROMA_AC)] * 2
+    return out
+
+
+def monta_mb(h, escolhas):
+    """Sintaxe no formato do trace de um MB de borda.
+
+      h         cabecalho ('I', croma) ou ('P', ref, cbp)
+      escolhas  vetores de coeficientes dos primeiros blocos (os demais = zero)
+
+    Devolve: a lista de elementos. ('F', m) e o MB m do molde, fixo."""
+    if h[0] == 'F': return _GS['S'][h[1]]
+    if h[0] == 'I':
+        return [('mb_skip_flag', (1,)), ('mb_type', (8,)), ('intra_chroma_pred_mode', (h[1],)), ('mb_qp_delta', (0,)),
+                ('DC luma 16x16', (0, 0)), ('end_of_slice_flag', (0,))]
+    se = [('mb_skip_flag', (1,)), ('mb_type', (1,)), ('ref_idx_l0', (h[1],)), ('mvd0_l0', (0,)), ('mvd1_l0', (0,)),
+          ('coded_block_pattern', (h[2],))]
+    if h[2]: se.append(('mb_qp_delta', (0,)))
+    for k, (restr, tipo) in enumerate(blocos_de(h)):
+        v = escolhas[k] if k < len(escolhas) else None
+        se.extend(C._pares(tipo, list(v)) if v and any(v) else [(C.NOME_TIPO[tipo], (0, 0))])
+    return se + [('end_of_slice_flag', (0,))]
+
+
+_GS = {}
+def _gs(K):
+    """Estado do codificador no MB K (prefixo das hipoteses), uma vez por processo."""
+    if not _GS:
+        S = hipoteses(); obs = obs11()
+        ctx = C.contextos(QP, MODELO); e = C.Enc(); mbs = {}; st = {'dq': 0, 'nref': NREF}
+        for m in range(K): C.processa_mb(e, ctx, mbs, m, S[m], st, 0)
+        _GS.update(S=S, OBS=obs, BASE=mbs, SNAP=((e.low, e.rng, e.outst, e.primeiro, tuple(e.bits)), ctx, {}, dict(st)))
+    return _GS
+
+
+def _codifica_mb(K, snap, m, se):
+    """Codifica um MB a partir de um instantaneo do codificador.
+
+    Devolve: (Enc, marcas -- bits emitidos ao fim de cada elemento --, ctx, vizinhos, st)."""
+    g = _gs(K)
+    (low, rng, outst, pr, bits), ctx, over, st = snap
+    e = C.Enc(); e.low, e.rng, e.outst, e.primeiro, e.bits = low, rng, outst, pr, list(bits)
+    cx = copy.deepcopy(ctx); ov = dict(over); st2 = dict(st); marcas = []
+    C.processa_mb(e, cx, Viz(g['BASE'], ov), m, se, st2, 0, marca=lambda: marcas.append(len(e.bits)))
+    return e, marcas, cx, ov, st2
+
+
+def _metrica(bits, obs, a, b):
+    b = min(b, len(obs)); x = sum(1 for i in range(a, b) if bits[i] != obs[i])
+    return (b - a - x) * GANHO + x * PERDA
+
+
+def _avalia(args):
+    """Filhos de um item do feixe para um lote de candidatos.
+
+    Devolve: lista de (pontos, indice do pai, cabecalho, escolhas, MB completo)."""
+    K, i, item, cands = args
+    g = _gs(K); obs = g['OBS']
+    pts0, snap, sint, h, esc = item
+    m = K + len(sint); ini = len(snap[0][4]); out = []
+    ant = sint[-1] if sint else g['S'][K - 1]
+    for c in cands:
+        h2, esc2 = (c, []) if h is None else (h, esc + [c])
+        try: e, marcas, _, _, _ = _codifica_mb(K, snap, m, monta_mb(h2, esc2))
+        except (C.ForaDoAlcance, AssertionError): continue
+        bl = blocos_de(h2)
+        completo = all(r == 'zero' for r, t in bl[len(esc2):])
+        fim = len(e.bits) if completo else marcas[len(esc2)]
+        out.append((pts0 + _metrica(e.bits, obs, ini, fim) + _custo(h2, esc2, ant), i, h2, esc2, completo))
+    return out
+
+
+def _fecha_mb(args):
+    """Item com estado completo depois de um MB terminado."""
+    K, item, h, esc = args
+    g = _gs(K); obs = g['OBS']
+    pts0, snap, sint, _, _ = item
+    m = K + len(sint); ini = len(snap[0][4])
+    se = monta_mb(h, esc)
+    e, _, cx, ov, st = _codifica_mb(K, snap, m, se)
+    ant = sint[-1] if sint else g['S'][K - 1]
+    return (pts0 + _metrica(e.bits, obs, ini, len(e.bits)) + _custo(h, esc, ant), ((e.low, e.rng, e.outst, e.primeiro, tuple(e.bits)), cx, ov, st),
+            sint + [se], None, [])
+
+
+def feixe_sintaxe(K, KF, KT, largura=64, procs=8):
+    """Feixe sobre valores de sintaxe na regiao de borda [K, KF), com o molde do 9
+    de KF a KT como juiz final.
+
+      K, KF    regiao (MBs de borda, gramatica de cabecalhos_borda e GRAMATICA)
+      KT       fim do trecho de molde usado no fecho
+      largura  itens mantidos por passo
+      procs    processos
+
+    Devolve: lista de (pontos, sintaxe da regiao, discordancias no molde depois,
+    bits comparados, discordancias na regiao, bits da regiao), pelo molde depois."""
+    # o molde de KF a KT entra no proprio feixe como MBs fixos: o comprimento
+    # errado da regiao desalinha o molde e o caminho afunda antes de ser escolhido
+    g = _gs(K); n = KF - K; nt = KT - K
+    beam = [(0.0, g['SNAP'], [], None, [])]
+    with ProcessPoolExecutor(procs) as ex:
+        while any(len(it[2]) < nt for it in beam):
+            tarefas = []
+            for i, it in enumerate(beam):
+                if len(it[2]) >= nt: continue
+                if len(it[2]) >= n: cands = [('F', K + len(it[2]))]
+                else: cands = cabecalhos_borda(K + len(it[2])) if it[3] is None else GRAMATICA[blocos_de(it[3])[len(it[4])][0]]
+                for j in range(0, len(cands), 96): tarefas.append((K, i, it, cands[j:j + 96]))
+            filhos = [f for fs in ex.map(_avalia, tarefas) for f in fs]
+            prontos = [(it[0], it) for it in beam if len(it[2]) >= nt]
+            filhos.sort(key=lambda f: -f[0])
+            vistos = set(); esc = []
+            for f in filhos:
+                chave = (f[1], f[2], tuple(f[3]))
+                if chave in vistos: continue
+                vistos.add(chave); esc.append(f)
+                if len(esc) >= largura: break
+            novos = list(ex.map(_fecha_mb, [(K, beam[f[1]], f[2], f[3]) for f in esc if f[4]]))
+            if FIM_BIT is not None:
+                # a regiao inteira cabe ate FIM_BIT; ao fechar o ultimo MB dela, tem que cair ali (+-2)
+                def cabe(it):
+                    nb = len(it[1][0][4]); k = len(it[2])
+                    if k < n: return nb <= FIM_BIT + 2
+                    if k == n: return abs(nb - FIM_BIT) <= 2
+                    return True
+                novos = [it for it in novos if cabe(it)]
+            for f in esc:
+                if not f[4]:
+                    pts0, snap, sint, _, _ = beam[f[1]]
+                    novos.append((f[0], snap, sint, f[2], f[3]))
+            beam = sorted(novos + [it for _, it in prontos], key=lambda it: -it[0])[:largura]
+            it0 = beam[0]
+            print('passo: %d filhos; melhor %.1f pontos, %d MBs prontos, cabecalho %s, %d blocos escolhidos' % (
+                len(filhos), it0[0], len(it0[2]), it0[3], len(it0[4])), flush=True)
+    res = []
+    for it in beam:
+        S2 = dict(g['S'])
+        for j, se in enumerate(it[2][:n]): S2[K + j] = se
+        pos = []; bb = C.codifica(S2, QP, MODELO, n_mb=KT, posicoes=pos)
+        a, b = pos[KF], min(pos[KT - 1], len(g['OBS']))
+        dep = sum(1 for x in range(a, b) if bb[x] != g['OBS'][x]); reg = sum(1 for x in range(pos[K], a) if bb[x] != g['OBS'][x])
+        res.append((it[0], it[2][:n], dep, b - a, reg, a - pos[K]))
+    return sorted(res, key=lambda r: r[2] / max(r[3], 1))
+
+
 def _txt(se):
     cab = [x for x in se if x[0] not in ('mb_skip_flag', 'end_of_slice_flag') and x[0] not in C.NOME_BLOCO]
     res = ' '.join(('|' if v == (0, 0) else '%s%s' % (k[0], v)) for k, v in se if k in C.NOME_BLOCO)
@@ -314,5 +563,12 @@ if __name__ == '__main__':
             print('regiao %d de %d fora, depois %d de %d fora; trocas novas %s' % (reg, nr, dep, nd, tr))
         if res:
             for i, se in enumerate(res[0][5]): print(K + i, _txt(se)[:220])
+    elif sub == 'sintaxe':
+        K, KF, KT, larg = map(int, a[:4])
+        res = feixe_sintaxe(K, KF, KT, larg, int(os.environ.get('PROCS', '8')))
+        for pts, sint, dep, nd, reg, nr in res[:5]:
+            print('%.1f pontos; regiao %d de %d fora; molde depois %d de %d fora (%.1f%%)' % (pts, reg, nr, dep, nd, 100 * dep / max(nd, 1)))
+        if res:
+            for i, se in enumerate(res[0][1]): print(K + i, _txt(se)[:220])
     else:
         print(__doc__ if __doc__ else open(__file__, encoding='utf-8').read().split('import sys')[0]); sys.exit(1)

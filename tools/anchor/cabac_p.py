@@ -266,7 +266,7 @@ def _bloco(io, ctx, tipo, up, lf, coef):
     return c
 
 
-def processa_mb(io, ctx, mbs, m, se, st, fim):
+def processa_mb(io, ctx, mbs, m, se, st, fim, marca=None):
     """Um MB de slice P, codificado (se dado) ou decodificado (se None).
 
       io   Enc ou Dec
@@ -276,6 +276,10 @@ def processa_mb(io, ctx, mbs, m, se, st, fim):
       se   sintaxe do MB no formato do trace (Enc) ou None (Dec)
       st   estado do slice: 'dq' (ultimo mb_qp_delta) e 'nref'
       fim  end_of_slice_flag a codificar (Enc; ignorado no Dec)
+      marca  funcao chamada sem argumentos ao fim do cabecalho do MB (depois do
+           mb_qp_delta, ou do CBP quando ele e 0) e ao fim de cada bloco de
+           residuo -- para quem precisa saber quantos bits ja sairam em cada
+           ponto (busca elemento a elemento)
 
     Devolve: (sintaxe no formato do trace, end_of_slice_flag). Levanta
     ForaDoAlcance em elemento nao coberto."""
@@ -377,7 +381,9 @@ def processa_mb(io, ctx, mbs, m, se, st, fim):
             bb = 2 if cima and (cima.cbp >> 4) == 2 else 0; aa = 1 if esq and (esq.cbp >> 4) == 2 else 0
             acum += 32 if io.bin(cc[2][aa + bb], E(1 if enc and (cbp_v >> 4) == 2 else 0)) else 16
         cur.cbp = acum; out.append(('coded_block_pattern', (acum,)))
-        if acum == 0: st['dq'] = 0
+        if acum == 0:
+            st['dq'] = 0
+            if marca: marca()
     # --- mb_qp_delta (sempre em I16x16; em inter so com cbp)
     if cur.intra or cur.cbp:
         dq = d.get('mb_qp_delta'); dc = ctx['delta_qp']; val = 0
@@ -390,6 +396,7 @@ def processa_mb(io, ctx, mbs, m, se, st, fim):
             val = (act + 1) >> 1
             if act % 2 == 0: val = -val
         st['dq'] = val; out.append(('mb_qp_delta', (val,)))
+        if marca: marca()
     # --- residuo, na ordem de leitura do JM
     def bloco(tipo, up, lf, bit_seta):
         if enc:
@@ -399,6 +406,7 @@ def processa_mb(io, ctx, mbs, m, se, st, fim):
         cf = _bloco(io, ctx, tipo, up, lf, coef)
         if any(cf): cur.sbits |= 1 << bit_seta
         out.extend(_pares(tipo, cf) if any(cf) else [(NOME_TIPO[tipo], (0, 0))])
+        if marca: marca()
     def bit_viz(mbv, bit, padrao):
         return padrao if mbv is None else (mbv.sbits >> bit) & 1
     dflt = 1 if cur.intra else 0
