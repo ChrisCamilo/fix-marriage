@@ -531,6 +531,77 @@ def feixe_sintaxe(K, KF, KT, largura=64, procs=8):
     return sorted(res, key=lambda r: r[2] / max(r[3], 1))
 
 
+# ---------------------------------------------------------------- fileira 8: busca por estagios com a fisica
+def _pontua_mb960(args):
+    """Pontos (Fano) dos bits do MB 960 ate a marca dada, para varias escolhas."""
+    K, escolhas_lista, ate_bloco = args
+    g = _gs(K); obs = g['OBS']; snap = g['SNAP']; ini = len(snap[0][4]); out = []
+    for esc in escolhas_lista:
+        e, marcas, _, _, _ = _codifica_mb(K, snap, K, monta_mb(('P', 0, 35), esc))
+        fim = marcas[ate_bloco + 1] if ate_bloco + 1 < len(marcas) else len(e.bits)
+        out.append((_metrica(e.bits, obs, ini, fim), esc))
+    return out
+
+
+def _fecho_fileira(args):
+    """MB 960 dado + MB 961 + fileira horizontal de croma c + campo: pontos e alinhamento."""
+    K, esc960, se961, c, KT = args
+    g = _gs(K); obs = g['OBS']
+    S2 = dict(g['S']); S2[K] = monta_mb(('P', 0, 35), esc960); S2[K + 1] = se961
+    h = monta_mb(('I', c), [])
+    for m in range(K + 2, 1080): S2[m] = h
+    pos = []; bb = C.codifica(S2, QP, MODELO, n_mb=KT, posicoes=pos)
+    ini, fim = pos[K], min(pos[KT - 1], len(obs))
+    return (_metrica(bb, obs, ini, fim), pos[1080], sum(1 for i in range(ini, pos[1080]) if bb[i] != obs[i]),
+            sum(1 for i in range(pos[1080], fim) if bb[i] != obs[i]), fim - pos[1080], esc960, se961, c)
+
+
+def busca_fileira8(larg=48, procs=8, KT=1320):
+    """Tentativa 1 do passo 3 para a borda da fileira 8 do frame 11.
+
+    A borda tarja/campo e uniforme na horizontal: o MB 960 e inter, ref 0,
+    CBP 35, com a luma da fisica (4 blocos de cima com coeficientes nas
+    posicoes 0 e 2, valor 1 -- confirmada no passo 3); o DC de croma de cada
+    componente so tem o termo medio e o vertical (a, 0, b, 0); o AC de croma
+    tem os 2 blocos de cima iguais e os de baixo zero. O resto da fileira e
+    horizontal com um unico modo de croma; o MB 961 e horizontal ou inter
+    (familia do 9). Estagios: DC (U e V juntos), AC de U, AC de V -- cada um
+    pontuado pelos bits emitidos ate ali (Fano), mantendo `larg`. No fim, cada
+    MB 960 candidato e codificado com a fileira inteira e o campo ate KT; o
+    campo tem que comecar no bit FIM_BIT (medido: 3.122).
+
+      larg   candidatos mantidos por estagio
+      KT     fim do trecho de campo usado no juiz
+
+    Devolve: lista de (pontos, bit do MB 1080, fora na fileira, fora no campo,
+    bits de campo, MB 960, MB 961, croma), melhor primeiro."""
+    K = 960; g = _gs(K)
+    L = tuple([1, 0, 1] + [0] * 13)
+    base = [L, L, None, None, L, L, None, None]
+    dcs = [tuple([a, 0, b, 0]) for a in range(-4, 5) for b in range(-4, 5)]
+    acs = GRAMATICA['ac']
+    def esc(dcu, dcv, acu=None, acv=None):
+        return base + [dcu, dcv, acu, acu, None, None, acv, acv, None, None]
+    with ProcessPoolExecutor(procs) as ex:
+        def estagio(lista, ate):
+            lotes = [lista[i:i + 64] for i in range(0, len(lista), 64)]
+            r = [x for rs in ex.map(_pontua_mb960, [(K, l_, ate) for l_ in lotes]) for x in rs]
+            r.sort(key=lambda x: -x[0]); return r[:larg]
+        s1 = estagio([esc(u, v) for u in dcs for v in dcs], 9)
+        print('DC: melhores', [(round(p, 1), e[8], e[9]) for p, e in s1[:3]], flush=True)
+        s2 = estagio([esc(e[8], e[9], a) for _, e in s1 for a in acs], 11)
+        print('AC U: melhores', [(round(p, 1), e[10]) for p, e in s2[:3]], flush=True)
+        s3 = estagio([esc(e[8], e[9], e[10], a) for _, e in s2 for a in acs], 17)
+        print('AC V: melhores', [(round(p, 1), e[14]) for p, e in s3[:3]], flush=True)
+        q9 = sintaxe(20)
+        op961 = [monta_mb(('I', c), []) for c in range(4)] + [q9[961], q9[960]]
+        tarefas = [(K, e, s961, c, KT) for _, e in s3 for s961 in op961 for c in range(4)]
+        res = list(ex.map(_fecho_fileira, tarefas, chunksize=4))
+    fim = FIM_BIT if FIM_BIT is not None else 3122
+    res.sort(key=lambda r: (abs(r[1] - fim) > 2, -r[0]))
+    return res
+
+
 def _txt(se):
     cab = [x for x in se if x[0] not in ('mb_skip_flag', 'end_of_slice_flag') and x[0] not in C.NOME_BLOCO]
     res = ' '.join(('|' if v == (0, 0) else '%s%s' % (k[0], v)) for k, v in se if k in C.NOME_BLOCO)
@@ -563,6 +634,14 @@ if __name__ == '__main__':
             print('regiao %d de %d fora, depois %d de %d fora; trocas novas %s' % (reg, nr, dep, nd, tr))
         if res:
             for i, se in enumerate(res[0][5]): print(K + i, _txt(se)[:220])
+    elif sub == 'fileira8':
+        res = busca_fileira8(int(a[0]) if a else 48, int(os.environ.get('PROCS', '8')))
+        for pts, p1080, fr, fc, nc, e960, s961, c in res[:8]:
+            print('%.1f pontos; campo no bit %d; fileira %d fora; campo %d de %d fora (%.1f%%); croma %d; 961 %s' % (
+                pts, p1080, fr, fc, nc, 100 * fc / max(nc, 1), c, dict(s961).get('mb_type')))
+        if res:
+            print('MB 960:', _txt(monta_mb(('P', 0, 35), res[0][5]))[:300])
+            print('MB 961:', _txt(res[0][6])[:300])
     elif sub == 'sintaxe':
         K, KF, KT, larg = map(int, a[:4])
         res = feixe_sintaxe(K, KF, KT, larg, int(os.environ.get('PROCS', '8')))

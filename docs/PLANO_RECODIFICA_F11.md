@@ -325,3 +325,24 @@ Medidas que entram na próxima tentativa: a região certa é a fileira 8
 inteira (o fim dela também difere do 9: o trecho 988–1079 é ~3 bits mais curto
 no 11), o campo começa no bit 3.122, e a primeira fileira do campo depende do
 modo de croma da fileira 8 (contexto) — indício de croma ≠ 1 na fileira 8 do 11.
+
+### Tentativa 1 — fileira 8 por estágios com a física (2026-09-28)
+
+`f11.py fileira8`: MB 960 com a luma da física, DC de croma (a, 0, b, 0), AC
+com os dois blocos de cima iguais; a fileira horizontal com um modo de croma
+só; o 961 horizontal ou da família do 9; o campo tem que começar no bit 3.122.
+O melhor candidato alinha o campo (bit 3.121) mas não é o verdadeiro: MB 960
+com 12 de 100 bits fora e o 961 com 57 de 95 — o estado aritmético sai errado
+do 960 e o 961 já começa quebrado.
+
+A extensão por prefixo limpo (o critério que acertou a luma à mão) também
+cede com gramática livre: leva o 960 até o bit +108, mas com 10 desvios
+isolados em 108 bits (9%, o dobro da densidade da zona) e valores sem cara de
+física (DC de V −3/−1, AC −2).
+
+**Diagnóstico:** o que se provou é a luma do 960 (a física bate bit a bit,
+com 3 trocas) e o DC de croma U = +3 como hipótese. O resto do croma do 960 e
+o 961 inteiro não se determinam com o dano da zona: nos ~200 bits deles cabem
+~8 trocas, e qualquer gramática com liberdade suficiente para conter a verdade
+contém também um lixo que encaixa melhor. Falta um gabarito de croma — o valor
+de croma da tarja e do campo no fade, que ninguém mediu ainda.
