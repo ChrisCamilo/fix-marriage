@@ -139,14 +139,14 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c data/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 5.724 linhas:**
+**Composição do `patches.txt` — 5.730 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
 | 1–1338 | 1.338 | base determinística (prefixos de NAL e cabeçalhos). Reconferido: regerar com `base` reproduz os mesmos 1338 byte a byte |
 | 1339–1828 | 490 | destas, **478** também estão em `data/deterministicos.txt`. Saíram em 2026-09-18 a `77528965 2` (reparo antigo do 2361) e a `114260576 3` (reparo antigo do 3442, que era o próprio defeito); em 2026-09-29 a `147444 0` (determinística, frame 10) e a `150538 0` (reparo do 12) — as duas trocavam o escape `03` do byte 13 do NAL por `02`, o ffmpeg cortava o NAL e o B virava interpolação (armadilha 62; `data/patches_gemeos.txt`) |
 | | **11** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` — hoje todos "insuficientes" pelo critério de ocultação |
-| | 1 | a linha 1378, `77528961 0` — o `frame_num` do reparo antigo do 2361, que ficou. Reclassificada como cabeçalho: está em `data/patches_cabecalho.txt` (por isso ele tem 783 linhas, não 782) e o `verify` a pula |
+| | 1 | a linha 1378, `77528961 0` — o `frame_num` do reparo antigo do 2361, que ficou. Reclassificada como cabeçalho: está em `data/patches_cabecalho.txt` (por isso ele tem 783 linhas, não 782; e mais 6 desde 2026-09-29, os cabeçalhos do 14 e do 15: 789) e o `verify` a pula |
 | 1829–2610 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `data/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
 | 2611 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `data/deterministicos.txt` |
 | 2612–2644 | 33 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 13 IDRs, todas com encaixe desde as fileiras 63–65 — linha a linha em `data/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. Entraram 65; as 32 de encaixe nas fileiras 66–67 saíram em 2026-09-25 (sintaxe variante na tarja, armadilha 61; `data/cauda_auditoria.txt`). `mapa` idêntico nas duas mudanças. Ver `docs/PLANO_ANCORA_CAUDA.md` |
@@ -157,6 +157,7 @@ conferida com `sha256sum -c data/CHECKSUMS.txt`.
 | 5342–5348 | 7 | **escapes restaurados** (2026-09-29): o `03` onde um `00 00 02` (59, 263, 407, 1610, 1638, 2459) ou `00 00 01` (2971, criado pela linha 4.834 do lote da cabeça) cortava o NAL — o quadro parecia inteiro no `mapa` sem ler os dados. Com o escape, os 6 falsos inteiros param no dano real (MB 805–1.278) e o 2971 vai de 960 a 998; `serie` igual. Também em `data/deterministicos.txt`. Guarda: `tools/proibidas.py` (armadilha 62) |
 | 5349–5673 | 325 | **nível B da tarja de cima** (2026-09-29): 163 quadros, distância 1–3 com folga ≥ 10 bits depois da última troca — calibrado nos 26 quadros de controle com evento real na cabeça, onde nenhuma rajada verdadeira passa como troca com essa folga. Linha a linha em `data/patches_cabeca_b.txt`, que o `verify` também pula. `mapa`: os 163 andam (121 passam da tarja); `serie` igual |
 | 5674–5724 | 51 | **escapes `00 00 02` → `00 00 03`** em 49 quadros (2026-09-29, `tools/proibidas.py`): nos quadros bons há 705 escapes contra 2 casos da alternativa de 1 bit (byte de 1 bit zerado antes de um `02`), ~350:1. Ficaram fora os 10 `00 00 00` (voltar custa 2 bits; a alternativa de 1 bit é ~3× mais provável) e o 3444 (legítimo). O `mapa` não julga: o corte dava avanço falso, e 5 quadros recuam para o dano real. Também em `data/deterministicos.txt` |
+| 5725–5730 | 6 | **cabeçalhos do 14 e do 15** (2026-09-29): o 14 com 4 bits pelo molde dos B do GOP 0 (4, 6, 8, 10, 12 e 16 idênticos fora `frame_num`/POC; fica QP 18 como os irmãos, tarja de cima com distância 0); o 15 com a solução A das duas de 2 bits (pesos na progressão do fade; a B dava deslocamento +125). Também em `data/patches_cabecalho.txt`. `mapa`: o 14 de sem imagem ao MB 896, o 15 ao MB 1 — os corpos estão na zona densa |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a

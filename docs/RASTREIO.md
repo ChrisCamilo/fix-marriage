@@ -2050,3 +2050,23 @@ prevê pelos vizinhos.
 O 13 fica, nos bits, onde está: fileiras 0–53 certas, 54–59 perdidas (~1.700
 trocas sobre cena desconhecida). Gabarito emprestado não há (nenhuma cópia
 íntegra do plano); busca em feixe sem física já se mostrou enganosa no 11.
+
+## Frames 14 e 15 — cabeçalhos consertados, corpos na zona densa (2026-09-29)
+
+- **14** (B não-referência, 4 KB, 0,190 MB): o censo de cabeçalhos buscava 1–2
+  bits e deu "0 soluções". Pelo molde dos B do GOP 0 — 4, 6, 8, 10, 12 e 16 têm
+  cabeçalhos idênticos bit a bit fora `frame_num` e POC —, o do 14 difere em
+  **4 bits** (POC, dois na lista de referências — a origem do
+  `modification_of_pic_nums_idc=16` —, e um na região do QP). Consertado: QP
+  18 como os irmãos, a tarja de cima recodificada bate em 0 bits; o `mapa` vai
+  de sem imagem ao MB 896 (o dano começa logo depois da tarja).
+- **15** (P de referência, 85 KB): as duas soluções de 2 bits de 2026-09-18
+  empatavam; os pesos decidem — a A dá (44,−5) (58,−14) (72,−23), na progressão
+  do fade (o 13 tem (42,−6) (52,−13) (69,−24)); a B dava deslocamento +125 na
+  ref2 com o croma desligado. Com a A o `mapa` vai ao MB 1: o MB 0 especial da
+  tarja não se lê, e o censo da cabeça não consegue testar o quadro. A tarja de
+  baixo, no fim do NAL, tem ~2% de trocas: a zona densa rareia, mas segue.
+
+Aplicado com aprovação do usuário (linhas 5.725–5.730, também em
+`data/patches_cabecalho.txt`). Aberto: o MB 0 do 15 pela física, como no 11,
+para a tarja de cima virar gabarito de ~2.500 bits.

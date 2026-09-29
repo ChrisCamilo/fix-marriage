@@ -808,3 +808,13 @@
 53079142 4 | 1610 | C deblocking/alpha/beta/cabac_init/refs fora do padrao | valido, desvia 0/2 (achado depois de o 1595 deixar de contar como IDR; aprovado pelo usuario)
 77528966 4 | 2361 | A cabecalho invalido | invalido: cabac_alignment_one_bit = 0. Junto com a REMOCAO da linha "77528965 2" do reparo antigo (aprovado pelo usuario): o deblocking saia 1 e o cabecalho terminava cedo; o B decodificava "tudo skip" em 8 bytes, uma interpolacao, ignorando 30 KB
 77528961 0 | 2361 | reclassificado | o outro bit do reparo antigo e o frame_num (sem ele, 136; esperado 8). Ja estava no patches.txt desde o reparo; listado aqui so para o verify pula-lo
+# 2026-09-29, aprovado pelo usuario -- linhas 5725-5730 do patches.txt:
+#   quadro 14: 4 bits pelo molde dos B do GOP 0 (4, 6, 8, 10, 12 e 16 identicos fora frame_num/POC); fica QP 18 como os irmaos
+#   quadro 15: das 2 solucoes de 2 bits (data/cabecalho_slice.txt), a A -- pesos (44,-5) (58,-14) (72,-23) na progressao do
+#   fade; a B dava deslocamento +125 na ref2 com o croma desligado
+189999 6 # quadro 14, POC (bit 25 do RBSP)
+190000 0 # quadro 14, lista de referencias (bit 39)
+190001 7 # quadro 14, lista de referencias (bit 40)
+190003 5 # quadro 14, regiao do QP/deblocking (bit 58)
+194111 2 # quadro 15, solucao A (1/2)
+194126 7 # quadro 15, solucao A (2/2)
