@@ -18,7 +18,7 @@
 # Hipoteses por quadro (fica a de menor distancia):
 #   I   MB 0 com cada nivel de DC que leva 128 a 16 exato no QP do slice
 #   P   'skip' (tudo pulado), 'mb0+dc' e 'mb0+skip' (MB 0 como o arquivo o le)
-#       e, com predicao ponderada, 'fis rN ...' (MB 0 pela fisica, abaixo)
+#       e, com predicao ponderada, 'fis_rN_...' (MB 0 pela fisica, abaixo)
 #   B   'skip'
 # Com o MB 0 lido do arquivo, os bits dele nao sao testados: a distancia so
 # conta depois deles.
@@ -172,7 +172,7 @@ def mb0_fisica(h, qp):
                     if cbp & 16:
                         se += ([('2x2 DC Chroma', (b, 0))] if b else []) + [('2x2 DC Chroma', (0, 0))]
                         se += ([('2x2 DC Chroma', (c, 0))] if c else []) + [('2x2 DC Chroma', (0, 0))]
-                    out.append(('fis r%d L%d U%d V%d' % (r, a, b, c), se + [('end_of_slice_flag', (0,))]))
+                    out.append(('fis_r%d_L%d_U%d_V%d' % (r, a, b, c), se + [('end_of_slice_flag', (0,))]))
     return out
 
 
@@ -260,9 +260,14 @@ def quadro(t):
         nb = 8 * (b - a)
         if 2 <= b < len(nal) and nale[b - 2] == 0 and nale[b - 1] == 0 and nal[b] < 3:
             dif += [8 * b + j for j in range(8) if ((nal[b] ^ 3) >> (7 - j)) & 1]; nb += 8
-        if melhor is None or len(dif) < len(melhor[3]): melhor = (nome, nb, a, dif)
+        # Fica a de menor TAXA de diferencas (empate: a que testa mais bits). Pela
+        # distancia absoluta, uma hipotese curta (skip, 40 bits, 21 fora) passava
+        # na frente da certa (2.760 bits, 59 fora) -- e o QP errado do frame 17
+        # ficou escondido (2026-09-29).
+        chave = (len(dif) / max(nb, 1), -nb)
+        if melhor is None or chave < melhor[4]: melhor = (nome, nb, a, dif, chave)
     if melhor is None: return (t, tipo, '-', 0, -1, 0, [])
-    nome, n, a, dif = melhor
+    nome, n, a, dif, _ = melhor
     locs = [(k, o + 4 + (k >> 3), 7 - (k & 7)) for k in dif]
     return (t, tipo, nome, n, len(dif), a, locs)
 

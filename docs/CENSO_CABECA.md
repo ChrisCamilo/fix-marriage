@@ -125,6 +125,20 @@ referência e os níveis que o encoder escolheu (ref0, ref1 ou ref2 conforme o
 peso). No 15 foi o que achou os 48 bits aplicados.
 
 No filme inteiro não aparece candidato novo: nos outros P ponderados a leitura
-do MB 0 já dava a resposta. O 17 e o 19 ficam sem hipótese (a física erra
-22–26%), e nenhuma troca de 1 bit no cabeçalho deles faz a tarja bater —
-dano múltiplo no cabeçalho ou na tarja, dentro da zona densa.
+do MB 0 já dava a resposta. O 17 e o 19 ficavam sem hipótese (a física erra
+22–26%) — **porque o QP do cabeçalho deles estava errado** (ver abaixo).
+
+**Corrigido em 2026-09-29: o critério de escolha.** O censo ficava com a
+hipótese de menor distância **absoluta**, e uma hipótese curta (skip, 40–72
+bits, ~20–30 fora) passava na frente da certa (~2.700 bits, ~60 fora). Foi
+assim que a varredura de 1 bit no cabeçalho do 17 "não achou nada". Agora fica
+a de menor **taxa** (empate: a que testa mais bits). Com o critério certo, a
+busca de 1–2 bits no cabeçalho julgada pela física da tarja achou:
+
+| quadro | troca | efeito | tarja de cima |
+|---|---|---|---|
+| 17 | bit 164 | QP 15 → **11** | 59 de 2.760 bits (2,1%) |
+| 19 | bit 159 | QP 14 → **12** | 68 de 2.704 bits (2,5%), com o peso da ref0 corrigido em 1 bit — mas três bits dão o mesmo (luma 44 → 45 ou 46, ou deslocamento −9 → −8): a tarja não decide |
+
+A segunda melhor hipótese fica em 17–18% nos dois. Com o QP e as trocas da
+cabeça, o `mapa` leva o 17 do MB 9 ao 1.151 e o 19 do MB 1 ao 1.080.

@@ -2093,8 +2093,8 @@ Aplicado com aprovação do usuário (linhas 5.731–5.778,
 `data/patches_cabeca_f15.txt`): o 15 vai do MB 1 ao 965 — passa a tarja e para
 na cena, onde a zona densa segue. Depois, o MB 0 pela física entrou no
 `cabeca.py` (validado em 11 P do GOP 0, 0 bits cada); o censo refeito não
-achou candidato novo no filme, e o 17 e o 19 seguem sem hipótese — nenhuma
-troca de 1 bit no cabeçalho deles faz a tarja bater (`docs/CENSO_CABECA.md`).
+achou candidato novo no filme. (O 17 e o 19 pareciam sem conserto de cabeçalho;
+era o critério de escolha do censo — ver "Frames 17 e 19 — o QP".)
 
 ## GOP 0: a régua da tarja de período 7 e onde a zona densa acaba (2026-09-29)
 
@@ -2114,3 +2114,24 @@ A zona densa que começa na fileira 54 do 13 acaba dentro do 15 (cabeça com
 1,8% medido exato, fim limpo). O 21, o 23 e o 25 têm cabeça (0 bits em ~2.580,
 ~2.580 e 72) e cauda limpas e param no meio (MB 2.083, 3.947 e 1.680): dano
 localizado, não zona densa.
+
+## Frames 17 e 19 — o QP estava errado no cabeçalho (2026-09-29)
+
+A varredura de 1 bit no cabeçalho, julgada pela tarja de cima com o MB 0 pela
+física, parecia não achar nada: ela ordenava pela distância absoluta, e uma
+hipótese curta (skip, 40–72 bits) passava na frente da certa (~2.700 bits).
+Refeita pela taxa (e estendida a 2 bits, ~14 mil combinações por quadro):
+
+- **17**: o bit 164 muda o `slice_qp_delta` e leva o QP de 15 a **11** (os P
+  1, 3 e 5 do fade têm 11). A tarja bate em 59 de 2.760 bits (2,1%, no máximo 4
+  por janela de 64); a segunda melhor fica em 18%. Os pesos da ref2 seguem
+  estranhos (deslocamento −4, peso de croma 12) — não entram na tarja, só nos
+  pixels dos MBs que usam a ref2.
+- **19**: o bit 159 leva o QP de 14 a **12**; a tarja bate em 68 de 2.704 bits
+  (2,5%) desde que a predição da ref0 dê 14 e não 13 — o peso da ref0 tem 1 bit
+  errado, mas três bits fazem isso (luma 44 → 45 ou 46, deslocamento −9 → −8), e
+  a tarja não decide qual. As 68 trocas da cabeça são as mesmas nos três.
+
+Com o QP e as trocas da cabeça (60 bits no 17, 69 no 19, sem o bit ambíguo do
+peso, que não muda o parse): `mapa` do 17 de 9 a 1.151 e do 19 de 1 a 1.080;
+`serie` igual; nenhuma sequência proibida. **Proposta, não aplicada.**
