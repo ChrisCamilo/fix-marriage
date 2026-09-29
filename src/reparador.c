@@ -2035,14 +2035,16 @@ static int modo_verify(int argc, char **argv) {
          * era cortada em silencio).
          *
          * E o nivel B da cabeca (patches_cabeca_b, folga >= 10), do mesmo tipo
-         * do patches_cabeca. Das oito listas juntas saem 4.375 pulados. */
-        const char *listas[8] = {
+         * do patches_cabeca, e a tarja de cima do frame 15 com o MB 0 pela
+         * fisica (patches_cabeca_f15). Das nove listas juntas saem 4.429
+         * pulados. */
+        const char *listas[9] = {
             getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
             "data/patches_cabecalho.txt", "data/patches_cauda.txt",
             "data/patches_cauda_pb.txt", "data/patches_f11.txt",
             "data/patches_cabeca.txt", "data/patches_gemeos.txt",
-            "data/patches_cabeca_b.txt" };
-        for (int f = 0; f < 8; f++) {
+            "data/patches_cabeca_b.txt", "data/patches_cabeca_f15.txt" };
+        for (int f = 0; f < 9; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;
             char linha[512]; long o; int b, n0 = n_det;

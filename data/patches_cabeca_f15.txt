@@ -1,0 +1,54 @@
+# patches_cabeca_f15.txt -- a tarja de cima do frame 15 com o MB 0 pela fisica: o lote que entrou no patches.txt.
+# Aplicado em 2026-09-29, aprovado pelo usuario: 48 linhas (5731-5778 do patches.txt). O verify pula este arquivo.
+# MB 0: inter 16x16 ref0 (o 13, peso (44,-5): tarja 16 -> 17), mvd 0, cbp 31, dqp 0, os 16 blocos 4x4 de luma com DC -2
+# (residuo -1), croma U sem coeficiente, V com DC -3 (Cr 129 -> 128). MBs 1-959: I16x16 DC sem residuo.
+# Comparado no NAL como no tools/anchor/cabeca.py: 48 bits de 2.696 (1,8%, no maximo 4 por janela de 64); a segunda
+# melhor de 45 variantes (ref1) fica em 18%. mapa: o 15 vai do MB 1 ao 965; serie 165 igual.
+194133 5
+194141 2
+194158 5
+194165 1
+194166 7
+194180 5
+194183 4
+194185 2
+194197 4
+194199 3
+194202 1
+194203 5
+194213 2
+194232 4
+194234 0
+194250 0
+194252 4
+194269 0
+194276 2
+194301 3
+194306 2
+194307 0
+194326 6
+194328 3
+194329 5
+194331 7
+194363 0
+194364 1
+194365 7
+194366 0
+194374 2
+194375 2
+194381 3
+194386 5
+194391 2
+194396 0
+194404 5
+194406 4
+194407 2
+194415 0
+194419 0
+194436 2
+194445 1
+194447 6
+194452 3
+194464 0
+194465 2
+194467 1

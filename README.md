@@ -111,7 +111,7 @@ raiz/                   o que todo comando cita, e o que nunca se move
     deterministicos.txt remontados.txt
     patches_cabecalho.txt  o lote de cabeçalhos que entrou no patches.txt
     patches_cauda.txt patches_cauda_pb.txt patches_f11.txt patches_cabeca.txt
-    patches_gemeos.txt patches_cabeca_b.txt
+    patches_gemeos.txt patches_cabeca_b.txt patches_cabeca_f15.txt
                         os lotes de cauda e o frame 11 (idem; o verify pula)
     mapa_dano.txt alvos.txt alvos_ocultos.txt cabecalho_slice.txt
                         medidas; cada um traz no topo como foi gerado
@@ -139,7 +139,7 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c data/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 5.730 linhas:**
+**Composição do `patches.txt` — 5.778 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
@@ -158,6 +158,7 @@ conferida com `sha256sum -c data/CHECKSUMS.txt`.
 | 5349–5673 | 325 | **nível B da tarja de cima** (2026-09-29): 163 quadros, distância 1–3 com folga ≥ 10 bits depois da última troca — calibrado nos 26 quadros de controle com evento real na cabeça, onde nenhuma rajada verdadeira passa como troca com essa folga. Linha a linha em `data/patches_cabeca_b.txt`, que o `verify` também pula. `mapa`: os 163 andam (121 passam da tarja); `serie` igual |
 | 5674–5724 | 51 | **escapes `00 00 02` → `00 00 03`** em 49 quadros (2026-09-29, `tools/proibidas.py`): nos quadros bons há 705 escapes contra 2 casos da alternativa de 1 bit (byte de 1 bit zerado antes de um `02`), ~350:1. Ficaram fora os 10 `00 00 00` (voltar custa 2 bits; a alternativa de 1 bit é ~3× mais provável) e o 3444 (legítimo). O `mapa` não julga: o corte dava avanço falso, e 5 quadros recuam para o dano real. Também em `data/deterministicos.txt` |
 | 5725–5730 | 6 | **cabeçalhos do 14 e do 15** (2026-09-29): o 14 com 4 bits pelo molde dos B do GOP 0 (4, 6, 8, 10, 12 e 16 idênticos fora `frame_num`/POC; fica QP 18 como os irmãos, tarja de cima com distância 0); o 15 com a solução A das duas de 2 bits (pesos na progressão do fade; a B dava deslocamento +125). Também em `data/patches_cabecalho.txt`. `mapa`: o 14 de sem imagem ao MB 896, o 15 ao MB 1 — os corpos estão na zona densa |
+| 5731–5778 | 48 | **a tarja de cima do frame 15 com o MB 0 pela física** (2026-09-29): pelos pesos do cabeçalho, o MB 0 é inter da ref0 (o 13, tarja 16 → 17) com resíduo −1 na luma e −1 no Cr; os MBs 1–959, I16x16 DC. Das 45 variantes testadas, a prevista bate em 1,8% (48 de 2.696 bits, uniforme) e a segunda fica em 18%. Linha a linha em `data/patches_cabeca_f15.txt`, que o `verify` também pula. `mapa`: o 15 vai do MB 1 ao 965; `serie` igual |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a

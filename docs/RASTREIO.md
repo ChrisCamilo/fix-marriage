@@ -2070,3 +2070,22 @@ trocas sobre cena desconhecida). Gabarito emprestado não há (nenhuma cópia
 Aplicado com aprovação do usuário (linhas 5.725–5.730, também em
 `data/patches_cabecalho.txt`). Aberto: o MB 0 do 15 pela física, como no 11,
 para a tarja de cima virar gabarito de ~2.500 bits.
+
+### Frame 15 — o MB 0 pela física destrava a tarja de cima (2026-09-29)
+
+Nos P ponderados do fade o MB 0 da tarja é inter com vetor zero, da referência
+cujo peso dá o resíduo mais barato (9: ref0, luma +1; 13: ref0, luma +1 e U +3;
+11: ref2, que já dá 16, com U +3 e V −3); os MBs 1–959 são I16x16 DC. No 15,
+com os pesos do cabeçalho consertado, a ref0 (o 13, peso (44,−5)) leva a tarja
+16 a 17 e o Cr a 129: MB 0 com luma −1 (nível −2 nos 16 blocos) e V −1 (DC
+−3). Das 45 variantes testadas (três referências, vários níveis), essa bate
+com o arquivo em **48 de 2.696 bits (1,8%)**, no máximo 4 por janela de 64 bits;
+a segunda melhor fica em 18%. É a assinatura do frame 11: a hipótese vale do
+começo ao fim. 1,8% bate com os ~2% da tarja de baixo do 15.
+
+Aplicado com aprovação do usuário (linhas 5.731–5.778,
+`data/patches_cabeca_f15.txt`): o 15 vai do MB 1 ao 965 — passa a tarja e para
+na cena, onde a zona densa segue. Depois, o MB 0 pela física entrou no
+`cabeca.py` (validado em 11 P do GOP 0, 0 bits cada); o censo refeito não
+achou candidato novo no filme, e o 17 e o 19 seguem sem hipótese — nenhuma
+troca de 1 bit no cabeçalho deles faz a tarja bater (`docs/CENSO_CABECA.md`).
