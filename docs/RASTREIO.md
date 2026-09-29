@@ -1996,3 +1996,22 @@ Com a janela depois da cabeça (bytes 2.048 e 600 do slice data), o que casa é:
 E não sobra quadro quebrado pequeno o bastante para ser todo pulado: os 7 NALs
 abaixo de 700 bytes são todos bons. **Os gêmeos eram um caso do fade liso do
 GOP 0; não reabrir a busca.**
+
+## Censo de conteúdo conhecido — fechado, nada a recodificar (2026-09-29)
+
+O método do frame 11 (sintaxe pela física, recodificação, o que difere é dano)
+exige imagem inteira conhecida. Procurado no `panorama` de hoje:
+
+- **39 quadros de campo liso** (desvio < 1). Os 27 bons são os dois únicos
+  fades do filme — o do começo (GOP 0, quadros 0–12, todos já inteiros) e o do
+  fim (3431–3444, intacto). Os 12 fora do `serie` não são fade: 128,0 é o
+  cinza de decodificação que falhou (entre eles os IDRs 901, 1011, 1437 e
+  2130), o 850 e o 857 dão 23,2 com tarja 25 (ocultação), o 2777 dá 1,0.
+- **Quase lisos quebrados** (desvio < 4, 224 quadros, campo ~17 e tarja ~19):
+  IDRs com a imagem destruída depois da tarja e seus dependentes, não fade.
+- **Quadros quebrados ou sem imagem entre vizinhos de exibição lisos e bons**
+  (ordem por POC dentro do GOP): nenhum.
+
+O 13 é o único vizinho de fade quebrado, e é fusão com a cena — conteúdo
+desconhecido. **Não há outro quadro de conteúdo inteiro conhecido para
+recodificar.** Tarjas continuam cobertas pela cabeça e pelas caudas.
