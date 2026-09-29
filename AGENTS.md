@@ -124,6 +124,13 @@ elas trocavam o escape `03` por `02`, e o 10 e o 12 só pareciam bons porque o
 ffmpeg cortava o NAL e os lia como todo pulados (armadilha 62). `mapa`,
 `panorama` e `serie` idênticos; o JM decodifica o GOP 0 do 0 ao 12 sem erro.
 
+**Depois de todo lote, rodar `python tools/proibidas.py`**: nenhuma sequência
+`00 00 0x` (x < 3) pode ter sido criada por patch, e quadro "inteiro" no `mapa`
+com uma delas antes do fim dos dados é o NAL cortado, não conserto. Foi assim
+que os "3 inteiros" do lote da cabeça (263, 1638, 2459) e o `00 00 01` que ele
+criou no 2971 apareceram; os 7 escapes (com 59, 407 e 1610) entraram no mesmo
+dia, aprovados pelo usuário, também em `data/deterministicos.txt`.
+
 A `docs/ARMADILHAS.md` lista **62** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
@@ -142,7 +149,7 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 11 falsos, 3992 determinísticos pulados`** (os 479 de
+hoje **`0 válidos, 11 falsos, 3999 determinísticos pulados`** (os 486 de
 `data/deterministicos.txt`, os 783 de `data/patches_cabecalho.txt`, os 33 de
 `data/patches_cauda.txt`, os 475 de `data/patches_cauda_pb.txt`, os 873 de
 `data/patches_f11.txt`, os 943 de `data/patches_cabeca.txt` e os 406 de

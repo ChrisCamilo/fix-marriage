@@ -196,9 +196,9 @@ bits sabidamente errados.
 | que não analisam | **73** |
 | que decodificam limpo **e com imagem** (critério rigoroso) | **7** — 1683, 2333, 3319, 3348, 3368, 3397, 3426. **O 1683 é listrado da metade para baixo** (armadilha 56): imagem boa de verdade são 6 |
 | cabeçalhos fechados | **130 de 131** |
-| `patches.txt` | **5.341** linhas (1.830 + 781 de cabeçalho de slice, 2026-09-18, + 33 de cauda de IDR e 475 de cauda de P/B, 2026-09-24/25, + 873 do frame 11 e 943 da tarja de cima, 2026-09-28, + 406 dos B 10 e 12, 2026-09-29, que tiraram 2 linhas) |
-| `deterministicos.txt` | **478** (a `147444 0` saiu em 2026-09-29, armadilha 62) |
-| `verify` com `BASE_N=1338` | **0 válidos, 11 falsos, 3.992 pulados** (479 linhas lidas de determinísticos + 783 de cabeçalho + 33 de cauda de IDR + 475 de cauda de P/B + 873 do frame 11 + 943 da tarja de cima + 406 dos gêmeos) — ver o `AGENTS.md` — os 10 estão explicados no `AGENTS.md` |
+| `patches.txt` | **5.348** linhas (1.830 + 781 de cabeçalho de slice, 2026-09-18, + 33 de cauda de IDR e 475 de cauda de P/B, 2026-09-24/25, + 873 do frame 11 e 943 da tarja de cima, 2026-09-28, + 406 dos B 10 e 12, 2026-09-29, que tiraram 2 linhas, + 7 escapes) |
+| `deterministicos.txt` | **485** (a `147444 0` saiu e entraram 7 escapes em 2026-09-29, armadilha 62) |
+| `verify` com `BASE_N=1338` | **0 válidos, 11 falsos, 3.999 pulados** (486 linhas lidas de determinísticos + 783 de cabeçalho + 33 de cauda de IDR + 475 de cauda de P/B + 873 do frame 11 + 943 da tarja de cima + 406 dos gêmeos) — ver o `AGENTS.md` — os 10 estão explicados no `AGENTS.md` |
 
 **"Analisa 100%" não é "tem imagem".** Dos 132 IDRs, 59 percorrem os 8.160
 macroblocos sem erro, mas só 7 produzem quadro que passa no critério rigoroso.

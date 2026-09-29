@@ -478,3 +478,11 @@
 114262918 1
 # RETIRADA 2026-09-29: 147444 0   # frame 10: trocava o escape 03 legitimo do byte 13 do NAL por 02 (00 00 02 proibido, o ffmpeg corta o NAL e o B vira interpolacao) -- ver data/patches_gemeos.txt
 77496469 0
+# 2026-09-29, aprovado pelo usuario: o escape 03 restaurado onde 00 00 02/01 cortava o NAL (tools/proibidas.py; armadilha 62) -- linhas 5342-5348 do patches.txt
+2951918 0  # 59 0x2 -> 0x03
+9482126 0  # 263 0x2 -> 0x03
+14648628 0  # 407 0x2 -> 0x03
+53079148 0  # 1610 0x2 -> 0x03
+53960011 0  # 1638 0x2 -> 0x03
+81895050 0  # 2459 0x2 -> 0x03
+100380096 1  # 2971 0x1 -> 0x03

@@ -4,11 +4,12 @@
 
 | | antes | depois |
 |---|---|---|
-| `patches.txt` | 4.937 linhas | **5.341** (−2: as linhas 1.826 e 1.828, escape `03` → `02`; +406: `data/patches_gemeos.txt`) |
+| `patches.txt` | 4.937 linhas | **5.341** (−2: as linhas 1.826 e 1.828, escape `03` → `02`; +406: `data/patches_gemeos.txt`); depois **5.348** (+7 escapes) |
 | `serie 0 3444` (`TARJA=1`) | 165 | **165** — os mesmos quadros |
 | `mapa` / `panorama` | — | idênticos |
 | `verify` com `BASE_N=1338` | 0 válidos, 12 falsos, 3.587 pulados | 0 válidos, **11** falsos, **3.992** pulados |
 | JM no GOP 0 | parava no frame 10 | decodifica do 0 ao 12 **sem erro nem aviso** |
+| escapes restaurados (mesmo dia, 7 linhas) | `mapa` 993 inteiros | **987** — os 6 que eram o NAL cortado (59, 263, 407, 1610, 1638, 2459) passam a parar no dano real; `serie` 165 igual; `verify` 0 / 11 / **3.999** |
 
 **Consertado por reparo: 2 quadros, o 10 e o 12** — que já contavam como bons,
 mas por interpolação: o NAL cortado num `00 00 02` fazia os dois serem lidos
@@ -23,7 +24,7 @@ dados; a contagem não muda. **Já eram bons antes:** os outros 163.
 |---|---|---|
 | `patches.txt` | 3.994 linhas | **4.937** (+943 da tarja de cima: níveis A e I) |
 | `serie 0 3444` (`TARJA=1`) | 165 | **165** — os mesmos quadros |
-| `mapa`: sem imagem / inteiros / param na tarja de cima | 159 / 990 / 789 | 159 / **993** / **602** — mudam só os 232 do lote, todos para a frente (3 inteiros, 184 passam da tarja, 45 avançam), +207.583 MBs |
+| `mapa`: sem imagem / inteiros / param na tarja de cima | 159 / 990 / 789 | 159 / **993** / **602** — mudam só os 232 do lote, todos para a frente (184 passam da tarja, 45 avançam, e 3 "inteiros" que eram o NAL cortado — revisto em 2026-09-29), +207.583 MBs |
 | `verify` com `BASE_N=1338` | 0 válidos, 12 falsos, 2.644 pulados | 0 válidos, 12 falsos, **3.587** pulados |
 
 **Consertado por reparo: bits, não imagem** — a cabeça de 232 quadros (197 P/B
@@ -91,7 +92,7 @@ Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 | `serie 0 3444` com a cadeia de referência (`TARJA=1`) | **167** — idêntico antes e depois do lote. O conjunto é as três ilhas + o 1683 (listrado, falso positivo); o 12 fica de fora por depender do frame 11 |
 | imagens dos 167 bons | **byte a byte iguais** antes e depois do lote |
 | `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **159 / 2.133 / 1.153** (com as 12 linhas erradas eram 165: elas tiravam a imagem de 6 quadros) |
-| `verify` com `BASE_N=1338` | **0 válidos, 11 falsos** explicados, 3.992 pulados (desde 2026-09-29, com os 406 dos gêmeos; antes 12 falsos e 3.587 desde 2026-09-28, com os 33 de cauda de IDR, os 475 de cauda de P/B, os 873 do frame 11 e os 943 da tarja de cima) — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
+| `verify` com `BASE_N=1338` | **0 válidos, 11 falsos** explicados, 3.999 pulados (desde 2026-09-29, com os 406 dos gêmeos e os 7 escapes; antes 12 falsos e 3.587 desde 2026-09-28, com os 33 de cauda de IDR, os 475 de cauda de P/B, os 873 do frame 11 e os 943 da tarja de cima) — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
 
 **Frame 2361 (aprovado pelo usuário):** o reparo antigo (`77528961 0` +
 `77528965 2`) dava cabeçalho inválido e o B decodificava "tudo skip" em 8 bytes —

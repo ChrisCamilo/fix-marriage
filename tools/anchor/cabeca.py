@@ -169,7 +169,15 @@ def quadro(t):
         nale, idxe = escapa(rbe)
         a = idxe[(h['bits'] + pos[m_ini]) >> 3]; b = min(len(nale), len(nal))
         dif = [8 * i + j for i in range(a, b) for j in range(8) if ((nale[i] ^ nal[i]) >> (7 - j)) & 1]
-        if melhor is None or len(dif) < len(melhor[3]): melhor = (nome, 8 * (b - a), a, dif)
+        # O escape logo depois da janela: o esperado acaba em 00 00 e o arquivo
+        # tem ali 00 00 0x (x < 3), proibido num NAL -- o byte so pode ser o
+        # 03 de escape (o resto da cabeca pulada e zeros). Sem isto o NAL
+        # corrigido fica cortado ali e o quadro "fecha" sem ler os dados
+        # (armadilha 62: 263, 1638 e 2459 em 2026-09-28; o 2971 ganhou um 00 00 01).
+        nb = 8 * (b - a)
+        if 2 <= b < len(nal) and nale[b - 2] == 0 and nale[b - 1] == 0 and nal[b] < 3:
+            dif += [8 * b + j for j in range(8) if ((nal[b] ^ 3) >> (7 - j)) & 1]; nb += 8
+        if melhor is None or len(dif) < len(melhor[3]): melhor = (nome, nb, a, dif)
     if melhor is None: return (t, tipo, '-', 0, -1, 0, [])
     nome, n, a, dif = melhor
     locs = [(k, o + 4 + (k >> 3), 7 - (k & 7)) for k in dif]

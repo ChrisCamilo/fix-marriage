@@ -54,7 +54,8 @@ o argumento do frame 11 em escala pequena; 4 divergem (901, 1011, 1437, 2130,
 | B — P/B, o resto de d 1–3 | 362 | 703 | 6 | 246 | 110 |
 | I — IDRs de dano uniforme | 35 | 700 | 0 | 34 | 1 |
 
-Inteiros com a correção: 263, 601, 780, 813, 1638, 1647, 2068, 2459, 3260.
+Inteiros com a correção: 263, 601, 780, 813, 1638, 1647, 2068, 2459, 3260 — **ao
+menos 263, 1638 e 2459 eram artefato** (ver "Revisto" no fim).
 Fora pelo juiz: 3 já passavam, 5 pioram, 3 não mudam. "Avança dentro da
 tarja" = mais dano logo depois da janela (nos bits pendentes: numa tarja em
 skip cada bit carrega ~24 MBs). A correção prova os bits dela; não fecha o
@@ -72,10 +73,26 @@ do meio continua).
 Níveis **A e I**, aprovados pelo usuário: 943 linhas (3.995–4.937 do
 `patches.txt`; 3.993–4.935 desde 2026-09-29), registradas em `data/patches_cabeca.txt`, que o `verify` pula.
 Medido depois: o `mapa` muda só nos 232 quadros do lote, todos para a frente
-(3 inteiros, 184 passam da tarja, 45 avançam; parados na tarja de cima 789 →
-602; +207.583 MBs); `serie` 165, os mesmos; `verify` 0 / 12 / 3.587. O nível B
+(184 passam da tarja, 45 avançam, e 3 que pareciam inteiros; parados na tarja de
+cima 789 → 602; +207.583 MBs); `serie` 165, os mesmos; `verify` 0 / 12 / 3.587. O nível B
 (362 quadros, 703 bits) segue só na proposta: a folga curta é justamente o
 que as 3 correções falsas do controle tinham.
 
 Reproduzir: `python tools/anchor/cabeca.py censo …`, `mapa` com os candidatos,
 `python tools/anchor/cabeca.py niveis …` (uso no topo da ferramenta).
+
+## Revisto em 2026-09-29: o escape depois da janela
+
+Os "3 inteiros" do lote aplicado (263, 1638, 2459) eram artefato: logo depois
+da janela testada o arquivo tem `00 00 02`, proibido num NAL; o ffmpeg corta o
+NAL ali e o quadro é lido todo pulado (armadilha 62). No IDR 2971 a correção da
+linha 4.834 formou um `00 00 01` pelo mesmo motivo — o escape seguinte (`01`
+onde devia ser `03`) ficou 1 byte fora da janela. As correções da cabeça estão
+certas; faltava o escape.
+
+Restaurado o `03` nesses 4 e em 59, 407 e 1610 (linhas 5342–5348, aprovadas
+pelo usuário): os falsos inteiros param no dano real, o 2971 vai de 960 a 998,
+`serie` igual. O `cabeca.py` agora inclui esse byte: quando o esperado termina
+a janela em `00 00` e o arquivo tem ali `00 00 0x` (x < 3), o byte só pode ser o
+escape `03`. Testado nos 7: acha os 7 e nada mais. Guarda para todo lote novo:
+`python tools/proibidas.py` — nenhuma sequência criada por patch.

@@ -1,5 +1,7 @@
 # patches_cabeca.txt -- a tarja de cima recodificada (docs/CENSO_CABECA.md): o lote que entrou no patches.txt.
 # Aplicado em 2026-09-28, aprovado pelo usuario: niveis A (P/B) e I (IDRs), 943 linhas (3995-4937 do patches.txt; 3993-4935 desde 2026-09-29, quando sairam as linhas 1.826 e 1.828). O verify pula este arquivo.
+# ATENCAO (2026-09-29): os "mapa ->8160" de 263, 1638 e 2459 abaixo eram o NAL cortado num 00 00 02 logo depois
+# da janela; o escape entrou nas linhas 5342-5348 (e o do 2971, cuja linha 4834 formou um 00 00 01).
 # Gerado por: python tools/anchor/cabeca.py censo/niveis (data/patches_cabeca_proposta.txt, niveis A e I).
 1124886 7 # quadro 28 B skip nivel A mapa 378->933
 2503408 6 # quadro 52 B skip nivel A mapa 10->1104

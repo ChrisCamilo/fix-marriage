@@ -1215,3 +1215,9 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     remendado**, e conferir no JM que o quadro lê os dados dele. O conserto
     honesto dos dois (os gêmeos 6 e 8, `tools/anchor/gemeos.py`) dá a mesma
     imagem — agora lida dos dados.
+
+    No mesmo dia a varredura (`tools/proibidas.py`) achou o mesmo efeito em
+    mais 6 quadros "inteiros" — 59, 407, 1610 (da lista da armadilha 27) e
+    263, 1638, 2459, que o lote da cabeça tinha dado como fechados — e um
+    `00 00 01` criado pela correção da cabeça do 2971. A janela testada do
+    censo acabava 1 byte antes do escape.
