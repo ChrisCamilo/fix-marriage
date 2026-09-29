@@ -671,7 +671,10 @@ Cada uma delas me custou horas e produziu uma conclusão errada:
     e foi o que se fez.
 
 36. **"Completa cedo" não prova atalho — refutei o juiz de consumo, e a
-    refutação estava generalizada demais.** *(corrigida no fim do item)* O frame
+    refutação estava generalizada demais.** *(corrigida no fim do item; e
+    **revista em 2026-09-29**: o "reparo verificado" do frame 12 usado como
+    controle era o NAL cortado da armadilha 62 — a refutação não vale, ver a 62.
+    E o `184311 bit 6` do 13 era mesmo destravador, RASTREIO.)* O frame
     13 com o candidato `184311 bit 6` fecha o quadro no byte **31.900** de
     **36.528**, e o payload dele não tem `cabac_zero_word` nenhum. Parecia prova
     de que o candidato atravessava a cauda como skip em vez de decodificá-la, e
@@ -1221,3 +1224,14 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     263, 1638, 2459, que o lote da cabeça tinha dado como fechados — e um
     `00 00 01` criado pela correção da cabeça do 2971. A janela testada do
     censo acabava 1 byte antes do escape.
+
+    E o `avanco` acha o truque sozinho: no B 16, a única troca de 1 bit que
+    "fechava" o quadro (8.160, sem erro) era o escape `03` do byte 13 virando
+    `02`. Desde 2026-09-29 o `avanco` reprova sem decodificar toda combinação
+    que cria `00 00 0x` no NAL (`cria_proibida`; `PERMITE_PROIBIDA=1` desliga).
+
+    **Revisão da armadilha 36:** o juiz de consumo foi "refutado" usando o
+    frame 12 como reparo verificado que fechava truncado em 100 bytes. Aquele 12
+    era justamente o NAL cortado desta armadilha. A refutação não vale; o juiz
+    de consumo segue desligado, mas por falta de controle, não por prova
+    contra.

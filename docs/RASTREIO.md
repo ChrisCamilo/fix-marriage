@@ -2137,3 +2137,18 @@ peso, que não muda o parse): `mapa` do 17 de 9 a 1.151 e do 19 de 1 a 1.080;
 `serie` igual; nenhuma sequência proibida. **Aplicado com aprovação do usuário**
 (linhas 5.779–5.907: o QP em `data/patches_cabecalho.txt`, as 127 trocas da
 cabeça em `data/patches_cabeca_fis.txt`). O bit ambíguo do peso do 19 não entrou.
+
+## B 16 e 18 — nenhum bit sozinho; o `avanco` ganhou a guarda do escape (2026-09-29)
+
+Os dois têm a tarja de cima intacta e param por dessincronização
+(`Reference 2 >= 2`): o 16 no MB 2.156 (~3.300 bytes lidos de 18.008), o 18 no
+3.456 (~6.050 de 13.923). Busca de 1 bit do começo do slice até a parada:
+26.520 posições no 16, 48.520 no 18. O melhor leva o 16 a 2.588 e o 18 a
+4.594 — ruído (mais de mil empurram o erro). **Nenhum bit sozinho**: são 2 ou
+mais.
+
+O único candidato que "fechava" o 16 (8.160 sem erro) era o escape `03` do
+byte 13 virando `02` — o NAL cortado da armadilha 62 (fecha mesmo truncado em
+1.000 bytes). O `avanco` agora reprova, sem decodificar, toda combinação que
+cria `00 00 0x` no NAL; refeita a busca, o 16 não tem mais nenhum "fechamento".
+Próximo passo possível: 2 bits perto da dessincronização (horas por quadro).

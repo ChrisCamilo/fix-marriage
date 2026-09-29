@@ -805,6 +805,7 @@ static int consumo_t  = 0;      /* CONSUMO=n: quadro que fecha truncado em n byt
 static int iguais     = 0;      /* IGUAIS=1: grava tambem quem empata com a base */
 static int piso_croma = 0;      /* PISO_CROMA=1: desvio de croma dentro da faixa real */
 static int piso_trinca = 0;     /* PISO_TRINCA=1: libera + limpa + borrao intacto */
+static int permite_proibida = 0; /* PERMITE_PROIBIDA=1: aceita troca que cria 00 00 0x no NAL */
 static int base_fronteira = -1; /* fronteira do borrao sem nenhum flip */
 static int base_ntrechos = -1, base_maior = -1, base_linhas = -1, base_longos = -1;
 
@@ -1121,12 +1122,42 @@ static int croma_mb_na_faixa(int y0, int y1) {
 
 
 
+/* Diz se as trocas de uma combinacao criaram uma sequencia proibida no NAL.
+ *
+ *   novo   a amostra com as trocas aplicadas (prefixo AVCC de 4 bytes + NAL)
+ *   orig   a mesma amostra sem as trocas
+ *   len    tamanho da amostra
+ *   comb   posicoes das trocas, em bits a partir do byte `ini_k`
+ *   k      quantas trocas
+ *
+ * Proibida: 00 00 0x com x < 3 dentro do NAL. So conta a que nao existia em
+ * `orig`: os 11 quadros com sequencia no arquivo cru (tools/proibidas.py) nao
+ * podem reprovar toda troca feita neles.
+ *
+ * Devolve: 1 se alguma troca criou sequencia proibida; 0 se nao.
+ */
+static int cria_proibida(const uint8_t *novo, const uint8_t *orig, int len,
+                         const int *comb, int k) {
+    for (int q = 0; q < k; q++) {
+        int b = ini_k + comb[q] / 8;
+        for (int i = b - 2; i <= b; i++) {
+            if (i < 4 || i + 2 >= len) continue;
+            if (novo[i] == 0 && novo[i + 1] == 0 && novo[i + 2] < 3
+                && !(orig[i] == 0 && orig[i + 1] == 0 && orig[i + 2] < 3))
+                return 1;
+        }
+    }
+    return 0;
+}
+
 /* Varre combinacoes de k bits e pontua por PROGRESSO, para o modo `avanco`.
  *
  *   p  ignorado; a tarefa vem de `prox_combo` e de `combos_k`
  *
  * Pontua, em `placar[indice]`: por padrao o macrobloco alcancado, 8160 quando
- * nao ha erro, -1 quando reprova num piso. Com PONTUA_CONSUMO=1 a nota vira
+ * nao ha erro, -1 quando reprova num piso -- ou quando a combinacao cria uma
+ * sequencia 00 00 0x proibida no NAL (cria_proibida; PERMITE_PROIBIDA=1
+ * desliga). Com PONTUA_CONSUMO=1 a nota vira
  * bytes consumidos antes do erro.
  *
  * E aqui que moram os pisos -- e SO aqui, o que nao esta obvio: passar
@@ -1150,6 +1181,17 @@ static void *worker_avanco(void *p) {
         memcpy(copia, arq + ix[alvo].off, len);
         for (int q = 0; q < prof_k; q++)
             copia[ini_k + comb[q] / 8] ^= (1 << (comb[q] % 8));
+        /* Troca que cria 00 00 0x (x < 3) dentro do NAL e reprovada sem
+         * decodificar: a sequencia e proibida, o ffmpeg CORTA o NAL ali e o
+         * quadro "fecha" sem ler o resto -- num B, todo pulado, a interpolacao
+         * das referencias (armadilha 62). No frame 16 era o unico candidato que
+         * chegava a 8160: o escape 03 do byte 13 virando 02. Sequencia que ja
+         * estava no arquivo nao conta contra o candidato. PERMITE_PROIBIDA=1
+         * desliga. */
+        if (!permite_proibida && cria_proibida(copia, arq + ix[alvo].off, len, comb, prof_k)) {
+            placar[c] = -1;
+            continue;
+        }
         decodifica(anc, alvo, copia, len, NULL);
         /* Sem quadro na saida nao ha pontuacao possivel. Se o decoder rejeita o
          * pacote antes de decodificar macrobloco nenhum, nao sai linha "error
@@ -3462,6 +3504,7 @@ int main(int argc, char **argv) {
     if (getenv("PISO_BASE")) piso_base = atoi(getenv("PISO_BASE"));
     if (getenv("CONSUMO")) consumo_t = atoi(getenv("CONSUMO"));
     if (getenv("IGUAIS")) iguais = atoi(getenv("IGUAIS"));
+    if (getenv("PERMITE_PROIBIDA")) permite_proibida = atoi(getenv("PERMITE_PROIBIDA"));
     if (getenv("PISO_CROMA")) { piso_croma = atoi(getenv("PISO_CROMA")); if (piso_croma) guardar_croma = 1; }
     if (getenv("TOL_COPIA")) juizes_tolerancia(atoi(getenv("TOL_COPIA")));
     if (getenv("TETO_RESPINGO")) teto_respingo = atoi(getenv("TETO_RESPINGO"));
