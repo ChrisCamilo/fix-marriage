@@ -96,3 +96,19 @@ pelo usuário): os falsos inteiros param no dano real, o 2971 vai de 960 a 998,
 a janela em `00 00` e o arquivo tem ali `00 00 0x` (x < 3), o byte só pode ser o
 escape `03`. Testado nos 7: acha os 7 e nada mais. Guarda para todo lote novo:
 `python tools/proibidas.py` — nenhuma sequência criada por patch.
+
+## Nível B aplicado (2026-09-29)
+
+Recalibrado o risco que deixou o nível B de fora: nos 26 quadros de controle
+com evento real na cabeça (MB não pulado que passa da tarja), corta-se a
+janela em todo ponto possível e conta-se quando a rajada verdadeira passaria
+como 1–3 trocas. Probabilidade média por evento: folga ≥ 6 → 0,5%; ≥ 8 →
+0,07%; **≥ 10 → 0** (máximo 0 nos 26). O espaçamento entre trocas não importa.
+Com ~1% de quadros com evento, nem a folga 6 daria 0,02 falso esperado; fica
+10, com margem.
+
+Censo refeito no buffer do dia (com a guarda do escape): 365 candidatos P/B
+parados na tarja; com folga ≥ 10, **163 quadros, 325 bits**, todos andam no
+`mapa` (121 passam da tarja), nenhum piora; `serie` igual. Aplicado com
+aprovação do usuário: `data/patches_cabeca_b.txt`. Os 198 com folga < 10 são o
+nível C, fora. O `cabeca.py niveis` agora separa A, B e C.

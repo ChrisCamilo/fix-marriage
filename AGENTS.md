@@ -131,6 +131,16 @@ que os "3 inteiros" do lote da cabeça (263, 1638, 2459) e o `00 00 01` que ele
 criou no 2971 apareceram; os 7 escapes (com 59, 407 e 1610) entraram no mesmo
 dia, aprovados pelo usuário, também em `data/deterministicos.txt`.
 
+Ainda em 2026-09-29, aprovados pelo usuário: o **nível B da cabeça**
+(`data/patches_cabeca_b.txt`, 325 linhas em 163 quadros, folga ≥ 10 bits depois
+da última troca — calibrado nos 26 eventos reais do controle: nenhuma rajada
+passa como troca com essa folga; o espaçamento entre trocas não importa) e **51
+escapes `00 00 02` → `03`** (em `data/deterministicos.txt`; 705 escapes contra
+2 casos da alternativa nos quadros bons). Os `00 00 00` não entram: voltar a
+`03` custa 2 bits e a alternativa de 1 bit é mais provável. **Com o NAL
+cortado, o `mapa` não julga escape** — o avanço era falso, e restaurar pode
+recuar o quadro para o dano real.
+
 A `docs/ARMADILHAS.md` lista **62** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
@@ -149,11 +159,11 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 11 falsos, 3999 determinísticos pulados`** (os 486 de
+hoje **`0 válidos, 11 falsos, 4375 determinísticos pulados`** (os 537 de
 `data/deterministicos.txt`, os 783 de `data/patches_cabecalho.txt`, os 33 de
 `data/patches_cauda.txt`, os 475 de `data/patches_cauda_pb.txt`, os 873 de
-`data/patches_f11.txt`, os 943 de `data/patches_cabeca.txt` e os 406 de
-`data/patches_gemeos.txt`), e os 11 falsos são
+`data/patches_f11.txt`, os 943 de `data/patches_cabeca.txt`, os 406 de
+`data/patches_gemeos.txt` e os 325 de `data/patches_cabeca_b.txt`), e os 11 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |

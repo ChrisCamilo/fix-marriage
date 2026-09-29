@@ -44,8 +44,12 @@
 # controle (quadros que ja passavam da tarja) tem 3 "correcoes" assim, todas
 # com folga <= 9 bits. Dai os niveis de P/B:
 #   A  folga >= 16 bits iguais depois da ultima troca e trocas a >= 8 bits
-#      uma da outra
-#   B  o resto
+#      uma da outra (aplicado em 2026-09-28)
+#   B  folga >= 10 (aplicado em 2026-09-29). Calibrado nos 26 quadros de
+#      controle com evento real na cabeca: cortando a janela em todo ponto
+#      possivel, nenhuma rajada verdadeira passa como troca com folga >= 10
+#      (com 8, 0,07%; com 6, 0,5%). O espacamento entre trocas nao importa.
+#   C  o resto (folga < 10), fora
 # e em todos: o quadro parava dentro da tarja e o `mapa` com o candidato
 # aplicado para mais adiante (nunca igual, nunca antes).
 #
@@ -190,7 +194,7 @@ def _ini():
 
 
 MAXD_PB, JAN_I, MAX_JAN_I = 3, 64, 12
-FOLGA_A, VAO_A = 16, 8
+FOLGA_A, VAO_A, FOLGA_B = 16, 8, 10
 
 
 def janela_max(ps, a0, n):
@@ -263,7 +267,7 @@ def niveis(censo_txt, mapa_antes, mapa_com, saida):
         else:
             folga = 8 * a0 + nb - max(ps)
             vao = min((ps[i + 1] - ps[i] for i in range(len(ps) - 1)), default=99)
-            nv = 'A' if folga >= FOLGA_A and vao >= VAO_A else 'B'
+            nv = 'A' if folga >= FOLGA_A and vao >= VAO_A else ('B' if folga >= FOLGA_B else 'C')
         cont[nv] += 1
         for p in ps:
             linhas.append('%d %d # quadro %d %s %s nivel %s mapa %d->%d\n' % (

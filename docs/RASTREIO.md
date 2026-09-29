@@ -2015,3 +2015,15 @@ exige imagem inteira conhecida. Procurado no `panorama` de hoje:
 O 13 é o único vizinho de fade quebrado, e é fusão com a cena — conteúdo
 desconhecido. **Não há outro quadro de conteúdo inteiro conhecido para
 recodificar.** Tarjas continuam cobertas pela cabeça e pelas caudas.
+
+## Nível B da cabeça e as sequências proibidas restantes (2026-09-29)
+
+- **Nível B:** calibração com os 26 eventos reais do controle — com folga ≥ 10
+  bits nenhuma rajada passa como troca. 163 quadros, 325 bits, todos andam no
+  `mapa`. Detalhe em `docs/CENSO_CABECA.md`.
+- **Sequências proibidas:** das 64, 2 saíram com o nível B (escape dentro da
+  cabeça). Das 62: 51 `00 00 02` restaurados para `03` pela estatística dos
+  quadros bons (705 escapes contra 2 casos da alternativa de 1 bit); 10
+  `00 00 00` fora (2 bits para o escape, 1 para a alternativa, ~3× mais
+  provável); o 3444 é legítimo. O `mapa` não julga — o corte dava avanço
+  falso: 37, 800, 1212, 1570 e 3260 recuam para o dano real. Restam 11.

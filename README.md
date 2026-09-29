@@ -111,7 +111,7 @@ raiz/                   o que todo comando cita, e o que nunca se move
     deterministicos.txt remontados.txt
     patches_cabecalho.txt  o lote de cabeçalhos que entrou no patches.txt
     patches_cauda.txt patches_cauda_pb.txt patches_f11.txt patches_cabeca.txt
-    patches_gemeos.txt
+    patches_gemeos.txt patches_cabeca_b.txt
                         os lotes de cauda e o frame 11 (idem; o verify pula)
     mapa_dano.txt alvos.txt alvos_ocultos.txt cabecalho_slice.txt
                         medidas; cada um traz no topo como foi gerado
@@ -139,7 +139,7 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c data/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 5.348 linhas:**
+**Composição do `patches.txt` — 5.724 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
@@ -155,6 +155,8 @@ conferida com `sha256sum -c data/CHECKSUMS.txt`.
 | 3993–4935 | 943 | **a tarja de cima recodificada** (censo da cabeça, 2026-09-28): os 960 MBs das fileiras 0–7 recodificados com CABAC a partir do estado exato do começo do slice e comparados com o arquivo byte a byte no NAL; 232 quadros — nível A, 197 P/B com 243 bits (distância 1–3, 16+ bits iguais depois da última troca), e nível I, 35 IDRs com 700 bits (dano uniforme de 1,5–6,6%). Linha a linha em `data/patches_cabeca.txt`, que o `verify` também pula. `mapa` muda só nesses 232, todos para a frente (184 passam da tarja, 45 avançam; parados na tarja de cima: 789 → 602; os 3 que pareciam fechar — 263, 1638, 2459 — eram o NAL cortado num `00 00 02` logo depois da janela, corrigido em 2026-09-29, linhas 5342–5348); `serie` igual (165). O nível B (362 quadros) ficou de fora. Ver `docs/CENSO_CABECA.md` |
 | 4936–5341 | 406 | **os B 10 e 12 recodificados pelos gêmeos** (2026-09-29): o 10 todo pulado como o 6 (81 bits, 3,9%), o 12 com a sintaxe do 8 (325 bits nos 1.135 bytes de dados, 3,6%; enchimento limpo); os dois NALs fecham no tamanho exato e o JM decodifica o GOP 0 do 0 ao 12 sem erro nem aviso. Linha a linha em `data/patches_gemeos.txt`, que o `verify` também pula. `mapa`, `panorama` e `serie` idênticos — a imagem já era a interpolação, agora vem dos dados. Ver `tools/anchor/gemeos.py` |
 | 5342–5348 | 7 | **escapes restaurados** (2026-09-29): o `03` onde um `00 00 02` (59, 263, 407, 1610, 1638, 2459) ou `00 00 01` (2971, criado pela linha 4.834 do lote da cabeça) cortava o NAL — o quadro parecia inteiro no `mapa` sem ler os dados. Com o escape, os 6 falsos inteiros param no dano real (MB 805–1.278) e o 2971 vai de 960 a 998; `serie` igual. Também em `data/deterministicos.txt`. Guarda: `tools/proibidas.py` (armadilha 62) |
+| 5349–5673 | 325 | **nível B da tarja de cima** (2026-09-29): 163 quadros, distância 1–3 com folga ≥ 10 bits depois da última troca — calibrado nos 26 quadros de controle com evento real na cabeça, onde nenhuma rajada verdadeira passa como troca com essa folga. Linha a linha em `data/patches_cabeca_b.txt`, que o `verify` também pula. `mapa`: os 163 andam (121 passam da tarja); `serie` igual |
+| 5674–5724 | 51 | **escapes `00 00 02` → `00 00 03`** em 49 quadros (2026-09-29, `tools/proibidas.py`): nos quadros bons há 705 escapes contra 2 casos da alternativa de 1 bit (byte de 1 bit zerado antes de um `02`), ~350:1. Ficaram fora os 10 `00 00 00` (voltar custa 2 bits; a alternativa de 1 bit é ~3× mais provável) e o 3444 (legítimo). O `mapa` não julga: o corte dava avanço falso, e 5 quadros recuam para o dano real. Também em `data/deterministicos.txt` |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a

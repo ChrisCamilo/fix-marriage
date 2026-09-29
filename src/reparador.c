@@ -2030,15 +2030,19 @@ static int modo_verify(int argc, char **argv) {
          * continua, como nas caudas.
          *
          * E os B 10 e 12 recodificados pelos gemeos (patches_gemeos,
-         * tools/anchor/gemeos.py): so as linhas juntas fecham cada quadro. Das
-         * sete listas juntas saem 3.993 pulados; o teto do det_off era 4.096 e
-         * passou a 16.384 (lista maior que o teto era cortada em silencio). */
-        const char *listas[7] = {
+         * tools/anchor/gemeos.py): so as linhas juntas fecham cada quadro. O
+         * teto do det_off era 4.096 e passou a 16.384 (lista maior que o teto
+         * era cortada em silencio).
+         *
+         * E o nivel B da cabeca (patches_cabeca_b, folga >= 10), do mesmo tipo
+         * do patches_cabeca. Das oito listas juntas saem 4.375 pulados. */
+        const char *listas[8] = {
             getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
             "data/patches_cabecalho.txt", "data/patches_cauda.txt",
             "data/patches_cauda_pb.txt", "data/patches_f11.txt",
-            "data/patches_cabeca.txt", "data/patches_gemeos.txt" };
-        for (int f = 0; f < 7; f++) {
+            "data/patches_cabeca.txt", "data/patches_gemeos.txt",
+            "data/patches_cabeca_b.txt" };
+        for (int f = 0; f < 8; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;
             char linha[512]; long o; int b, n0 = n_det;
