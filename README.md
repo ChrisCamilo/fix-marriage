@@ -280,8 +280,11 @@ praticamente limpo. Medido em conteúdo conhecido, no MP4 original
 Consequência: quadro com payload em zona de ~4% tem centenas de bits trocados —
 o frame 11 tinha 873 — e nenhuma busca de 1–3 bits o consertava (entrou
 inteiro em 2026-09-28, recodificado a partir do conteúdo conhecido: plano 5). **Consultar o mapa
-antes de escolher alvo de varredura.** Aberto: tamanho e alinhamento dos blocos
-de dano.
+antes de escolher alvo de varredura.** Tamanho e alinhamento dos blocos de dano,
+medidos em 2026-09-29 nas 1.279 trocas provadas em zona densa: não há bloco nem
+alinhamento (bit no byte e posição uniformes), mas as trocas se repelem a menos
+de 8 bits (1/3 do esperado) e raramente caem duas no mesmo byte (RASTREIO,
+"Frame 13 — o dano denso").
 
 **Os 1.439 quadros não inteiros, por onde está o dano** ([`data/alvos.txt`](data/alvos.txt)):
 435 com **cabeçalho do slice inválido** pela norma (o caso do frame 11; 151 P,

@@ -2027,3 +2027,26 @@ recodificar.** Tarjas continuam cobertas pela cabeça e pelas caudas.
   `00 00 00` fora (2 bits para o escape, 1 para a alternativa, ~3× mais
   provável); o 3444 é legítimo. O `mapa` não julga — o corte dava avanço
   falso: 37, 800, 1212, 1570 e 3260 recuam para o dano real. Restam 11.
+
+## Frame 13 — o dano denso: a textura não ancora, e as trocas se repelem (2026-09-29)
+
+**Estrutura do dano, medida nas 1.279 trocas provadas em zona densa** (frame
+11, 10 e 12): bit dentro do byte e posição mod 2/4/8/16/512/4096 uniformes
+(qui² 7,5 com 7 g.l.) — **não há bloco nem alinhamento** —, mas as trocas se
+**repelem a curta distância**: espaçamento de 0–7 bits 109 vezes contra 348 se
+fossem independentes, duas no mesmo byte 163 contra 348; de 8 bits em diante,
+geométrico (densidade 3,9%). Prior útil para busca (corta ~2–3×), não atalho.
+
+**Caminho 2 (ancorar a faixa perdida na textura do papel de parede): fechado.**
+No 13 a cena mal começou a fundir: o papel de parede tem desvio de **1,04
+nível** (média 49,2). O melhor período vertical (~138–140 linhas, sem
+deslocamento) erra 0,83 nível por pixel, contra 0,94 de um deslocamento
+qualquer. Na sintaxe (trace do JM, fileiras 20–53, colunas 57–119, 2.142
+pares): sintaxe idêntica ao vizinho de cima em 2,1%, a um período acima em
+0,9%; mesmo tipo de MB em ~40%. Cada MB leva 4–12 coeficientes quase todos ±1
+— o ruído de quantização, não o desenho. Nem pixel nem bit da faixa perdida se
+prevê pelos vizinhos.
+
+O 13 fica, nos bits, onde está: fileiras 0–53 certas, 54–59 perdidas (~1.700
+trocas sobre cena desconhecida). Gabarito emprestado não há (nenhuma cópia
+íntegra do plano); busca em feixe sem física já se mostrou enganosa no 11.
