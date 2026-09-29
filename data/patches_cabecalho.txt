@@ -818,3 +818,6 @@
 190003 5 # quadro 14, regiao do QP/deblocking (bit 58)
 194111 2 # quadro 15, solucao A (1/2)
 194126 7 # quadro 15, solucao A (2/2)
+# 2026-09-29, aprovado pelo usuario: o QP do 17 e do 19, achado pela tarja de cima com o MB 0 pela fisica (docs/CENSO_CABECA.md)
+297438 3 # quadro 17, slice_qp_delta: QP 15 -> 11 (linha 5779 do patches.txt)
+439020 0 # quadro 19, slice_qp_delta: QP 14 -> 12 (linha 5839 do patches.txt)

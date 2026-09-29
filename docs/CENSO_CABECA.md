@@ -141,4 +141,6 @@ busca de 1–2 bits no cabeçalho julgada pela física da tarja achou:
 | 19 | bit 159 | QP 14 → **12** | 68 de 2.704 bits (2,5%), com o peso da ref0 corrigido em 1 bit — mas três bits dão o mesmo (luma 44 → 45 ou 46, ou deslocamento −9 → −8): a tarja não decide |
 
 A segunda melhor hipótese fica em 17–18% nos dois. Com o QP e as trocas da
-cabeça, o `mapa` leva o 17 do MB 9 ao 1.151 e o 19 do MB 1 ao 1.080.
+cabeça, o `mapa` leva o 17 do MB 9 ao 1.151 e o 19 do MB 1 ao 1.080. Aplicado
+em 2026-09-29 com aprovação do usuário (`data/patches_cabeca_fis.txt`), sem o
+bit ambíguo do peso do 19.

@@ -2134,4 +2134,6 @@ Refeita pela taxa (e estendida a 2 bits, ~14 mil combinações por quadro):
 
 Com o QP e as trocas da cabeça (60 bits no 17, 69 no 19, sem o bit ambíguo do
 peso, que não muda o parse): `mapa` do 17 de 9 a 1.151 e do 19 de 1 a 1.080;
-`serie` igual; nenhuma sequência proibida. **Proposta, não aplicada.**
+`serie` igual; nenhuma sequência proibida. **Aplicado com aprovação do usuário**
+(linhas 5.779–5.907: o QP em `data/patches_cabecalho.txt`, as 127 trocas da
+cabeça em `data/patches_cabeca_fis.txt`). O bit ambíguo do peso do 19 não entrou.

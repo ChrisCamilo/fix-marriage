@@ -112,6 +112,7 @@ raiz/                   o que todo comando cita, e o que nunca se move
     patches_cabecalho.txt  o lote de cabeçalhos que entrou no patches.txt
     patches_cauda.txt patches_cauda_pb.txt patches_f11.txt patches_cabeca.txt
     patches_gemeos.txt patches_cabeca_b.txt patches_cabeca_f15.txt
+    patches_cabeca_fis.txt
                         os lotes de cauda e o frame 11 (idem; o verify pula)
     mapa_dano.txt alvos.txt alvos_ocultos.txt cabecalho_slice.txt
                         medidas; cada um traz no topo como foi gerado
@@ -139,14 +140,14 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c data/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 5.778 linhas:**
+**Composição do `patches.txt` — 5.907 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
 | 1–1338 | 1.338 | base determinística (prefixos de NAL e cabeçalhos). Reconferido: regerar com `base` reproduz os mesmos 1338 byte a byte |
 | 1339–1828 | 490 | destas, **478** também estão em `data/deterministicos.txt`. Saíram em 2026-09-18 a `77528965 2` (reparo antigo do 2361) e a `114260576 3` (reparo antigo do 3442, que era o próprio defeito); em 2026-09-29 a `147444 0` (determinística, frame 10) e a `150538 0` (reparo do 12) — as duas trocavam o escape `03` do byte 13 do NAL por `02`, o ffmpeg cortava o NAL e o B virava interpolação (armadilha 62; `data/patches_gemeos.txt`) |
 | | **11** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` — hoje todos "insuficientes" pelo critério de ocultação |
-| | 1 | a linha 1378, `77528961 0` — o `frame_num` do reparo antigo do 2361, que ficou. Reclassificada como cabeçalho: está em `data/patches_cabecalho.txt` (por isso ele tem 783 linhas, não 782; e mais 6 desde 2026-09-29, os cabeçalhos do 14 e do 15: 789) e o `verify` a pula |
+| | 1 | a linha 1378, `77528961 0` — o `frame_num` do reparo antigo do 2361, que ficou. Reclassificada como cabeçalho: está em `data/patches_cabecalho.txt` (por isso ele tem 783 linhas, não 782; e mais 8 desde 2026-09-29, os cabeçalhos do 14 e do 15 e o QP do 17 e do 19: 791) e o `verify` a pula |
 | 1829–2610 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `data/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
 | 2611 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `data/deterministicos.txt` |
 | 2612–2644 | 33 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 13 IDRs, todas com encaixe desde as fileiras 63–65 — linha a linha em `data/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. Entraram 65; as 32 de encaixe nas fileiras 66–67 saíram em 2026-09-25 (sintaxe variante na tarja, armadilha 61; `data/cauda_auditoria.txt`). `mapa` idêntico nas duas mudanças. Ver `docs/PLANO_ANCORA_CAUDA.md` |
@@ -159,6 +160,7 @@ conferida com `sha256sum -c data/CHECKSUMS.txt`.
 | 5674–5724 | 51 | **escapes `00 00 02` → `00 00 03`** em 49 quadros (2026-09-29, `tools/proibidas.py`): nos quadros bons há 705 escapes contra 2 casos da alternativa de 1 bit (byte de 1 bit zerado antes de um `02`), ~350:1. Ficaram fora os 10 `00 00 00` (voltar custa 2 bits; a alternativa de 1 bit é ~3× mais provável) e o 3444 (legítimo). O `mapa` não julga: o corte dava avanço falso, e 5 quadros recuam para o dano real. Também em `data/deterministicos.txt` |
 | 5725–5730 | 6 | **cabeçalhos do 14 e do 15** (2026-09-29): o 14 com 4 bits pelo molde dos B do GOP 0 (4, 6, 8, 10, 12 e 16 idênticos fora `frame_num`/POC; fica QP 18 como os irmãos, tarja de cima com distância 0); o 15 com a solução A das duas de 2 bits (pesos na progressão do fade; a B dava deslocamento +125). Também em `data/patches_cabecalho.txt`. `mapa`: o 14 de sem imagem ao MB 896, o 15 ao MB 1 — os corpos estão na zona densa |
 | 5731–5778 | 48 | **a tarja de cima do frame 15 com o MB 0 pela física** (2026-09-29): pelos pesos do cabeçalho, o MB 0 é inter da ref0 (o 13, tarja 16 → 17) com resíduo −1 na luma e −1 no Cr; os MBs 1–959, I16x16 DC. Das 45 variantes testadas, a prevista bate em 1,8% (48 de 2.696 bits, uniforme) e a segunda fica em 18%. Linha a linha em `data/patches_cabeca_f15.txt`, que o `verify` também pula. `mapa`: o 15 vai do MB 1 ao 965; `serie` igual |
+| 5779–5907 | 129 | **o QP e a tarja de cima do 17 e do 19** (2026-09-29): o QP do cabeçalho estava errado (17: bit 164, 15 → 11; 19: bit 159, 14 → 12), achado pela física da tarja depois de corrigir o critério do censo; com ele, a tarja bate em 59 de 2.760 bits (17) e 68 de 2.704 (19). O QP em `data/patches_cabecalho.txt`, as 127 trocas da cabeça em `data/patches_cabeca_fis.txt` (o `verify` pula as duas). O peso da ref0 do 19 tem 1 bit errado, ambíguo entre três — não entrou. `mapa`: 17 de 9 a 1.151, 19 de 1 a 1.080; `serie` igual |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a
