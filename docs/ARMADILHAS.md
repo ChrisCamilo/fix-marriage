@@ -1196,3 +1196,22 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     dano denso na cauda; eram, com alta probabilidade, isto. Pixel não
     valida sintaxe: validar o modelo contra o JM, e desconfiar de encaixe curto
     (só as últimas fileiras) em quadro que não encaixa desde a fileira 63.
+
+62. **Um `00 00 02` no começo do NAL transforma um B em interpolação — e a
+    imagem sai "perfeita".** O frame 12 passou várias sessões como
+    reparado por 2 bits (`150530 4` + `150538 0`) com campo 41,000, tarjas
+    16,000 e desvio zero; o 10 também saía limpo. O segundo bit trocava o
+    escape `03` do byte 13 do NAL por `02` (no 10, a linha `147444 0`, que
+    estava até em `data/deterministicos.txt`). `00 00 02` é proibido dentro de
+    um NAL: o ffmpeg corta o NAL ali, o slice fica com 3 bytes de dados e o B
+    é lido como todo pulado — a média das referências, que num fade liso é
+    quase o quadro certo. É o reparo antigo do 2361 de novo (8 bytes de tudo
+    skip ignorando 30 KB). Sinais: sequência `00 00 0x` (x < 3) no NAL
+    remendado; o JM parando o fluxo Annex B nesse quadro; o quadro "bom"
+    sendo B num trecho liso. O censo da cabeça não pegou porque a janela
+    testada de um B tem só ~5 bytes e o escape estava no byte seguinte.
+
+    **Antes de aceitar um B perfeito, procurar `00 00 0x` proibido no NAL
+    remendado**, e conferir no JM que o quadro lê os dados dele. O conserto
+    honesto dos dois (os gêmeos 6 e 8, `tools/anchor/gemeos.py`) dá a mesma
+    imagem — agora lida dos dados.

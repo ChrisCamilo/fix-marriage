@@ -144,3 +144,15 @@
 153470 5
 153471 6
 184311 6
+
+# ============================================================================
+# 2026-09-29 -- COM O FRAME 11 CONSERTADO, OS TRES CAEM (ver RASTREIO.md)
+#
+#   par 153470 5 + 153471 6 .... tarja de cima 16 -> 17. Muda o peso da ref0
+#                                (42,-6) -> (40,-4); era compensacao do 11
+#                                quebrado. DESCARTADO.
+#   184311 6 ................... tarja de baixo 15,018 (nao uniforme), fileiras
+#                                55-59 degeneram em skip, JM para no MB 7.293.
+#                                Destravador. DESCARTADO.
+#   a "previsao falsificavel" acima falhou: a tarja de baixo nao vira 16.
+#   O dano da fileira 54 em diante e denso (~4,5% na tarja de baixo).

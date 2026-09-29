@@ -374,7 +374,7 @@ tamanho do arquivo; JM sem erro com a sintaxe das hipóteses; imagem tarja
 16,000 e campo 43,000 exatos; ffmpeg sem erro no GOP 0; mapa do filme inteiro
 só muda o 11 (0% → 100%); `serie` no GOP 0 de 11 para 13 quadros bons (o 11 e o
 12). **Aplicado em 2026-09-28** (aprovado pelo usuário): as **873 linhas** são as
-3.122–3.994 do `patches.txt`, registradas em `data/patches_f11.txt`, que o
+3.122–3.994 do `patches.txt` (3.120–3.992 desde 2026-09-29, quando saíram duas linhas anteriores), registradas em `data/patches_f11.txt`, que o
 `verify` pula (uma a uma nenhuma fecha o quadro; só as 873 juntas).
 
 Reproduzir: `python tools/anchor/f11.py nal <saida.txt>`.

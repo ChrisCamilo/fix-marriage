@@ -2004,7 +2004,7 @@ static int modo_verify(int argc, char **argv) {
          * ruim". Foram 31 de uma vez, contra 4 falsos de verdade. */
         int bons = 0, falsos = 0, pulados = 0;
         int base_n = getenv("BASE_N") ? atoi(getenv("BASE_N")) : 0;
-        static long det_off[4096]; static int det_bit[4096]; int n_det = 0;
+        static long det_off[16384]; static int det_bit[16384]; int n_det = 0;
         /* Os cabecalhos de slice consertados por coerencia (patches_cabecalho,
          * tools/cabecalho_slice.py) sao do mesmo tipo: provam o
          * cabecalho, nao fazem o quadro fechar -- o dano segue no corpo. Sem
@@ -2027,18 +2027,22 @@ static int modo_verify(int argc, char **argv) {
          *
          * E a tarja de cima recodificada (patches_cabeca, docs/CENSO_CABECA.md,
          * tools/anchor/cabeca.py): prova os bits da cabeca, o dano do meio
-         * continua, como nas caudas. Das seis listas juntas saem 3.587
-         * pulados -- perto do teto de 4.096 do det_off. */
-        const char *listas[6] = {
+         * continua, como nas caudas.
+         *
+         * E os B 10 e 12 recodificados pelos gemeos (patches_gemeos,
+         * tools/anchor/gemeos.py): so as linhas juntas fecham cada quadro. Das
+         * sete listas juntas saem 3.993 pulados; o teto do det_off era 4.096 e
+         * passou a 16.384 (lista maior que o teto era cortada em silencio). */
+        const char *listas[7] = {
             getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
             "data/patches_cabecalho.txt", "data/patches_cauda.txt",
             "data/patches_cauda_pb.txt", "data/patches_f11.txt",
-            "data/patches_cabeca.txt" };
-        for (int f = 0; f < 6; f++) {
+            "data/patches_cabeca.txt", "data/patches_gemeos.txt" };
+        for (int f = 0; f < 7; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;
             char linha[512]; long o; int b, n0 = n_det;
-            while (n_det < 4096 && fgets(linha, sizeof linha, fd))
+            while (n_det < 16384 && fgets(linha, sizeof linha, fd))
                 if (linha[0] != '#' && sscanf(linha, "%ld %d", &o, &b) == 2) {
                     det_off[n_det] = o; det_bit[n_det] = b; n_det++;
                 }

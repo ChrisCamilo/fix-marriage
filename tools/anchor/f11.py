@@ -82,7 +82,8 @@ def obs11():
 def sintaxe(poc):
     """Sintaxe de um quadro P do fade lida do trace do JM (data/f11).
 
-      poc  4, 8, 12, 16 ou 20 (quadros 1, 3, 5, 7 e 9)
+      poc  4, 8, 12, 16 ou 20 (quadros P 1, 3, 5, 7 e 9), ou 14 (o B 8,
+           gemeo do 12 -- tools/anchor/gemeos.py)
 
     Devolve: {mb: [(elemento, (valores...)), ...]}."""
     with gzip.open(os.path.join(RAIZ, 'data', 'f11', 'sintaxe_poc%02d.json.gz' % poc), 'rt', encoding='utf-8') as f:

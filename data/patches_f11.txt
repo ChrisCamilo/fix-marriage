@@ -1,5 +1,5 @@
 # patches_f11.txt -- o frame 11 recodificado inteiro (plano 5): o lote que entrou no patches.txt.
-# Aplicado em 2026-09-28, aprovado pelo usuario: as 873 linhas (3.122-3.994 do patches.txt). O verify pula este arquivo.
+# Aplicado em 2026-09-28, aprovado pelo usuario: as 873 linhas (3.122-3.994 do patches.txt; 3.120-3.992 desde 2026-09-29, quando sairam as linhas 1.826 e 1.828). O verify pula este arquivo.
 # Gerado em 2026-09-28 por: python tools/anchor/f11.py nal <saida>  (a partir de data/f11/hipoteses.json).
 #
 # O frame 11 (P, 2.832 bytes, ultimo quadro do fade) cai inteiro numa zona de dano de ~4%. A imagem

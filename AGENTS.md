@@ -113,7 +113,18 @@ que parava na tarja e que o `mapa` faz avançar. O nível B (362 quadros, folga
 curta) ficou de fora: no controle, as correções falsas eram todas assim. O
 `mapa` muda só nesses 232, todos para a frente; o `serie` fica em 165.
 
-A `docs/ARMADILHAS.md` lista **61** maneiras de medir errado que já produziram
+Em 2026-09-29 entrou o sétimo: **os B 10 e 12 recodificados pelos gêmeos**
+(`data/patches_gemeos.txt`, 406 linhas, `tools/anchor/gemeos.py`). No fade do
+GOP 0 os B não-referência repetem a sintaxe do irmão: o 10 é todo pulado como
+o 6; o 12 é a sintaxe do 8 (skip na tarja, B_Direct_16x16 com DC de croma).
+Mesmo QP, mesmo modelo e mesma sintaxe dão os mesmos bits, então o que difere
+é dano; o 6 recodificado bate em 0 bits. Saíram junto as linhas 1.826
+(`147444 0`, que estava em `data/deterministicos.txt`) e 1.828 (`150538 0`):
+elas trocavam o escape `03` por `02`, e o 10 e o 12 só pareciam bons porque o
+ffmpeg cortava o NAL e os lia como todo pulados (armadilha 62). `mapa`,
+`panorama` e `serie` idênticos; o JM decodifica o GOP 0 do 0 ao 12 sem erro.
+
+A `docs/ARMADILHAS.md` lista **62** maneiras de medir errado que já produziram
 conclusões falsas neste projeto. As três que mais enganam:
 
 - **Contagem de frames do ffmpeg não mede nada** — ele emite quadros de
@@ -131,22 +142,24 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 12 falsos, 3587 determinísticos pulados`** (os 480 de
+hoje **`0 válidos, 11 falsos, 3992 determinísticos pulados`** (os 479 de
 `data/deterministicos.txt`, os 783 de `data/patches_cabecalho.txt`, os 33 de
 `data/patches_cauda.txt`, os 475 de `data/patches_cauda_pb.txt`, os 873 de
-`data/patches_f11.txt` e os 943 de `data/patches_cabeca.txt`), e os 12 falsos são
+`data/patches_f11.txt`, os 943 de `data/patches_cabeca.txt` e os 406 de
+`data/patches_gemeos.txt`), e os 11 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |
 |---|---|---|
 | 6 | 2360, 2362, 2363, 2364, 2365, 2366 | `com=1 sem=1` — insuficientes, não errados: o quadro segue com dano adiante. 2360 e 2363 contavam como "válidos" até 2026-09-18 só porque o critério antigo aceitava slice encerrado cedo (armadilha 59) |
-| 2 | 12 | `com=1 sem=1` — o `verify` usa o critério rigoroso, que recusa todo o fade do GOP 0 (sem `TARJA=1` o `serie 0 13` dá 0 de 14, até o 0–10); com o 11 consertado, o `serie` com `TARJA=1` já aceita o 12 |
+| 1 | 12 | `com=1 sem=1` — o `150530 4`, cabeçalho do 12 (QP 18, o do gêmeo 8). O `verify` usa o critério rigoroso, que recusa todo o fade do GOP 0 (sem `TARJA=1` o `serie 0 13` dá 0 de 14, até o 0–10). O outro falso do 12, o `150538 0`, saiu em 2026-09-29 (armadilha 62) |
 | 4 | 3435, 3439 | `com=1 sem=1` — pares **cancelados de propósito**; o `verify` testa cada ocorrência e não entende cancelamento |
 
 **Nenhum reparo de 1 linha hoje faz um quadro fechar sozinho pelo critério
 honesto** — o último que fazia, o do 3442, era ele mesmo o defeito e saiu. O
-único quadro que um reparo fez fechar é o 11, e com as 873 linhas juntas. **Qualquer falso
-além desses 12 é problema.** Rodar `verify` **sem** `BASE_N`
+único quadro que um reparo fez fechar é o 11, e com as 873 linhas juntas (e o 10 e o 12,
+recodificados pelos gêmeos, com as linhas de cada um juntas). **Qualquer falso
+além desses 11 é problema.** Rodar `verify` **sem** `BASE_N`
 acusa ~1328 falsos por construção, o que é esperado e não é bug.
 
 ## 4. Manter a documentação viva

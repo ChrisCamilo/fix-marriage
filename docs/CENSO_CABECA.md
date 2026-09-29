@@ -70,7 +70,7 @@ do meio continua).
 ## Aplicado (2026-09-28)
 
 Níveis **A e I**, aprovados pelo usuário: 943 linhas (3.995–4.937 do
-`patches.txt`), registradas em `data/patches_cabeca.txt`, que o `verify` pula.
+`patches.txt`; 3.993–4.935 desde 2026-09-29), registradas em `data/patches_cabeca.txt`, que o `verify` pula.
 Medido depois: o `mapa` muda só nos 232 quadros do lote, todos para a frente
 (3 inteiros, 184 passam da tarja, 45 avançam; parados na tarja de cima 789 →
 602; +207.583 MBs); `serie` 165, os mesmos; `verify` 0 / 12 / 3.587. O nível B

@@ -1367,7 +1367,7 @@ Com o `cap_w > 0` exigido, a etapa 1 vai de 35 para **24** candidatos — onze
 eram quadros que não existiam. Dos 21 que fecham de verdade: **20 dão campo 38**
 (cópia do frame 9) e **1 dá 43** (cópia do frame 11). Nenhum dá 40 nem 41.
 
-### Frame 12 REPARADO — 2 bits, na segunda rodada do encadeamento
+### Frame 12 REPARADO — 2 bits, na segunda rodada do encadeamento (REVISTO em 2026-09-29: o 2º bit era truque, armadilha 62)
 
 `150530 bit 4` + `150538 bit 0`, payload bytes **5 e 13**, os dois bem dentro
 dos dados reais.
@@ -1876,7 +1876,7 @@ slice recodificado difere do arquivo em 873 bits (3,87%, uniforme) e o NAL
 corrigido fecha no tamanho exato; o JM o decodifica sem erro, a imagem sai
 16/43 exata, e pelo critério rigoroso o GOP 0 passa de 11 para 13 quadros bons.
 Aplicado em 2026-09-28, aprovado pelo usuário: 873 linhas no `patches.txt`
-(3.122–3.994), registradas em `data/patches_f11.txt`.
+(3.122–3.994; 3.120–3.992 desde 2026-09-29), registradas em `data/patches_f11.txt`.
 ### E a corrida revelou por que o ataque estava mal posto
 
 Os 14 bits de 1 flip que fazem o frame 11 "decodificar inteiro" não consomem o
@@ -1932,3 +1932,46 @@ quase sem exceção. Aplicados os níveis A (197 P/B) e I (35 IDRs): 943 bits em
 232 quadros; o B (362 P/B, folga curta) ficou de fora. Fora do censo: 184 com
 cabeçalho inválido, 4 IDRs divergentes (901, 1011, 1437, 2130), P/B com
 distância 4+, B com MB não pulado na cabeça. Detalhe em `docs/CENSO_CABECA.md`.
+
+## Frames 10 e 12 — recodificados pelos gêmeos (2026-09-29)
+
+O "12 reparado" e o 10 limpo eram interpolação: as linhas `147444 0` e
+`150538 0` trocavam o escape `03` do byte 13 do NAL por `02`, e o ffmpeg cortava
+o NAL ali (armadilha 62). Desfeito só o `150538 0`, o 12 lê a tarja e morre no
+primeiro MB da fileira 8 (campo 38, cópia do 9).
+
+O conserto honesto usa os gêmeos. O 10 é todo pulado como o 6 (o 6 recodificado
+bate com o arquivo em 0 bits); o 12 tem a sintaxe do 8 — skip na tarja,
+B_Direct_16x16 com DC de croma (`cabac_p.py` ganhou o B_Direct; o 4, o 6 e o 8
+recodificam bit a bit do trace). Com o mesmo QP (18, pelo `150530 4`) e o mesmo
+modelo, o CABAC gera os mesmos bits; diferença isolada de 1 bit com o fluxo
+voltando a casar só pode ser troca. **A leitura antiga dos "gêmeos de
+bitstream" (mesmos símbolos, modelo de probabilidade diferente) estava errada:
+eram o mesmo fluxo, e as 329 diferenças eram dano.**
+
+| quadro | trocas | densidade | onde |
+|---|---|---|---|
+| 10 | 81 | 3,9% do NAL | uniforme nos 258 bytes |
+| 12 | 325 | 3,6% dos 1.135 bytes de dados | nenhuma no enchimento (a zona acaba em 151.660) |
+
+Os dois NALs fecham no tamanho exato; o JM decodifica o GOP 0 do 0 ao 12 sem
+erro nem aviso (antes parava no 10); a imagem sai 36 e 41 com tarjas 16 — a
+mesma da interpolação, agora lida dos dados. `mapa`, `panorama` e `serie`
+idênticos. Aplicado com aprovação do usuário: `data/patches_gemeos.txt`.
+
+## Frame 13 — com o 11 consertado, os três candidatos caem (2026-09-29)
+
+- A tarja de cima já sai 16 sem nada: ela vinha 15 porque o MB 0 (inter da
+  ref0 com resíduo +1) herdava a tarja 15 do 11 quebrado.
+- O par `153470 5` + `153471 6` muda o peso da ref0 de (42,−6) para (40,−4) e
+  leva a tarja de cima a 17: era compensação do 11 quebrado. O resíduo +1 do
+  MB 0 é o que o peso original pede.
+- O `184311 6` "destrava" o quadro, mas depois dele as fileiras degeneram em
+  skip (15 → 55 → 87 → 104 → 103 → 118 por fileira, contra 2–8 nas fileiras
+  44–53, que têm ~35% de I4x4); a tarja de baixo sai 15 (peso da ref0 sem
+  resíduo) e o JM para no MB 7.293. Destravador, não conserto.
+- O dano dali em diante é denso: na tarja de baixo (padrão de período 7 bits,
+  os últimos ~280 bytes) a autocorrelação dá **4,2–4,6% de bits trocados**.
+  Entre a fileira 54 (~byte 30.850) e a tarja há ~5.400 bytes de cena
+  desconhecida — da ordem de mil trocas. Fora do alcance de busca; o método do
+  frame 11 exige conteúdo conhecido.

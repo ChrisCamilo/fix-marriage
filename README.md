@@ -101,13 +101,15 @@ raiz/                   o que todo comando cita, e o que nunca se move
                         f11.py (encaixe, leitura, feixe e o NAL
                         corrigido do frame 11: gera o patches_f11.txt);
                         cabeca.py (censo da tarja de cima: gera o
-                        censo_cabeca.txt e o patches_cabeca.txt)
+                        censo_cabeca.txt e o patches_cabeca.txt);
+                        gemeos.py (os B 10 e 12 pelos gemeos 6 e 8)
   docs/                 os doze documentos que crescem
   data/                 registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
     deterministicos.txt remontados.txt
     patches_cabecalho.txt  o lote de cabeçalhos que entrou no patches.txt
     patches_cauda.txt patches_cauda_pb.txt patches_f11.txt patches_cabeca.txt
+    patches_gemeos.txt
                         os lotes de cauda e o frame 11 (idem; o verify pula)
     mapa_dano.txt alvos.txt alvos_ocultos.txt cabecalho_slice.txt
                         medidas; cada um traz no topo como foi gerado
@@ -135,20 +137,21 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c data/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 4.937 linhas:**
+**Composição do `patches.txt` — 5.341 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
 | 1–1338 | 1.338 | base determinística (prefixos de NAL e cabeçalhos). Reconferido: regerar com `base` reproduz os mesmos 1338 byte a byte |
-| 1339–1830 | 492 | destas, **479** também estão em `data/deterministicos.txt`. Saíram em 2026-09-18 a `77528965 2` (reparo antigo do 2361) e a `114260576 3` (reparo antigo do 3442, que era o próprio defeito) |
-| | **12** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` — hoje todos "insuficientes" pelo critério de ocultação |
+| 1339–1828 | 490 | destas, **478** também estão em `data/deterministicos.txt`. Saíram em 2026-09-18 a `77528965 2` (reparo antigo do 2361) e a `114260576 3` (reparo antigo do 3442, que era o próprio defeito); em 2026-09-29 a `147444 0` (determinística, frame 10) e a `150538 0` (reparo do 12) — as duas trocavam o escape `03` do byte 13 do NAL por `02`, o ffmpeg cortava o NAL e o B virava interpolação (armadilha 62; `data/patches_gemeos.txt`) |
+| | **11** | os reparos reais, que é o que o `verify` testa com `BASE_N=1338` — hoje todos "insuficientes" pelo critério de ocultação |
 | | 1 | a linha 1378, `77528961 0` — o `frame_num` do reparo antigo do 2361, que ficou. Reclassificada como cabeçalho: está em `data/patches_cabecalho.txt` (por isso ele tem 783 linhas, não 782) e o `verify` a pula |
-| 1831–2612 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `data/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
-| 2613 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `data/deterministicos.txt` |
-| 2614–2646 | 33 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 13 IDRs, todas com encaixe desde as fileiras 63–65 — linha a linha em `data/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. Entraram 65; as 32 de encaixe nas fileiras 66–67 saíram em 2026-09-25 (sintaxe variante na tarja, armadilha 61; `data/cauda_auditoria.txt`). `mapa` idêntico nas duas mudanças. Ver `docs/PLANO_ANCORA_CAUDA.md` |
-| 2647–3121 | 475 | **caudas de P/B** provadas pela tarja de skips recodificada (2026-09-24), 325 quadros — linha a linha em `data/patches_cauda_pb.txt`, que o `verify` também pula. Nível A (dist 0–1): 189 quadros, 196 bits; nível B (dist 2): 136 quadros, 279 bits. `mapa` muda só no 2189 (erro do MB 7356 para o 7358, quadro que já era lixo antes da tarja) |
-| 3122–3994 | 873 | **o frame 11 recodificado inteiro** (plano 5, 2026-09-28): a sintaxe do quadro reconstruída pela física do fade e recodificada com CABAC; 818 bits no slice, 55 no enchimento, 3,87% uniforme; o NAL corrigido fecha no tamanho exato — linha a linha em `data/patches_f11.txt`, que o `verify` também pula (só as 873 juntas fecham o quadro). `mapa` muda só no 11 (MB 1 → 8.160 inteiro); `serie` do filme de 163 para **165** (o 11 e o 12). Ver `docs/PLANO_RECODIFICA_F11.md` |
-| 3995–4937 | 943 | **a tarja de cima recodificada** (censo da cabeça, 2026-09-28): os 960 MBs das fileiras 0–7 recodificados com CABAC a partir do estado exato do começo do slice e comparados com o arquivo byte a byte no NAL; 232 quadros — nível A, 197 P/B com 243 bits (distância 1–3, 16+ bits iguais depois da última troca), e nível I, 35 IDRs com 700 bits (dano uniforme de 1,5–6,6%). Linha a linha em `data/patches_cabeca.txt`, que o `verify` também pula. `mapa` muda só nesses 232, todos para a frente (3 inteiros, 184 passam da tarja, 45 avançam; parados na tarja de cima: 789 → 602); `serie` igual (165). O nível B (362 quadros) ficou de fora. Ver `docs/CENSO_CABECA.md` |
+| 1829–2610 | 782 | **cabeçalhos de slice** consertados por coerência (2026-09-18), 570 quadros — linha a linha em `data/patches_cabecalho.txt`, que o `verify` também pula. Provam o cabeçalho; não trazem imagem nova (o dano segue no corpo). As imagens dos 167 quadros bons foram conferidas byte a byte antes de entrar |
+| 2611 | 1 | `77496469 0` — o `00 00 02` proibido do 2360 restaurado para `03` (armadilha 27, revista); também em `data/deterministicos.txt` |
+| 2612–2644 | 33 | **caudas de IDR** provadas pela tarja recodificada com CABAC (2026-09-24), 13 IDRs, todas com encaixe desde as fileiras 63–65 — linha a linha em `data/patches_cauda.txt`, que o `verify` também pula. Provam os bits do fim do NAL; o dano do meio continua. Entraram 65; as 32 de encaixe nas fileiras 66–67 saíram em 2026-09-25 (sintaxe variante na tarja, armadilha 61; `data/cauda_auditoria.txt`). `mapa` idêntico nas duas mudanças. Ver `docs/PLANO_ANCORA_CAUDA.md` |
+| 2645–3119 | 475 | **caudas de P/B** provadas pela tarja de skips recodificada (2026-09-24), 325 quadros — linha a linha em `data/patches_cauda_pb.txt`, que o `verify` também pula. Nível A (dist 0–1): 189 quadros, 196 bits; nível B (dist 2): 136 quadros, 279 bits. `mapa` muda só no 2189 (erro do MB 7356 para o 7358, quadro que já era lixo antes da tarja) |
+| 3120–3992 | 873 | **o frame 11 recodificado inteiro** (plano 5, 2026-09-28): a sintaxe do quadro reconstruída pela física do fade e recodificada com CABAC; 818 bits no slice, 55 no enchimento, 3,87% uniforme; o NAL corrigido fecha no tamanho exato — linha a linha em `data/patches_f11.txt`, que o `verify` também pula (só as 873 juntas fecham o quadro). `mapa` muda só no 11 (MB 1 → 8.160 inteiro); `serie` do filme de 163 para **165** (o 11 e o 12). Ver `docs/PLANO_RECODIFICA_F11.md` |
+| 3993–4935 | 943 | **a tarja de cima recodificada** (censo da cabeça, 2026-09-28): os 960 MBs das fileiras 0–7 recodificados com CABAC a partir do estado exato do começo do slice e comparados com o arquivo byte a byte no NAL; 232 quadros — nível A, 197 P/B com 243 bits (distância 1–3, 16+ bits iguais depois da última troca), e nível I, 35 IDRs com 700 bits (dano uniforme de 1,5–6,6%). Linha a linha em `data/patches_cabeca.txt`, que o `verify` também pula. `mapa` muda só nesses 232, todos para a frente (3 inteiros, 184 passam da tarja, 45 avançam; parados na tarja de cima: 789 → 602); `serie` igual (165). O nível B (362 quadros) ficou de fora. Ver `docs/CENSO_CABECA.md` |
+| 4936–5341 | 406 | **os B 10 e 12 recodificados pelos gêmeos** (2026-09-29): o 10 todo pulado como o 6 (81 bits, 3,9%), o 12 com a sintaxe do 8 (325 bits nos 1.135 bytes de dados, 3,6%; enchimento limpo); os dois NALs fecham no tamanho exato e o JM decodifica o GOP 0 do 0 ao 12 sem erro nem aviso. Linha a linha em `data/patches_gemeos.txt`, que o `verify` também pula. `mapa`, `panorama` e `serie` idênticos — a imagem já era a interpolação, agora vem dos dados. Ver `tools/anchor/gemeos.py` |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a
@@ -213,7 +216,7 @@ resolvidos, arquivos e comandos. O que cresce fica separado:
 |---|---|
 | [`RESULTADOS.md`](docs/RESULTADOS.md) | números medidos: quantos frames, quantos segundos, o que os reparos renderam |
 | [`CRITERIOS.md`](docs/CRITERIOS.md) | **como julgar um candidato** — a imagem manda, a tarja é subordinada |
-| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **61 maneiras de medir errado** que já produziram conclusão falsa aqui |
+| [`ARMADILHAS.md`](docs/ARMADILHAS.md) | **62 maneiras de medir errado** que já produziram conclusão falsa aqui |
 | [`CABAC.md`](docs/CABAC.md) | **por que não existe ressincronização dentro do slice**, e o que dá para explorar |
 | [`INVESTIGACOES.md`](docs/INVESTIGACOES.md) | hipóteses testadas, o que foi resolvido e o que segue aberto |
 | [`IDRS.md`](docs/IDRS.md) | **tudo sobre os quadros-chave** — censo, molde do cabecalho, o que ja foi tentado |

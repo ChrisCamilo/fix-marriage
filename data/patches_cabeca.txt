@@ -1,5 +1,5 @@
 # patches_cabeca.txt -- a tarja de cima recodificada (docs/CENSO_CABECA.md): o lote que entrou no patches.txt.
-# Aplicado em 2026-09-28, aprovado pelo usuario: niveis A (P/B) e I (IDRs), 943 linhas (3995-4937 do patches.txt). O verify pula este arquivo.
+# Aplicado em 2026-09-28, aprovado pelo usuario: niveis A (P/B) e I (IDRs), 943 linhas (3995-4937 do patches.txt; 3993-4935 desde 2026-09-29, quando sairam as linhas 1.826 e 1.828). O verify pula este arquivo.
 # Gerado por: python tools/anchor/cabeca.py censo/niveis (data/patches_cabeca_proposta.txt, niveis A e I).
 1124886 7 # quadro 28 B skip nivel A mapa 378->933
 2503408 6 # quadro 52 B skip nivel A mapa 10->1104
