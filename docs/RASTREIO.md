@@ -1971,7 +1971,10 @@ idênticos. Aplicado com aprovação do usuário: `data/patches_gemeos.txt`.
   44–53, que têm ~35% de I4x4); a tarja de baixo sai 15 (peso da ref0 sem
   resíduo) e o JM para no MB 7.293. Destravador, não conserto.
 - O dano dali em diante é denso: na tarja de baixo (padrão de período 7 bits,
-  os últimos ~280 bytes) a autocorrelação dá **4,2–4,6% de bits trocados**.
+  os últimos ~280 bytes) a autocorrelação dá **4,2–4,6%** — que é régua, não
+  densidade: nas tarjas íntegras de mesmo padrão (3417–3433) ela dá 1,5–2,3%
+  (o padrão desvia no começo de cada fileira). Acima do fundo: ~2–3% de trocas
+  (corrigido em 2026-09-29, ver "GOP 0: a régua da tarja de período 7").
   Entre a fileira 54 (~byte 30.850) e a tarja há ~5.400 bytes de cena
   desconhecida — da ordem de mil trocas. Fora do alcance de busca; o método do
   frame 11 exige conteúdo conhecido.
@@ -2047,8 +2050,9 @@ pares): sintaxe idêntica ao vizinho de cima em 2,1%, a um período acima em
 — o ruído de quantização, não o desenho. Nem pixel nem bit da faixa perdida se
 prevê pelos vizinhos.
 
-O 13 fica, nos bits, onde está: fileiras 0–53 certas, 54–59 perdidas (~1.700
-trocas sobre cena desconhecida). Gabarito emprestado não há (nenhuma cópia
+O 13 fica, nos bits, onde está: fileiras 0–53 certas, 54–59 perdidas (da ordem
+de mil trocas sobre cena desconhecida — a estimativa de 1.700 usava a régua
+sem calibrar). Gabarito emprestado não há (nenhuma cópia
 íntegra do plano); busca em feixe sem física já se mostrou enganosa no 11.
 
 ## Frames 14 e 15 — cabeçalhos consertados, corpos na zona densa (2026-09-29)
@@ -2065,7 +2069,8 @@ trocas sobre cena desconhecida). Gabarito emprestado não há (nenhuma cópia
   do fade (o 13 tem (42,−6) (52,−13) (69,−24)); a B dava deslocamento +125 na
   ref2 com o croma desligado. Com a A o `mapa` vai ao MB 1: o MB 0 especial da
   tarja não se lê, e o censo da cabeça não consegue testar o quadro. A tarja de
-  baixo, no fim do NAL, tem ~2% de trocas: a zona densa rareia, mas segue.
+  baixo, no fim do NAL, está no fundo da régua (1,9–2,0%, igual às tarjas
+  íntegras): sem dano detectável — a zona densa acaba dentro do 15.
 
 Aplicado com aprovação do usuário (linhas 5.725–5.730, também em
 `data/patches_cabecalho.txt`). Aberto: o MB 0 do 15 pela física, como no 11,
@@ -2081,7 +2086,8 @@ com os pesos do cabeçalho consertado, a ref0 (o 13, peso (44,−5)) leva a tarj
 −3). Das 45 variantes testadas (três referências, vários níveis), essa bate
 com o arquivo em **48 de 2.696 bits (1,8%)**, no máximo 4 por janela de 64 bits;
 a segunda melhor fica em 18%. É a assinatura do frame 11: a hipótese vale do
-começo ao fim. 1,8% bate com os ~2% da tarja de baixo do 15.
+começo ao fim. (A tarja de baixo do 15 não tem dano detectável: a régua dela
+está no fundo — a zona densa acaba dentro do quadro.)
 
 Aplicado com aprovação do usuário (linhas 5.731–5.778,
 `data/patches_cabeca_f15.txt`): o 15 vai do MB 1 ao 965 — passa a tarja e para
@@ -2089,3 +2095,22 @@ na cena, onde a zona densa segue. Depois, o MB 0 pela física entrou no
 `cabeca.py` (validado em 11 P do GOP 0, 0 bits cada); o censo refeito não
 achou candidato novo no filme, e o 17 e o 19 seguem sem hipótese — nenhuma
 troca de 1 bit no cabeçalho deles faz a tarja bater (`docs/CENSO_CABECA.md`).
+
+## GOP 0: a régua da tarja de período 7 e onde a zona densa acaba (2026-09-29)
+
+A tarja de baixo dos P de cena ponderados é um padrão de período 7 bits; a
+régua usada até aqui — (1 − fração de bits iguais ao de 7 atrás) / 2 — **tem
+fundo**: nas tarjas íntegras do fade final (3417, 3421, 3423, 3425, 3427,
+3429, 3433) ela dá 1,5–2,3%, porque o padrão muda de fase no começo de cada
+fileira. Relidos com o fundo:
+
+| quadro | régua | leitura |
+|---|---|---|
+| 13 | 4,2–4,6% | ~2–3% de trocas acima do fundo |
+| 15, 17, 21, 23 | 1,6–2,1% | **no fundo — sem dano detectável no fim** |
+| 19 | 4,4–5,1% | dano acima do fundo |
+
+A zona densa que começa na fileira 54 do 13 acaba dentro do 15 (cabeça com
+1,8% medido exato, fim limpo). O 21, o 23 e o 25 têm cabeça (0 bits em ~2.580,
+~2.580 e 72) e cauda limpas e param no meio (MB 2.083, 3.947 e 1.680): dano
+localizado, não zona densa.

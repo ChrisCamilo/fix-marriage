@@ -155,4 +155,5 @@
 #                                55-59 degeneram em skip, JM para no MB 7.293.
 #                                Destravador. DESCARTADO.
 #   a "previsao falsificavel" acima falhou: a tarja de baixo nao vira 16.
-#   O dano da fileira 54 em diante e denso (~4,5% na tarja de baixo).
+#   O dano da fileira 54 em diante e denso (~2-3% na tarja de baixo, descontado o fundo da
+#   regua de periodo 7, que da 1,5-2,3% em tarjas integras -- ver RASTREIO).
