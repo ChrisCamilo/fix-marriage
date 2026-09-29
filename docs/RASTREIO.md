@@ -1975,3 +1975,24 @@ idênticos. Aplicado com aprovação do usuário: `data/patches_gemeos.txt`.
   Entre a fileira 54 (~byte 30.850) e a tarja há ~5.400 bytes de cena
   desconhecida — da ordem de mil trocas. Fora do alcance de busca; o método do
   frame 11 exige conteúdo conhecido.
+
+## Censo de gêmeos — fechado, sem pares novos (2026-09-29)
+
+Depois do 10/12, procurei no filme inteiro pares com o mesmo slice data a menos
+de bits trocados (`python tools/anchor/gemeos.py censo`, 30 s). Primeira
+tentativa, por (tipo, QP, `cabac_init`, tamanho ±2%): só 6/10 e 8/12. Relaxada
+(só o tipo, janela nos bytes 16–272): 21 pares, todos falsos — a janela caía
+na tarja de cima, igual em todo P de fade (668 × 687 discorda 0 bits na
+janela e 49,8% no NAL inteiro; idem 660/995/943 e 806/860/850).
+
+Com a janela depois da cabeça (bytes 2.048 e 600 do slice data), o que casa é:
+
+| par | discordância na janela | leitura |
+|---|---|---|
+| 8 × 12 | 0 | o gêmeo já consertado |
+| 5 × 9, 7 × 11, 1/5/9 × 3441 | 2,8–16% | P de fade com o mesmo template, não o mesmo fluxo — e todos já bons |
+| janelas de enchimento, B todo pulados (6, 10, 3434, 3436, 3440, 3444) | 0 | triviais, já bons |
+
+E não sobra quadro quebrado pequeno o bastante para ser todo pulado: os 7 NALs
+abaixo de 700 bytes são todos bons. **Os gêmeos eram um caso do fade liso do
+GOP 0; não reabrir a busca.**

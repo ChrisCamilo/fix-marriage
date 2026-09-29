@@ -22,9 +22,16 @@
 #
 # NAO escreve no patches.txt.
 #
+# Fora do GOP 0 nao ha gemeos (censo de 2026-09-29, subcomando `censo`): o
+# que casa depois da cabeca e enchimento, B todo pulado ja bom (6, 10, 3434,
+# 3436, 3440, 3444) ou P de fade com o mesmo padrao de tarja (5/9, 7/11), que
+# se parecem mas nao sao o mesmo fluxo.
+#
 # uso (da raiz):
 #   python tools/anchor/gemeos.py proposta <saida.txt>
 #     `offset bit` das trocas do 10 e do 12, e as duas linhas a retirar
+#   python tools/anchor/gemeos.py censo
+#     pares de quadros com o mesmo slice data depois da cabeca
 import sys, os
 AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI); sys.path.insert(0, os.path.dirname(AQUI))
@@ -76,6 +83,43 @@ def proposta(saida):
     return res
 
 
+def censo(janelas=((2048, 256, 2400), (600, 128, 760), (150, 64, 230)), limiar=0.2):
+    """Pares de quadros com o mesmo slice data numa janela depois da cabeca.
+
+    A cabeca (tarja de cima) e igual em quadros de sintaxe parecida e engana: a
+    janela comeca depois dela. Janela que e so enchimento (00 00 03) e
+    descartada. Gemeo de verdade discorda em poucos bits isolados; fluxos sem
+    relacao, em ~50%.
+
+      janelas  (inicio, tamanho, dados minimos) em bytes do slice data
+      limiar   fracao maxima de bits diferentes na janela
+
+    Devolve: {janela: [(quadro, quadro, bits diferentes)]}."""
+    import numpy as np
+    d, ix = f11.buffer()
+    pop = np.array([bin(i).count('1') for i in range(256)], dtype=np.int32)
+    dados = {}
+    for t, off, sz, _ in ix:
+        nal = bytes(d[off + 4:off + sz])
+        try:
+            h = CS.le_cabecalho(nal); _, idx = f11.rbsp(nal); ini = idx[h['bits'] >> 3]
+        except CS.Invalido: ini = 18                     # cabecalho invalido: o slice data comeca por volta do byte 17-19
+        dados[t] = np.frombuffer(nal[ini:], dtype=np.uint8)
+    out = {}
+    for sk, n, minimo in janelas:
+        ts = [t for t in dados if len(dados[t]) >= minimo]
+        m = np.stack([dados[t][sk:sk + n] for t in ts])
+        res = []
+        for i, a in enumerate(ts):
+            if np.count_nonzero((m[i] != 0) & (m[i] != 3)) < n // 8: continue       # so enchimento
+            bits = pop[m[i + 1:] ^ m[i]].sum(axis=1)
+            res += [(a, ts[i + 1 + j], int(bits[j])) for j in np.nonzero(bits < limiar * 8 * n)[0]]
+        out[(sk, n)] = sorted(res, key=lambda r: r[2])
+    return out
+
+
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == 'proposta': print(proposta(sys.argv[2]))
+    elif len(sys.argv) == 2 and sys.argv[1] == 'censo':
+        for (sk, n), res in censo().items(): print('janela %d+%d: %d pares %s' % (sk, n, len(res), res[:20]))
     else: print(open(__file__).read().split('\nimport')[0])
