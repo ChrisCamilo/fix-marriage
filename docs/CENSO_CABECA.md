@@ -112,3 +112,19 @@ parados na tarja; com folga ≥ 10, **163 quadros, 325 bits**, todos andam no
 `mapa` (121 passam da tarja), nenhum piora; `serie` igual. Aplicado com
 aprovação do usuário: `data/patches_cabeca_b.txt`. Os 198 com folga < 10 são o
 nível C, fora. O `cabeca.py niveis` agora separa A, B e C.
+
+## MB 0 pela física no censo (2026-09-29)
+
+Nos P ponderados o censo lia o MB 0 do arquivo; quando o próprio MB 0 está
+danificado (o frame 15), nenhuma hipótese sobrava. O `cabeca.py` agora deriva
+o MB 0 dos pesos do cabeçalho (`mb0_fisica`): para cada referência, a predição
+ponderada da tarja (16 / 128), o resíduo e os níveis de DC que o reconstroem
+exato. **Validado sozinho em 11 quadros do GOP 0** (P 1, 3, 5, 7, 9, 11, 13,
+15, 21 e 23): a hipótese física bate com o arquivo em 0 bits em cada um, com a
+referência e os níveis que o encoder escolheu (ref0, ref1 ou ref2 conforme o
+peso). No 15 foi o que achou os 48 bits aplicados.
+
+No filme inteiro não aparece candidato novo: nos outros P ponderados a leitura
+do MB 0 já dava a resposta. O 17 e o 19 ficam sem hipótese (a física erra
+22–26%), e nenhuma troca de 1 bit no cabeçalho deles faz a tarja bater —
+dano múltiplo no cabeçalho ou na tarja, dentro da zona densa.

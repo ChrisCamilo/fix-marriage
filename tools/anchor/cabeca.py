@@ -18,9 +18,18 @@
 # Hipoteses por quadro (fica a de menor distancia):
 #   I   MB 0 com cada nivel de DC que leva 128 a 16 exato no QP do slice
 #   P   'skip' (tudo pulado), 'mb0+dc' e 'mb0+skip' (MB 0 como o arquivo o le)
+#       e, com predicao ponderada, 'fis rN ...' (MB 0 pela fisica, abaixo)
 #   B   'skip'
 # Com o MB 0 lido do arquivo, os bits dele nao sao testados: a distancia so
 # conta depois deles.
+#
+# O MB 0 pela fisica (2026-09-29, frame 15): nos P ponderados do fade o MB 0 e
+# inter 16x16 com vetor zero, da referencia cujo peso da o residuo mais barato
+# -- so o DC de cada bloco, que leva a tarja de volta a 16 e o croma a 128 (9:
+# ref0, luma +1; 11: ref2, croma U +3 V -3; 13: ref0, luma +1 e U +3). Para
+# cada referencia: a predicao ponderada da tarja (8.4.2.3), o residuo, e os
+# niveis que o reconstroem exato (residuo.py). O arquivo nao entra: quando o
+# proprio MB 0 esta danificado, a leitura dele falha e so a fisica testa.
 #
 # A comparacao e feita no NAL, byte a byte na mesma posicao, e nao no RBSP: a
 # cabeca de B e P e quase so zeros, entao o NAL dela e `00 00 03 00 00 03 ...`
@@ -68,7 +77,7 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, AQUI); sys.path.insert(0, os.path.dirname(AQUI))
 import cabac_p as C, f11
 import cabecalho_slice as CS
-from residuo import V
+from residuo import V, reconstroi_luma4x4, reconstroi_croma
 
 N_TARJA = 960                      # fileiras 0-7
 SKIP = [('mb_skip_flag', (0,)), ('end_of_slice_flag', (0,))]
@@ -102,12 +111,79 @@ def _mb_i(tipo, nivel=None):
     return [('mb_skip_flag', (1,)), ('mb_type', (9,)), ('intra_chroma_pred_mode', (0,)), ('mb_qp_delta', (0,))] + dc + [('end_of_slice_flag', (0,))]
 
 
-def hipoteses(tipo, qp, mb0):
+QPC = [29, 30, 31, 32, 32, 33, 34, 34, 35, 35, 36, 36, 37, 37, 37, 38, 38, 38, 39, 39, 39, 39]
+CROMA_QP_OFFSET = 1                   # chroma_qp_index_offset do PPS
+
+
+def _pesa(x, w, o, logwd):
+    """Predicao ponderada explicita de uma amostra (8.4.2.3.2), com o recorte."""
+    v = ((x * w + (1 << (logwd - 1))) >> logwd) + o if logwd >= 1 else x * w + o
+    return max(0, min(255, v))
+
+
+def _niveis_luma(res, qp, n=2):
+    """Niveis do DC de um bloco 4x4 inter que reconstroem o residuo uniforme res (ate n, do menor)."""
+    out = []
+    for L in sorted(range(-40, 41), key=abs):
+        if L and all(v == 16 for lin in reconstroi_luma4x4([[16 - res] * 4] * 4, [L] + [0] * 15, qp) for v in lin):
+            out.append(L)
+            if len(out) == n: break
+    return out
+
+
+def _niveis_croma(res, qpc, n=2):
+    """Niveis do DC 2x2 de croma (so o primeiro) que reconstroem o residuo uniforme res."""
+    out = []
+    for L in sorted(range(-40, 41), key=abs):
+        if L and all(v == 128 for lin in reconstroi_croma([[128 - res] * 8] * 8, [L, 0, 0, 0], [[0] * 15] * 4, qpc) for v in lin):
+            out.append(L)
+            if len(out) == n: break
+    return out
+
+
+def mb0_fisica(h, qp):
+    """Hipoteses do MB 0 de um P ponderado pela fisica da tarja (16 / 128).
+
+      h   cabecalho do slice (le_cabecalho: pesos, luma_denom, chroma_denom, n0)
+      qp  QP do slice
+
+    Devolve: lista de (nome, sintaxe do MB 0)."""
+    qpi = min(51, qp + CROMA_QP_OFFSET); qpc = qpi if qpi < 30 else QPC[qpi - 30]
+    ld, cd = h['luma_denom'], h['chroma_denom']; out = []
+    for r, (lw, cw) in enumerate(h['pesos']):
+        wl, ol = lw if lw else (1 << ld, 0)
+        cb_w, cb_o, cr_w, cr_o = cw if cw else (1 << cd, 0, 1 << cd, 0)
+        ry = 16 - _pesa(16, wl, ol, ld)
+        rcb = 128 - _pesa(128, cb_w, cb_o, cd); rcr = 128 - _pesa(128, cr_w, cr_o, cd)
+        ly = _niveis_luma(ry, qp) if ry else [0]
+        lcb = _niveis_croma(rcb, qpc) if rcb else [0]
+        lcr = _niveis_croma(rcr, qpc) if rcr else [0]
+        for a in ly:
+            for b in lcb:
+                for c in lcr:
+                    se = [('mb_skip_flag', (1,)), ('mb_type', (1,))]
+                    if h['n0'] > 1: se.append(('ref_idx_l0', (r,)))
+                    se += [('mvd0_l0', (0,)), ('mvd1_l0', (0,))]
+                    cbp = (15 if a else 0) + (16 if (b or c) else 0)
+                    se.append(('coded_block_pattern', (cbp,)))
+                    if cbp: se.append(('mb_qp_delta', (0,)))
+                    if a:
+                        for _ in range(16): se += [('Luma sng', (a, 0)), ('Luma sng', (0, 0))]
+                    if cbp & 16:
+                        se += ([('2x2 DC Chroma', (b, 0))] if b else []) + [('2x2 DC Chroma', (0, 0))]
+                        se += ([('2x2 DC Chroma', (c, 0))] if c else []) + [('2x2 DC Chroma', (0, 0))]
+                    out.append(('fis r%d L%d U%d V%d' % (r, a, b, c), se + [('end_of_slice_flag', (0,))]))
+    return out
+
+
+def hipoteses(tipo, qp, mb0, h=None):
     """As sintaxes candidatas da tarja de cima.
 
       tipo  'I', 'P' ou 'B'
       qp    QP do slice
       mb0   sintaxe do MB 0 lida do arquivo (ou None se nao deu para ler)
+      h     cabecalho do slice; num P com pesos, entram as hipoteses do MB 0
+            pela fisica (mb0_fisica), testadas desde o bit 0
 
     Devolve: lista de (nome, {mb: sintaxe}, mb do primeiro bit testado)."""
     if tipo == 'I':
@@ -117,6 +193,9 @@ def hipoteses(tipo, qp, mb0):
     if tipo == 'P' and mb0 is not None:
         out.append(('mb0+dc', dict([(0, mb0)] + [(m, _mb_i('P')) for m in range(1, N_TARJA)]), 1))
         out.append(('mb0+skip', dict([(0, mb0)] + [(m, SKIP) for m in range(1, N_TARJA)]), 1))
+    if tipo == 'P' and h is not None and h.get('pesos'):
+        resto = [(m, _mb_i('P')) for m in range(1, N_TARJA)]
+        out += [(nome, dict([(0, se)] + resto), 0) for nome, se in mb0_fisica(h, qp)]
     return out
 
 
@@ -164,7 +243,7 @@ def quadro(t):
             mb0 = lido.get(0)
         except Exception: mb0 = None
     melhor = None
-    for nome, sint, m_ini in hipoteses(tipo, qp, mb0):
+    for nome, sint, m_ini in hipoteses(tipo, qp, mb0, h):
         try: bits, pos = codifica(sint, tipo, qp, mod, nref)
         except (C.ForaDoAlcance, AssertionError, KeyError, TypeError): continue
         # esperado: cabecalho do arquivo + a tarja recodificada, so bytes inteiros
