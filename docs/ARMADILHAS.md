@@ -1235,3 +1235,17 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     era justamente o NAL cortado desta armadilha. A refutação não vale; o juiz
     de consumo segue desligado, mas por falta de controle, não por prova
     contra.
+
+63. **Um invariante que casa dois campos não diz qual dos dois está
+    errado.** O `molde_slice.py` usa "`nal_ref_idc` 0 ⇔ `slice_type` B", medido
+    sem exceção, e se protege só de `nal_ref_idc` fora de {0, 2}. No frame 63
+    o `nal_ref_idc` tinha virado 0 (o byte 0x41 → 0x01) — um valor legal — e a
+    regra "consertou" o `slice_type` P do arquivo para B, para concordar com
+    ele: a linha `2993169 2` entrou como determinística em 2026-09-18 e o 63
+    ficou sem imagem (`modification_of_pic_nums_idc` inválido, porque o
+    cabeçalho de P lido como B desanda). Quem decide é a estrutura do GOP: os
+    B 64–66 têm `frame_num` 3, então o 63 é o P de referência de `frame_num` 2
+    — e o arquivo original diz P. Retirada em 2026-09-30. Regra: quando um
+    invariante liga dois campos e eles discordam, o conserto de 1 bit pode
+    estar em qualquer um; decide um terceiro dado (aqui, a cadência de
+    `frame_num` dos vizinhos), nunca a ordem em que os campos são lidos.

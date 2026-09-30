@@ -1,0 +1,20 @@
+# patches_cabeca_gop58.txt -- a tarja de cima dos P e B do GOP 58 (IDR quebrado): o lote que entrou.
+# Aplicado em 2026-09-30, aprovado pelo usuario: 15 linhas (os cabecalhos do 63, 79, 80 e 83 estao em data/patches_cabecalho.txt). O verify pula.
+# 63: 2 bits pela tarja recodificada com o QP -6; 79: os 2 bits que o separam dos P irmaos 67/71/75/83; 62, 76, 84: tarja pulada;
+# 76 e 84: o escape 03 antes da cena (41 e 43); 72: o escape 07 -> 03; 74: o 1o byte depois do escape, 41 -> 01 como nos irmaos 68-73.
+# mapa: 62 731->996, 63 -1->991, 72 935->988, 74 848->1107, 76 82->1102, 79 17->992, 80 -1->1024, 84 79->990.
+2989987 4 # quadro 62 (linha 5929 do patches.txt)
+2993179 6 # quadro 63 (linha 5932 do patches.txt)
+2993181 3 # quadro 63 (linha 5933 do patches.txt)
+3244311 2 # quadro 72 (linha 5934 do patches.txt)
+3282912 6 # quadro 74 (linha 5935 do patches.txt)
+3383415 7 # quadro 76 (linha 5936 do patches.txt)
+3383419 6 # quadro 76 (linha 5937 do patches.txt)
+3383420 6 # quadro 76 (linha 5938 do patches.txt)
+3383420 1 # quadro 76 (linha 5939 do patches.txt)
+3435308 5 # quadro 79 (linha 5942 do patches.txt)
+3435310 2 # quadro 79 (linha 5943 do patches.txt)
+3676694 2 # quadro 84 (linha 5952 do patches.txt)
+3676694 0 # quadro 84 (linha 5953 do patches.txt)
+3676698 4 # quadro 84 (linha 5954 do patches.txt)
+3676699 6 # quadro 84 (linha 5955 do patches.txt)

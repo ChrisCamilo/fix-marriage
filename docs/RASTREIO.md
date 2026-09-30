@@ -2209,3 +2209,31 @@ Aplicado com aprovação do usuário (linhas 5.908–5.929; o cabeçalho em
 `data/patches_cabecalho.txt`, a tarja em `data/patches_cabeca_gop29.txt`, que
 o `verify` pula). `serie` igual; nenhuma sequência proibida criada; `verify`
 0 / 11 / 4.580.
+
+## GOP 58 — cabeçalhos, tarja e escapes: 27 bits e uma determinística errada (2026-09-30)
+
+O IDR 58 (223 KB) para no MB 1.440 com a tarja limpa; o GOP depende dele. A
+estrutura é a do GOP 29 (P a cada 4, B com `frame_num` do P anterior + 1). Os
+cabeçalhos quebrados saíram por um montador de cabeçalho de P (conferido bit a
+bit contra os P 34, 38, 59, 67, 71 e 75) e pelo molde dos B:
+
+| quadro | bits | o quê | `mapa` |
+|---|---|---|---|
+| 63 (P) | 4, **−1** | o `nal_ref_idc` 0 → 2 e o QP −6 (o único, entre QP −20…11 e 1–3 referências, que casa com a tarja: 2 em 56 bits; o −7 deixa 8) + 2 da tarja. **Saiu a linha 1.474** (`2993169 2`), que fazia o 63 virar B — armadilha 63 | sem imagem → 991 |
+| 79 (P) | 4 | 2 do cabeçalho (molde, igual por qualquer P irmão) + 2 da tarja: `fa 58 00 20 03 04 00 03 00` contra `fa 58 00 00 03 00 00 03 00` no 67, 71, 75 e 83 | 17 → 992 |
+| 83 (P) | 4 | `nal_ref_idc` 3 → 2, `frame_num` 68 → 7 | 989 → 989 |
+| 80 (B) | 4 | `frame_num` 2 → 7, POC 42, `n0` | sem imagem → 1.024 |
+| 62, 76, 84 (B) | 1, 2, 3 | tarja pulada | ver abaixo |
+| 72, 76, 84 (B) | 1, 2, 1 | o escape `03` antes da cena: `07`, `41`, `43`. Nos irmãos é sempre `00 00 03 00 00 03 xx` | 72 935 → 988; 76 82 → 1.102; 84 79 → 990 |
+| 74 (B) | 1 | o 1º byte depois do escape, `41` → `01`: todos os B do grupo de QP (68–73) têm `01` ali. A prova mais fraca do lote — o byte já é dado de cena — mas o quadro parava dentro da tarja | 848 → 1.107 |
+
+(62: 731 → 996.) O 76 e o 84 só passam da tarja com o escape: sem ele, 848 e
+846. O byte do escape fica depois da janela que o censo testa, por isso o
+censo não o via — a guarda do `cabeca.py` só olha escape que vira `00 00 0x`
+proibido, e `41`/`43`/`07` não são proibidos.
+
+`mapa`: só os oito quadros mudam, todos para a frente; `serie` igual; nenhuma
+sequência proibida criada; `verify` 0 / 11 / 4.606. Aplicado com aprovação do
+usuário (linhas 5.929–5.955; como a 1.474 saiu, as linhas depois dela subiram
+uma — a tabela do README está renumerada, os comentários "linha N" dos lotes
+antigos em `data/` ficam na numeração da época).

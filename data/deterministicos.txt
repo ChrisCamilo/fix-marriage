@@ -124,7 +124,7 @@
 1670880 3
 1912206 5
 2703747 4
-2993169 2
+# RETIRADA 2026-09-30: 2993169 2   # frame 63: o molde_slice fez o slice_type B para casar com o nal_ref_idc 0, mas o nal_ref_idc era o bit corrompido -- o 63 e o P de referencia (frame_num 2); ver data/patches_cabecalho.txt
 3529431 1
 7326702 6
 8592785 5

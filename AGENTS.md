@@ -159,13 +159,13 @@ conclusões falsas neste projeto. As três que mais enganam:
 Não mexer no `weighted_pred_flag`: ele fica em 1.
 
 Depois de gerar patches novos, revalidar com `BASE_N=1338 ... verify`. Espera-se
-hoje **`0 válidos, 11 falsos, 4580 determinísticos pulados`** (os 537 de
-`data/deterministicos.txt`, os 800 de `data/patches_cabecalho.txt`, os 33 de
+hoje **`0 válidos, 11 falsos, 4606 determinísticos pulados`** (os 536 de
+`data/deterministicos.txt`, os 812 de `data/patches_cabecalho.txt`, os 33 de
 `data/patches_cauda.txt`, os 475 de `data/patches_cauda_pb.txt`, os 873 de
 `data/patches_f11.txt`, os 943 de `data/patches_cabeca.txt`, os 406 de
 `data/patches_gemeos.txt`, os 325 de `data/patches_cabeca_b.txt`, os 48 de
-`data/patches_cabeca_f15.txt`, os 127 de `data/patches_cabeca_fis.txt` e os 13 de
-`data/patches_cabeca_gop29.txt`), e os 11 falsos são
+`data/patches_cabeca_f15.txt`, os 127 de `data/patches_cabeca_fis.txt`, os 13 de
+`data/patches_cabeca_gop29.txt` e os 15 de `data/patches_cabeca_gop58.txt`), e os 11 falsos são
 todos explicados — nenhum é patch ruim:
 
 | falsos | frames | leitura |
