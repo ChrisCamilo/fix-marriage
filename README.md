@@ -106,7 +106,9 @@ raiz/                   o que todo comando cita, e o que nunca se move
                         censo_cabeca.txt e o patches_cabeca.txt);
                         gemeos.py (os B 10 e 12 pelos gemeos 6 e 8);
                         prefixo.py (quadros sinteticos para o PREFIXO=
-                        do avanco: ~5x mais rapido no fim do GOP)
+                        do avanco: ~5x mais rapido no fim do GOP);
+                        sincronia_1773.py e sincronia_valida.py (juiz de
+                        sincronia no JM do plano 4, e a validacao dele)
   docs/                 os doze documentos que crescem
   data/                 registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele

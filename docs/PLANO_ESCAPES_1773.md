@@ -1,6 +1,6 @@
 # Plano 4 — IDR 1773: encadear pelas violações de escape
 
-**Estado: não iniciado** (proposto em 2026-09-25). Continua o trabalho no 1773
+**Estado: etapas 0b e 1 feitas em 2026-09-30; a busca da etapa 1b com a âncora de posição foi preparada e interrompida a pedido do usuário** (ver "Andamento" no fim). Proposto em 2026-09-25. Continua o trabalho no 1773
 depois dos planos [`PLANO_ANCORA_CAUDA.md`](PLANO_ANCORA_CAUDA.md) (a tarja e a
 auditoria das caudas) e [`PLANO_JUIZ_ENCODER.md`](PLANO_JUIZ_ENCODER.md)
 (refutado). Se este plano concluir que o dano é denso demais, o caminho é o
@@ -203,3 +203,50 @@ Resultados de cada etapa no RASTREIO.md (seção do 1773) e neste arquivo;
 números medidos no README.md; a geometria dos blocos de dano no README.md,
 seção 6, e em `data/mapa_dano.txt`. Ferramentas novas em `tools/anchor/`
 com bloco de documentação (AGENTS.md).
+
+## Andamento (2026-09-30)
+
+**Juiz de sincronia** (`tools/anchor/sincronia_1773.py`): JM com `JM_MBINFO`,
+NAL cortado em 34.250; alcance = primeiro MB desde a fileira 57 com QP ≠ 20,
+I_PCM, não lido, ou que começa além do corte (o JM lê zeros depois do fim do
+dado, e zeros parecem tarja — sem esse limite três candidatos de 1 bit
+"sincronizavam" até o MB 8.160 lendo até o byte 61.204). Base de hoje: MB
+6.950, byte 32.922.
+
+**Etapa 0b — o QP sozinho não basta** (`tools/anchor/sincronia_valida.py`).
+Em IDRs íntegros, 1 bit plantado a ~1.700 bytes do fim e toda troca de 1 bit
+em ±40 bytes (640): a troca certa chega ao corte em sincronia nas 8 corridas;
+as erradas que também chegam: 3368 0 e 0, 3397 7 e 17, 3426 5 e 71, 2333 86 e
+89. MB sem resíduo não tem `mb_qp_delta`, e o lixo passa.
+
+**A âncora de posição** resolve isso no 1773. Nos 6 IDRs íntegros a fileira
+60 é **tarja pura** (só I16x16), custa 30–40 bytes e começa 77–95 bytes antes
+do fim; as fileiras 61–67 ocupam 46–55. As fileiras 57–59 custam ~5 B/MB (a 56
+do 1773 custa 5,2). Então o caminho certo do 1773 lê a fileira 60 a partir de
+~34.229 do NAL. Cortando a amostra 100 bytes antes do fim, o ffmpeg para no MB
+7.188–7.198 nos quatro íntegros medidos (3368, 3426, 3397, 2333).
+
+**Etapa 1 — repontuados os 123 mil candidatos de setembro:** 1 de 3.000 de 1
+bit e 8 de 120.000 de 2 bits chegam ao corte em sincronia de QP; só um no
+lugar da tarja, `59363224 5` + `59363619 6` (MB 7.331 no corte). **Falso pela
+âncora:** lê as fileiras 57–59 a 2,6–3,3 B/MB e a fileira 60 com 712 bytes e
+39 MBs I4x4 (cena, não tarja). Não é conclusivo: as listas b e c estão cheias
+(40.000 cada, todas com MB ≥ 7.302 no ffmpeg) e foram gravadas antes de
+2026-09-23, quando o arquivo guardava as primeiras 40.000 na ordem da
+combinação, não as melhores — o par certo pode ter ficado de fora.
+
+**Etapa 1b refeita com a âncora (a rodar):** o `avanco` ganhou `CORTE_ALVO=n`
+(corta a amostra do alvo no byte n, base e candidatos). Com o corte em 34.217
+(fim − 100), o caminho certo tem que parar no MB ~7.185–7.200; base de hoje,
+6.960. Os que caem nessa faixa vão ao JM conferir a fileira 60 (tarja pura).
+
+    export PATH=/c/msys64/ucrt64/bin:$PATH; MP4="Caio & Lizandra - Making- Caio-Balu.mp4"
+    # controle sintetico no 3368: 2 bits plantados em 29434 b3 e 29634 b6
+    #   (patches.txt + "<off+29434> 3" e "<off+29634> 6"; off do 3368 no index.txt)
+    JANELA2=29394:29794 CORTE_ALVO=31034 PORTA=7180 TETO=0 ./reparador.exe "$MP4" index.txt pt_sint.txt avanco 3368 2 29394 29474 sint.txt
+    #   1.842.880 pares; esperado: o par plantado com MB ~7.188, e contar os falsos em [7180,7205]
+    # a busca real no 1773 (~16 M pares, 2 a 5 h pela velocidade de IDR)
+    JANELA2=32560:34217 CORTE_ALVO=34217 PORTA=7180 TETO=0 ./reparador.exe "$MP4" index.txt patches.txt avanco 1773 2 32560 32720 f1773_ancora.txt
+    # depois: os de MB em [7180,7205] no JM (sincronia_1773.py) e a fileira 60 tarja pura
+
+O controle foi interrompido com ~14 min de 1,84 M pares, sem resultado.

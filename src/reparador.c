@@ -984,6 +984,26 @@ static int intacto_ate  = 0;   /* INTACTO_ATE: linhas que tem que ficar identica
 static int sem_croma    = 0;   /* SEM_CROMA=1: quadro sem croma utilizavel */
 static int tarja_desce  = 0;   /* TARJA_DESCE=1: guiar pela tarja, nao pela fronteira */
 static int pontua_consumo = 0; /* PONTUA_CONSUMO=1: nota = bytes consumidos */
+static int corte_alvo = 0;     /* CORTE_ALVO=n: o NAL do alvo cortado no byte n (avanco) */
+
+/* Corta a amostra do alvo no byte `corte_alvo` (relativo a amostra, com o
+ * prefixo de 4 bytes), reescrevendo o prefixo de tamanho -- o mesmo que o modo
+ * `corta` faz. Com o dado acabando num ponto conhecido, o MB onde o
+ * decodificador para diz se a leitura chegou ali no MB certo: e a ancora de
+ * posicao do IDR 1773, cuja fileira 60 (tarja pura) comeca ~84 bytes antes do
+ * fim nos IDRs integros (RASTREIO.md, plano 4).
+ *
+ *   buf  a amostra (prefixo + NAL), alterada no lugar
+ *   len  o tamanho dela
+ *
+ * Devolve: o tamanho a decodificar -- `len` quando nao ha corte ou ele passa
+ * do fim. */
+static int corta_amostra(uint8_t *buf, int len) {
+    if (corte_alvo <= 4 || corte_alvo >= len) return len;
+    int n = corte_alvo - 4;
+    buf[0] = n >> 24; buf[1] = n >> 16; buf[2] = n >> 8; buf[3] = n;
+    return corte_alvo;
+}
 static double base_tarja_desvio = -1;
 static uint8_t *img_base = NULL;  /* luma da base, so leitura nos workers */
 static int janela_resp  = 64;  /* JANELA_RESP: linhas medidas a partir da base */
@@ -1232,7 +1252,7 @@ static void *worker_avanco(void *p) {
             placar[c] = -1;
             continue;
         }
-        decodifica(anc, alvo, copia, len, NULL);
+        decodifica(anc, alvo, copia, corta_amostra(copia, len), NULL);
         /* Sem quadro na saida nao ha pontuacao possivel. Se o decoder rejeita o
          * pacote antes de decodificar macrobloco nenhum, nao sai linha "error
          * while decoding MB", o log_mbx fica em -1 e o candidato tirava 8160 --
@@ -2565,6 +2585,9 @@ static int modo_corta(int argc, char **argv) {
  *   TARJA_DESCE      pisos de imagem: reprovado vira nota -1. So valem AQUI
  *                    (worker_avanco), nao no `varrek` nem no `cresce`
  *   CONSUMO=n        juiz do consumo -- REFUTADO, nao usar (armadilha 36)
+ *   CORTE_ALVO=n     o NAL do alvo cortado no byte n (da amostra) antes de
+ *                    decodificar, base e candidatos: a nota vira o MB onde o
+ *                    dado acaba -- ancora de posicao (corta_amostra)
  *   PREFIXO=arquivo  quadros anteriores ao alvo trocados pelos sinteticos do
  *                    tools/anchor/prefixo.py (mesmo cabecalho, corpo pulado;
  *                    os de nal_ref_idc 0 tirados): mesma nota, ~5x mais rapido
@@ -2648,6 +2671,11 @@ static int modo_avanco(int argc, char **argv) {
                 fim2 = f;
             }
         }
+        /* Com CORTE_ALVO, bit depois do corte nao existe para o decodificador. */
+        if (corte_alvo > 4) {
+            if (fim > corte_alvo) fim = corte_alvo;
+            if (j2 && fim2 > corte_alvo) fim2 = corte_alvo;
+        }
         /* Faixa vazia (ini depois do fim dos dados): sem isto o nbits_k sai
          * negativo e o gera_combos derrubava o programa. */
         if (fim <= ini_k) {
@@ -2701,9 +2729,15 @@ static int modo_avanco(int argc, char **argv) {
         for (int i = 0; i < nthr; i++) pthread_create(&th[i], NULL, worker_avanco, NULL);
         for (int i = 0; i < nthr; i++) pthread_join(th[i], NULL);
         free(th);
-        /* linha de base: sem flip nenhum */
+        /* linha de base: sem flip nenhum (e com o mesmo corte dos candidatos) */
         cap_buf = malloc((size_t)1920 * 1088);
-        decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
+        if (corte_alvo) {
+            uint8_t *b = malloc(ix[alvok].size);
+            memcpy(b, arq + ix[alvok].off, ix[alvok].size);
+            decodifica(ancora_de(alvok), alvok, b, corta_amostra(b, ix[alvok].size), NULL);
+            free(b);
+        } else
+            decodifica(ancora_de(alvok), alvok, NULL, 0, NULL);
         int base = (cap_w <= 0) ? -1
                  : mb_alcancado();
         /* A base tem que ser lida na MESMA escala dos candidatos. Sem isto a
@@ -3570,6 +3604,7 @@ int main(int argc, char **argv) {
     if (getenv("SEM_CROMA")) sem_croma = atoi(getenv("SEM_CROMA"));
     if (getenv("TARJA_DESCE")) tarja_desce = atoi(getenv("TARJA_DESCE"));
     if (getenv("PONTUA_CONSUMO")) pontua_consumo = atoi(getenv("PONTUA_CONSUMO"));
+    if (getenv("CORTE_ALVO")) corte_alvo = atoi(getenv("CORTE_ALVO"));
     if (getenv("PISO_TRINCA")) { piso_trinca = atoi(getenv("PISO_TRINCA")); if (piso_trinca) guardar_croma = 1; }
     if (getenv("TRACO")) { traco = atoi(getenv("TRACO")); if (traco) av_log_set_level(AV_LOG_DEBUG); }
     if (getenv("FOLGA")) folga_lookahead = atoi(getenv("FOLGA"));

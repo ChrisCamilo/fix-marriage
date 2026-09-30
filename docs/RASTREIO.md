@@ -2237,3 +2237,17 @@ sequência proibida criada; `verify` 0 / 11 / 4.606. Aplicado com aprovação do
 usuário (linhas 5.929–5.955; como a 1.474 saiu, as linhas depois dela subiram
 uma — a tabela do README está renumerada, os comentários "linha N" dos lotes
 antigos em `data/` ficam na numeração da época).
+
+## IDR 1773 — plano 4 retomado: o QP engana, a posição da tarja não (2026-09-30)
+
+Ranking dos 125 IDRs quebrados pelo MB de parada, dano na cabeça e GOP: o 1773
+segue o mais saudável com folga (MB 6.960, 85%; o seguinte, 1683, 4.305). O
+juiz de sincronia no JM deixa passar lixo (0–14% de falsos em IDRs íntegros com
+bit plantado), mas o 1773 tem uma âncora de posição: nos íntegros a fileira 60
+é tarja pura, começa 77–95 bytes antes do fim e o ffmpeg, com a amostra cortada
+100 bytes antes do fim, para no MB 7.188–7.198. O único par de setembro que
+sincronizava no lugar da tarja (`59363224 5` + `59363619 6`) cai por ela: lê a
+fileira 60 como cena. As listas de setembro não eram as melhores (gravadas
+antes da correção do `TETO`), então a busca de 2 bits foi preparada de novo
+com `CORTE_ALVO` e interrompida a pedido do usuário. Detalhes, números e os
+comandos para retomar: `docs/PLANO_ESCAPES_1773.md`, "Andamento".
