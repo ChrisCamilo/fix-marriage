@@ -285,6 +285,44 @@ static void difere(const uint8_t *A, const uint8_t *B, int w, int h,
     *media = s / n; *maxd = mx; *frac = (double)mud / n;
 }
 
+/* Quadros sinteticos no lugar dos anteriores ao alvo (PREFIXO=arquivo, gerado
+ * por tools/anchor/prefixo.py): mesmo cabecalho do arquivo remendado, corpo
+ * todo pulado. A leitura CABAC do alvo so depende da ESTRUTURA do DPB (quadros,
+ * frame_num, POC, marcacao), que vem dos cabecalhos -- nao dos pixels. Entao o
+ * MB onde o alvo para e o mesmo, e cada combinacao custa o alvo e ~1 ms por
+ * quadro anterior, em vez de decodificar o GOP inteiro. A imagem do alvo NAO e
+ * a mesma: so vale para nota de progresso (`avanco`, `corta`), e o main recusa
+ * outro modo e os pisos de imagem com ele ligado. */
+static uint8_t *pre_nal[MAXS];
+static int pre_len[MAXS];
+static int prefixo_ligado = 0;
+
+/* Le o arquivo do PREFIXO: uma linha `indice hexa` por quadro trocado, o hexa
+ * com o prefixo de 4 bytes do tamanho, como no MP4; `indice -` tira o quadro da
+ * cadeia (os de nal_ref_idc 0, que nao entram no DPB). pre_len -1 = tirado.
+ *
+ *   caminho  o arquivo
+ *
+ * Devolve: quantos quadros foram lidos; -1 se o arquivo nao abre ou uma linha
+ * nao se le. */
+static int carrega_prefixo(const char *caminho) {
+    FILE *f = fopen(caminho, "r");
+    if (!f) return -1;
+    int idx, n = 0;
+    static char hexa[1 << 20];
+    while (fscanf(f, "%d %1048575s", &idx, hexa) == 2) {
+        if (idx < 0 || idx >= n_ix) { fclose(f); return -1; }
+        if (!strcmp(hexa, "-")) { pre_len[idx] = -1; n++; continue; }
+        int len = (int)strlen(hexa) / 2;
+        if (len < 5) { fclose(f); return -1; }
+        pre_nal[idx] = malloc(len);
+        for (int k = 0; k < len; k++) sscanf(hexa + 2 * k, "%2hhx", &pre_nal[idx][k]);
+        pre_len[idx] = len; n++;
+    }
+    fclose(f);
+    return n;
+}
+
 /* Decodifica a cadeia [ancora..alvo]. Opcionalmente troca o payload do alvo.
  * Devolve 0 se TUDO saiu perfeito: nenhum log de erro e o numero de quadros
  * emitidos (apos flush) igual ao numero de pacotes enviados.
@@ -310,6 +348,8 @@ static int decodifica(int ancora, int alvo, const uint8_t *alt, int alt_len,
     for (int i = ancora; i <= ate; i++) {
         const uint8_t *src; int len;
         if (i == alvo && alt) { src = alt; len = alt_len; }
+        else if (prefixo_ligado && i < alvo && pre_len[i] < 0) continue;
+        else if (prefixo_ligado && i < alvo && pre_nal[i]) { src = pre_nal[i]; len = pre_len[i]; }
         else { src = arq + ix[i].off; len = ix[i].size; }
         /* O log guarda o ULTIMO erro visto. Zerando aqui, o que sobrar depois
          * de mandar o alvo e o erro DO ALVO -- e -1 quer dizer que ele nao
@@ -2522,6 +2562,12 @@ static int modo_corta(int argc, char **argv) {
  *   TARJA_DESCE      pisos de imagem: reprovado vira nota -1. So valem AQUI
  *                    (worker_avanco), nao no `varrek` nem no `cresce`
  *   CONSUMO=n        juiz do consumo -- REFUTADO, nao usar (armadilha 36)
+ *   PREFIXO=arquivo  quadros anteriores ao alvo trocados pelos sinteticos do
+ *                    tools/anchor/prefixo.py (mesmo cabecalho, corpo pulado;
+ *                    os de nal_ref_idc 0 tirados): mesma nota, ~5x mais rapido
+ *                    no fim do GOP 0; nao combina com os pisos de imagem, e a
+ *                    faixa comeca nos dados do slice (troca no cabecalho mexe
+ *                    no POC e no DPB, e ai a nota pode mudar)
  *
  * Nota de cada combinacao (worker_avanco + mb_alcancado): o endereco linear do
  * MB onde o alvo parou, mb_y * 120 + mb_x, de 0 a 8159; 8160 - ocultados
@@ -2539,7 +2585,8 @@ static int modo_corta(int argc, char **argv) {
  * primeiras 40.000 na ordem da combinacao, e no 1773 o par da melhor nota
  * (7.652, de 305.175 que passaram) ficou de fora do arquivo.
  *
- * Devolve: 0; 1 se JANELA2 vier malformada ou com k != 2.
+ * Devolve: 0; 1 se JANELA2 vier malformada ou com k != 2, ou se a faixa
+ * ficar vazia.
  */
 /* Por que: o criterio binario "decodifica limpo" desperdica a informacao mais
  * util que o decoder da: ATE ONDE ele chegou antes de falhar. Num slice CABAC
@@ -2597,6 +2644,12 @@ static int modo_avanco(int argc, char **argv) {
                 printf("[+] enchimento cortado: faixa do 2o bit vai ate o byte %d\n", f);
                 fim2 = f;
             }
+        }
+        /* Faixa vazia (ini depois do fim dos dados): sem isto o nbits_k sai
+         * negativo e o gera_combos derrubava o programa. */
+        if (fim <= ini_k) {
+            fprintf(stderr, "faixa vazia: [%d,%d)\n", ini_k, fim);
+            return 1;
         }
         if (prof_k < 1) prof_k = 1;
         if (prof_k > 4) prof_k = 4;
@@ -3570,6 +3623,22 @@ static const int N_MODOS = sizeof MODOS / sizeof MODOS[0];
         for (int k = 0; k < N_MODOS; k++)
             fprintf(stderr, "  %-10s %s\n", MODOS[k].nome, MODOS[k].uso);
         return 1;
+    }
+    /* O prefixo sintetico preserva onde o alvo para, nao a imagem dele. */
+    if (getenv("PREFIXO")) {
+        if (strcmp(m->nome, "avanco") && strcmp(m->nome, "corta")) {
+            fprintf(stderr, "PREFIXO so vale nos modos avanco e corta\n");
+            return 1;
+        }
+        if (piso_tarja || piso_topo || piso_base || piso_croma || piso_trinca
+            || intacto_ate || tarja_desce) {
+            fprintf(stderr, "PREFIXO nao combina com piso de imagem\n");
+            return 1;
+        }
+        int n = carrega_prefixo(getenv("PREFIXO"));
+        if (n < 0) { fprintf(stderr, "PREFIXO: nao li %s\n", getenv("PREFIXO")); return 1; }
+        prefixo_ligado = 1;
+        fprintf(stderr, "[+] prefixo sintetico: %d quadros de %s\n", n, getenv("PREFIXO"));
     }
     if (argc < m->min_args) {
         fprintf(stderr, "uso: %s <mp4> <index.txt> <patches.txt> %s %s\n",

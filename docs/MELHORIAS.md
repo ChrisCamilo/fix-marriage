@@ -52,11 +52,66 @@ depois de medido.
    igual ao de antes; com `TETO` 100, 500, 605 e 0 sai exatamente o top-N
    esperado, calculado à parte a partir da varredura completa. Muda o stdout
    dos três casos `avanco_*` da regressão (as 5 melhores), e só deles.
+5. **Prefixo sintético no `avanco` e no `corta`** (2026-09-30) —
+   `PREFIXO=arquivo`, gerado por `tools/anchor/prefixo.py <alvo> <arquivo>`.
+   É a versão possível da melhoria 2 (não redecodificar o prefixo da cadeia),
+   sem a contaminação do `WARM` (item 6 das descartadas). O contexto continua
+   novo a cada candidato; o que muda é o que se manda antes do alvo. A leitura
+   CABAC do alvo não depende dos pixels das referências, só da **estrutura** do
+   DPB (quadros, `frame_num`, POC, marcação), que vem dos cabeçalhos. Então cada
+   quadro anterior vira um NAL com o mesmo cabeçalho (do arquivo remendado) e o
+   corpo todo pulado, e os de `nal_ref_idc` 0 saem da cadeia.
+
+   **Conferido no fim do GOP 0:**
+   - a base: com o prefixo, o MB de parada é o mesmo do `mapa` nos 16 quadros
+     do 13 ao 28;
+   - as seis buscas de 1 bit de 2026-09-30 (17, 19, 21, 23, 27 e 28, 85.640
+     combinações) saem com o mesmo histograma e o mesmo arquivo, com **uma**
+     exceção.
+
+   A exceção está no cabeçalho do 17: o bit que leva o POC de 36 a 164 sem
+   prefixo parava no MB 1.151 e com prefixo não sai quadro (−1). Sem os B, o
+   quadro não é emitido. **Então a faixa começa nos dados do slice.** Uma
+   troca de cabeçalho mexe na saída e no DPB, que é justamente o que o
+   prefixo simplifica.
+
+   A imagem do alvo não é a verdadeira. Por isso o `reparador` recusa o
+   `PREFIXO` fora do `avanco` e do `corta`, e junto de qualquer piso de
+   imagem: serve para achar candidato, e o candidato se confere depois sem
+   ele.
+
+   **Ganho medido:**
+
+   | medida | sem prefixo | com prefixo |
+   |---|---|---|
+   | 1 thread, alvo 28 (ms por combinação) | 85 | 17 |
+   | 12 threads, alvo 19 (combinações/s) | 125 | 243 |
+   | 12 threads, alvo 23 (combinações/s) | 82 | 196 |
+
+   A composição dos 17 ms: ~0,8 ms para montar o decoder, ~4 ms o IDR, ~0,6 ms
+   cada sintético (14 no 28) e ~4 ms o alvo.
+
+   Com o prefixo a vazão **satura em ~6 threads**, e é da máquina, não do
+   processo:
+   - 223/s com 6 threads, 205/s com 20, 192/s com 26;
+   - três buscas simultâneas de 6 threads dão ~214/s no total.
+
+   As threads ficam em código de usuário (74 s de CPU em 12 s, só 8,8 s de
+   kernel), mas cada combinação custa o dobro de CPU com 12 threads. É
+   contenção de memória: cada decodificação percorre dezenas de MB de quadros.
+
+   **Testado e descartado no mesmo dia:**
+   - reaproveitar o contexto com `avcodec_flush_buffers`: quase não ganha, e
+     uma nota mudou (68 reprovadas em vez de 69, no 19). É a dependência de
+     história do `WARM` de novo;
+   - desligar a ocultação de vetor (`error_concealment` = 2) ou a deblocagem:
+     nenhum ganho, dentro do ruído.
 
 ### Pendentes
 
 3. **Cache do estado do decoder na âncora** — impossível como descrito, e a
-   versão possível foi medida e descartada. Ver item 6 abaixo. Não tente.
+   versão possível foi medida e descartada. Ver item 6 abaixo. Não tente. O que
+   deu certo foi baratear o prefixo em vez de guardá-lo: item 5 das feitas.
 4. **Paralelizar a busca com parada antecipada** (`busca1`) — ainda sequencial.
    Exige a regra do menor índice descrita em `PARALELIZACAO.md`, porque com
    múltiplas soluções "a primeira que chegar" escolheria bit errado.

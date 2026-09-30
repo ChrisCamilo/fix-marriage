@@ -104,7 +104,9 @@ raiz/                   o que todo comando cita, e o que nunca se move
                         corrigido do frame 11: gera o patches_f11.txt);
                         cabeca.py (censo da tarja de cima: gera o
                         censo_cabeca.txt e o patches_cabeca.txt);
-                        gemeos.py (os B 10 e 12 pelos gemeos 6 e 8)
+                        gemeos.py (os B 10 e 12 pelos gemeos 6 e 8);
+                        prefixo.py (quadros sinteticos para o PREFIXO=
+                        do avanco: ~5x mais rapido no fim do GOP)
   docs/                 os doze documentos que crescem
   data/                 registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
