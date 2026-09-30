@@ -2119,16 +2119,17 @@ static int modo_verify(int argc, char **argv) {
          * E o nivel B da cabeca (patches_cabeca_b, folga >= 10), do mesmo tipo
          * do patches_cabeca, e a tarja de cima do frame 15 com o MB 0 pela
          * fisica (patches_cabeca_f15), e a do 17 e do 19 depois do QP
-         * consertado (patches_cabeca_fis). Das dez listas juntas saem 4.558
-         * pulados. */
-        const char *listas[10] = {
+         * consertado (patches_cabeca_fis), e a do GOP 29 (patches_cabeca_gop29,
+         * IDR quebrado: o QP do 30, os irmaos do 54, o nivel C dos B que paravam
+         * dentro da tarja). Das onze listas juntas saem 4.580 pulados. */
+        const char *listas[11] = {
             getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
             "data/patches_cabecalho.txt", "data/patches_cauda.txt",
             "data/patches_cauda_pb.txt", "data/patches_f11.txt",
             "data/patches_cabeca.txt", "data/patches_gemeos.txt",
             "data/patches_cabeca_b.txt", "data/patches_cabeca_f15.txt",
-            "data/patches_cabeca_fis.txt" };
-        for (int f = 0; f < 10; f++) {
+            "data/patches_cabeca_fis.txt", "data/patches_cabeca_gop29.txt" };
+        for (int f = 0; f < 11; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;
             char linha[512]; long o; int b, n0 = n_det;

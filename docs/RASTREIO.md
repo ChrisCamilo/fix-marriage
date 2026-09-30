@@ -2178,3 +2178,34 @@ o decodificador anda lendo lixo, não dado. São 2 bits ou mais em cada.
 Custo medido: 90–150 combinações por segundo nesses quadros (o `avanco`
 decodifica o GOP desde o IDR 0 a cada uma). Busca de 2 bits só com `JANELA2`
 estreita: a faixa inteira do 21 daria ~10⁹ pares.
+
+## GOP 29 — cabeçalhos e tarja de cima: 22 bits (2026-09-30)
+
+O IDR 29 (289 KB) para no MB 1.102 com a tarja limpa (0 em 616 bits); 1–3
+bits e o encadeamento de 2 já tinham falhado (seção "IDR 29"). O GOP inteiro
+depende dele: nenhuma imagem sai certa. Mas os P e B têm cabeçalho e tarja de
+conteúdo conhecido, e o censo refeito com o buffer do dia, o molde dos irmãos e
+a comparação com os P irmãos acharam:
+
+| quadro | bits | o quê | prova | `mapa` |
+|---|---|---|---|---|
+| 30 (P) | 2 | `qp_delta` +8 → −8 (QP 34 → 18) e 1 da tarja | com o QP dos irmãos a tarja pulada bate em 56 de 56 bits (1 bit fora, folga 21); só o QP leva a 435 | 1 → 1.184 |
+| 54 (P) | 3 | tarja | os P 38, 42, 46 e 50 têm `fa 58 00 00 03 00 00 03 00`; o 54, `7a 48 00 00 03 00 20 03 00` | 1 → 990 (com 2 bits, 622) |
+| 47 (B) | 3 | POC 48 → 34, `n1` 2 → 3 | molde dos B do GOP (os campos são `frame_num` 8 bits e POC 8 bits; 0 bit de diferença em 12 pares de irmãos íntegros); 48 é o POC do P 50 | 988 → 988 |
+| 49 (B) | 6 | cabeçalho inválido (`modification_of_pic_nums_idc=42`) + 1 da tarja | molde com QP −5: 5 trocas (−6: 7). Os grupos de B alternam −5 e −6, e a tarja de 40 bits não decide | sem imagem → 985 (−6: 979) |
+| 35, 37, 48, 55, 57 (B) | 2, 2, 2, 1, 1 | tarja | nível C do censo (folga < 10), mas paravam **dentro** da tarja pulada — um MB verdadeiro não faria isso | 276 → 1.003, 542 → 891, sem imagem → 862, 792 → 997, 600 → 987 |
+
+O 48 e o 49 só voltam a sair com o POC do 47 consertado: com o 47 em 48, o
+ffmpeg os descartava como atrasados na reordenação. **Efeito colateral no
+`mapa`:** o 437 e o 438 (quebrados, 159 e 980) deixam de sair — o `mapa` usa um
+decodificador para o filme inteiro, como o ffprobe, e sem o POC errado do 47 o
+h264 aprende a profundidade de reordenação dos B mais tarde, justamente ali.
+Isolado: só o 47 causa isso.
+
+**Fora:** o QP do B 39 (+6 contra −6 dos irmãos 40 e 41, 1 bit): a tarja bate
+nos dois, mas com o −6 o quadro para **antes** (1.038 → 982).
+
+Aplicado com aprovação do usuário (linhas 5.908–5.929; o cabeçalho em
+`data/patches_cabecalho.txt`, a tarja em `data/patches_cabeca_gop29.txt`, que
+o `verify` pula). `serie` igual; nenhuma sequência proibida criada; `verify`
+0 / 11 / 4.580.

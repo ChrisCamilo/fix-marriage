@@ -14,6 +14,7 @@
 | cabeçalhos do 14 e do 15 (mesmo dia, 6 linhas) | 5.724 linhas | **5.730**; `mapa` muda só no 14 (sem imagem → MB 896) e no 15 (sem imagem → MB 1); `serie` 165 igual; `verify` 0 / 11 / **4.381** |
 | tarja de cima do 15, MB 0 pela física (mesmo dia, 48 linhas) | 5.730 linhas | **5.778**; `mapa` muda só no 15 (MB 1 → 965); `serie` 165 igual; `verify` 0 / 11 / **4.429** |
 | QP e tarja de cima do 17 e do 19 (mesmo dia, 129 linhas) | 5.778 linhas | **5.907**; `mapa` muda só no 17 (9 → 1.151) e no 19 (1 → 1.080); `serie` 165 igual; `verify` 0 / 11 / **4.558** |
+| cabeçalhos e tarja de cima do GOP 29 (2026-09-30, 22 linhas) | 5.907 linhas | **5.929**; `mapa`: dez quadros do GOP 29 andam (30, 35, 37, 47, 48, 49, 54, 55, 57; o 47 só na saída), o 437 e o 438 (quebrados) deixam de sair; `serie` igual; `verify` 0 / 11 / **4.580** |
 
 **Consertado por reparo: 2 quadros, o 10 e o 12** — que já contavam como bons,
 mas por interpolação: o NAL cortado num `00 00 02` fazia os dois serem lidos
@@ -96,7 +97,7 @@ Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 | `serie 0 3444` com a cadeia de referência (`TARJA=1`) | **167** — idêntico antes e depois do lote. O conjunto é as três ilhas + o 1683 (listrado, falso positivo); o 12 fica de fora por depender do frame 11 |
 | imagens dos 167 bons | **byte a byte iguais** antes e depois do lote |
 | `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **159 / 2.133 / 1.153** (com as 12 linhas erradas eram 165: elas tiravam a imagem de 6 quadros) |
-| `verify` com `BASE_N=1338` | **0 válidos, 11 falsos** explicados, 4.381 pulados (desde 2026-09-29, com os 406 dos gêmeos, os 7 + 51 escapes, os 325 do nível B da cabeça, os 6 de cabeçalho do 14 e do 15, os 48 da tarja do 15 e os 129 do 17 e do 19; hoje 4.558; antes 12 falsos e 3.587 desde 2026-09-28, com os 33 de cauda de IDR, os 475 de cauda de P/B, os 873 do frame 11 e os 943 da tarja de cima) — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
+| `verify` com `BASE_N=1338` | **0 válidos, 11 falsos** explicados, 4.381 pulados (desde 2026-09-29, com os 406 dos gêmeos, os 7 + 51 escapes, os 325 do nível B da cabeça, os 6 de cabeçalho do 14 e do 15, os 48 da tarja do 15, os 129 do 17 e do 19 e os 22 do GOP 29; hoje 4.580; antes 12 falsos e 3.587 desde 2026-09-28, com os 33 de cauda de IDR, os 475 de cauda de P/B, os 873 do frame 11 e os 943 da tarja de cima) — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
 
 **Frame 2361 (aprovado pelo usuário):** o reparo antigo (`77528961 0` +
 `77528965 2`) dava cabeçalho inválido e o B decodificava "tudo skip" em 8 bytes —

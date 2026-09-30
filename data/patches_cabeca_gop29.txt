@@ -1,0 +1,18 @@
+# patches_cabeca_gop29.txt -- a tarja de cima dos P e B do GOP 29 (IDR quebrado): o lote que entrou.
+# Aplicado em 2026-09-30, aprovado pelo usuario: 13 linhas (os cabecalhos do 30, 47 e 49 estao em data/patches_cabecalho.txt). O verify pula.
+# 30: com o QP certo a tarja pulada bate em 56 de 56 bits; 54: tres bits que o separam dos P irmaos 38/42/46/50 (bytes identicos);
+# 49: o bit que sobra depois do cabecalho; 35, 37, 48, 55, 57: nivel C do censo (folga < 10), aceitos porque o quadro parava DENTRO
+# da tarja pulada. mapa: 30 1->1184, 35 276->1003, 37 542->891, 48 -1->862, 49 -1->985, 54 1->990, 55 792->997, 57 600->987.
+1466031 5 # quadro 30 (linha 5909 do patches.txt)
+2558332 7 # quadro 54 (linha 5910 do patches.txt)
+2558333 4 # quadro 54 (linha 5911 do patches.txt)
+2558338 5 # quadro 54 (linha 5912 do patches.txt)
+2347114 7 # quadro 49 (linha 5921 do patches.txt)
+1670887 3 # quadro 35 (linha 5922 do patches.txt)
+1670890 5 # quadro 35 (linha 5923 do patches.txt)
+1723125 1 # quadro 37 (linha 5924 do patches.txt)
+1723126 6 # quadro 37 (linha 5925 do patches.txt)
+2300214 2 # quadro 48 (linha 5926 do patches.txt)
+2300215 2 # quadro 48 (linha 5927 do patches.txt)
+2655877 0 # quadro 55 (linha 5928 do patches.txt)
+2703757 7 # quadro 57 (linha 5929 do patches.txt)
