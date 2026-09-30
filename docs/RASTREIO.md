@@ -2152,3 +2152,29 @@ byte 13 virando `02` — o NAL cortado da armadilha 62 (fecha mesmo truncado em
 1.000 bytes). O `avanco` agora reprova, sem decodificar, toda combinação que
 cria `00 00 0x` no NAL; refeita a busca, o 16 não tem mais nenhum "fechamento".
 Próximo passo possível: 2 bits perto da dessincronização (horas por quadro).
+
+## GOP 0: busca de 1 bit no 17, 19, 21, 23, 27 e 28 — nenhum bit sozinho (2026-09-30)
+
+`avanco` k = 1 (com a guarda do escape), faixa do começo do slice — ou da
+queda de consumo, no 21 e no 23 — até o byte em que o `corta` atinge a parada:
+
+| quadro | faixa (bytes do NAL) | parada | melhor | passam da base |
+|---|---|---|---|---|
+| 28 (B) | 5–200 | 933 | 1.139 | 38 |
+| 19 (P) | 5–700 | 1.080 | 1.557 | 916 |
+| 27 (B) | 5–1.250 | 1.155 | 1.935 | 3.941 |
+| 17 (P) | 5–1.550 | 1.151 | 1.746 | 1.530 |
+| 21 (P) | 14.000–19.700 | 2.083 | 3.415 | 7.115 |
+| 23 (P) | 50.000–55.400 | 3.947 | 5.083 | 12.144 |
+
+Nenhum fecha, e milhares empurram o erro: ruído. A faixa do 21 veio da curva
+de consumo (bytes por MB oscilam 11–45 pela fileira e caem para 7–12 a partir
+do byte ~17.000); a do 23, do fim (~18 B/MB estáveis até a parada, sem queda
+anterior). **Conferência dos melhores pela curva:** com o 1º, 2º e 3º do 21 e
+o 1º e 2º do 23 aplicados, o consumo cai logo depois do ponto antigo (~10 B/MB
+no 23, contra ~18 na parte íntegra; 4–11 no 21) e o quadro para em seguida —
+o decodificador anda lendo lixo, não dado. São 2 bits ou mais em cada.
+
+Custo medido: 90–150 combinações por segundo nesses quadros (o `avanco`
+decodifica o GOP desde o IDR 0 a cada uma). Busca de 2 bits só com `JANELA2`
+estreita: a faixa inteira do 21 daria ~10⁹ pares.
