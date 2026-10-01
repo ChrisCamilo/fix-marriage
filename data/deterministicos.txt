@@ -516,6 +516,7 @@
 54214384 0  # quadro 1645 byte 7 de 19802: 02 -> 03
 58789315 0  # quadro 1759 byte 20822 de 20829: 02 -> 03
 59364902 0  # quadro 1773 byte 34308 de 34313: 02 -> 03
+59364903 5  # quadro 1773 byte 34315: 21 -> 01, o 2o byte da mesma violacao (00 00 03 21). Volta em 2026-10-01 com prova nova: das 23 trocas de 1 bit que desfazem a violacao, so esta fecha a fileira 67 da tarja em 0 (as outras 3-4) e e a melhor desde a 66 (3 contra 9-11). Saira em 2026-09-25 no lote da cauda (data/cauda_auditoria.txt)
 59864380 0  # quadro 1802 byte 77109 de 78003: 02 -> 03
 64883812 0  # quadro 1968 byte 24635 de 24641: 02 -> 03
 65803018 0  # quadro 1992 byte 7 de 19247: 02 -> 03

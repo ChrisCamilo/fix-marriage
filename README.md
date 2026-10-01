@@ -149,7 +149,7 @@ agente faz os commits e nunca roda `git push`. O `.mp4` e o binário compilado
 ficam fora do versionamento (ver `.gitignore`); a integridade do original é
 conferida com `sha256sum -c data/CHECKSUMS.txt`.
 
-**Composição do `patches.txt` — 6.607 linhas:**
+**Composição do `patches.txt` — 6.608 linhas:**
 
 | faixa | quantas | o que é |
 |---|---|---|
@@ -174,6 +174,7 @@ conferida com `sha256sum -c data/CHECKSUMS.txt`.
 | 5904–5930 | 27 | **cabeçalhos e tarja de cima do GOP 58** (2026-09-30; o IDR 58 segue quebrado): o 63 era o P de referência com o `nal_ref_idc` corrompido — saiu a linha 1.474 (`2993169 2`, que o fazia B), entrou o `nal_ref_idc` e o QP −6, o único que casa com a tarja, + 2 bits dela; o 79, o 80 e o 83 pelo molde dos irmãos (o 83 tinha `frame_num` 68); a tarja pulada dos B 62, 76 e 84; o escape `03` antes da cena no 72 (`07`), 76 (`41`) e 84 (`43`); e o 1º byte depois do escape no 74 (`41` → `01`, como os irmãos 68–73). O cabeçalho em `data/patches_cabecalho.txt`, a tarja em `data/patches_cabeca_gop58.txt`. `mapa`: 62 731 → 996, 63 sem imagem → 991, 72 935 → 988, 74 848 → 1.107, 76 82 → 1.102, 79 17 → 992, 80 sem imagem → 1.024, 84 79 → 990; nada muda fora do GOP; `serie` igual |
 | 5931–6605 | 675 | **o que os irmãos de GOP provam, no filme inteiro** (2026-10-01, `tools/varre_irmaos.py`, níveis A e B): **A** — bytes gêmeos do começo do slice (tarja de cima e o escape antes da cena) diferentes de todos os irmãos sãos do mesmo grupo (mesmo tipo, tamanho de cabeçalho, QP, n0/n1); **B** — cabeçalho inválido ou incoerente remontado pelos campos esperados (montador conferido em 3.076 cabeçalhos), sem empate. Saíram 25 determinísticas do `slice_type` que casavam com o `nal_ref_idc` corrompido (armadilha 63). `mapa`: 305 quadros andam, nenhum recua — 186 passam a tarja, 102 que não tinham imagem passam a sair; `serie` 165 igual; nenhuma sequência proibida criada. Fica fora o nível C (41 cabeçalhos com empate) e os 147 em que a correção não muda nada. Linha a linha em `data/patches_irmaos.txt` |
 | 6606–6607 | 2 | **a tarja do P 137** (GOP 128, 2026-10-01): os 2 bits que o separam do irmão 141 (mesmo QP e n0; bytes idênticos até a cena) — o censo da cabeça aponta os mesmos. A varredura dos irmãos não o pegava (exige 2 irmãos sãos). `mapa`: 137 de 97 a 970, nada mais muda; `serie` igual. Também em `data/patches_irmaos.txt` |
+| 6608 | 1 | **o `21` → `01` do fim do IDR 1773** (2026-10-01): o 2º byte da violação de escape `00 00 03 21` (o `02` → `03` já estava). Das 23 trocas de 1 bit que desfazem a violação, só esta fecha a fileira 67 da tarja recodificada em distância 0 (as outras deixam 3–4) e é a melhor desde a 66. Tinha saído em 2026-09-25 com o lote da cauda; volta com a prova nova. Não muda imagem (o 1773 quebra no byte 32.640). Também em `data/deterministicos.txt` |
 
 **18 pares de linhas duplicadas** se cancelam de propósito (XOR duas vezes é
 identidade), desfazendo reparos que foram aceitos por engano. Conferido par a

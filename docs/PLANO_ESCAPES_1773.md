@@ -284,3 +284,16 @@ tem ~4%) tem o tamanho de um bloco. Depois do teste a chance que sobra é a de 2
 bits **distantes** (o 2º entre 32.800 e 34.217), com a busca inteira de ~5,5 h.
 Recomendação: parar os bits no 1773 e ir para o plano 3 (substituir a
 referência), com o 1773 como primeiro alvo.
+
+**A tarja de baixo pelo fim (2026-10-01).** `ancora2.c` (tarja pura, contextos
+saturados do 3426, entrada nas fileiras 63–67; controle 3426: 0 nas duas
+entradas). No 1773, com o `21` → `01`: fileira 67, **0** em 42 bits; 66, 3 em
+82; 65, 9 em 118; 64, 22 em 156; 63, 26 em 166. Das 23 trocas de 1 bit que
+desfazem a violação final (`00 00 03 21`), **só o `21` → `01`** fecha a 67 em 0
+(as outras 3–4) e é a melhor desde a 66 (3 contra 9–11): aplicado com
+aprovação do usuário (`59364903 5`, em `data/deterministicos.txt`). Da 66
+para cima as diferenças se concentram na coluna 0 de cada fileira, onde o
+modelo puro tem incógnitas, e as hipóteses de entradas diferentes discordam:
+não dá para separar dano de sintaxe variante (armadilha 61) com a tarja pura.
+Ir além pede a busca com variantes por coluna (`cabac_enc2.py`) em C — prova
+bits em ~40 bytes de tarja, sem imagem.

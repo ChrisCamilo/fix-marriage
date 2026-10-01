@@ -2298,3 +2298,11 @@ O P 137 parava no MB 97, dentro da tarja. O irmão 141 (mesmo QP −5, n0 3) tem
 cabeça aponta. Com eles: MB 97 → 970, nada mais muda no `mapa`, `serie`
 igual. A varredura dos irmãos não o pegou: o grupo tem só um irmão são (ela
 exige dois). Aplicado com aprovação do usuário (linhas 6.606–6.607).
+
+### IDR 1773 — a tarja de baixo: 1 bit provado no fim (2026-10-01)
+
+A tarja recodificada pelo fim (`ancora2.c`, pura) fecha a fileira 67 em 0 só
+com o `21` → `01` do byte 34.315, o único das 23 consertos de 1 bit da
+violação final que faz isso; aplicado com aprovação do usuário. Acima da 67 o
+modelo puro não encaixa (3, 9, 22, 26 diferenças nas entradas 66–63, na coluna
+0) e não separa dano de variante. Detalhes em `docs/PLANO_ESCAPES_1773.md`.
