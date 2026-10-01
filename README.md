@@ -92,6 +92,9 @@ raiz/                   o que todo comando cita, e o que nunca se move
     ocultacao.py        quantos macroblocos o ffmpeg oculta em cada quadro
     proibidas.py        as sequencias 00 00 0x que cortam o NAL (guarda de
                         todo lote: nenhuma criada por patch)
+    varre_irmaos.py     o que os irmaos de GOP provam no filme inteiro:
+                        cabecalho remontado, bytes gemeos da tarja, cruzado
+                        com o patches.txt e as retiradas (proposta, nao patch)
     regressao.sh        prova que uma refatoração não mudou nada, modo a modo
                         (referência em data/regression/)
     confere_doc.py      confere o padrão de documentação das funções
