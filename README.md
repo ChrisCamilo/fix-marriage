@@ -112,7 +112,9 @@ raiz/                   o que todo comando cita, e o que nunca se move
                         do avanco: ~5x mais rapido no fim do GOP);
                         sincronia_1773.py, sincronia_valida.py e
                         sincronia_tarja.py (juizes no JM do plano 4: QP,
-                        e a fileira 60 como tarja pura no lugar certo)
+                        e a fileira 60 como tarja pura no lugar certo);
+                        ancora4.c + tarja_variante.py (tarja de IDR pelo
+                        fim com uma coluna de modo variante, todas varridas)
   docs/                 os doze documentos que crescem
   data/                 registros derivados, versionados
     CHECKSUMS.txt       SHA-256 do original, para detectar novo bit-rot nele
