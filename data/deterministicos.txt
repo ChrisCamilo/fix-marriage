@@ -159,7 +159,7 @@
 24720015 2
 24961906 2
 25412491 6
-26685550 2
+# RETIRADA 2026-10-01: 26685550 2   # frame 718: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 26685550 1
 26878357 4
 26928527 2
@@ -169,7 +169,7 @@
 28164859 6
 28953935 2
 29199890 3
-29333969 2
+# RETIRADA 2026-10-01: 29333969 2   # frame 792: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 29836311 4
 30020316 7
 30032144 5
@@ -178,10 +178,10 @@
 31399013 7
 32930236 5
 32930236 3
-33171005 2
+# RETIRADA 2026-10-01: 33171005 2   # frame 941: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 34496062 2
 35293262 6
-35293262 2
+# RETIRADA 2026-10-01: 35293262 2   # frame 1012: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 35434722 4
 35486898 7
 35531508 4
@@ -192,11 +192,11 @@
 36661007 2
 37423244 3
 37885702 6
-38240759 2
+# RETIRADA 2026-10-01: 38240759 2   # frame 1123: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 38382627 3
 39165135 2
-39264733 2
-39901192 2
+# RETIRADA 2026-10-01: 39264733 2   # frame 1159: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
+# RETIRADA 2026-10-01: 39901192 2   # frame 1181: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 40404376 5
 40553251 6
 40886459 6
@@ -205,7 +205,7 @@
 41236225 2
 41384368 6
 41721227 1
-42409170 2
+# RETIRADA 2026-10-01: 42409170 2   # frame 1249: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 42658145 6
 42658145 1
 42852716 1
@@ -230,12 +230,12 @@
 48169773 7
 48220186 2
 48220186 1
-48511209 2
+# RETIRADA 2026-10-01: 48511209 2   # frame 1445: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 48561109 4
 48854188 6
 48854188 2
 49448816 2
-49585258 2
+# RETIRADA 2026-10-01: 49585258 2   # frame 1491: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 49783157 7
 49790445 2
 50623797 4
@@ -268,8 +268,8 @@
 58687088 6
 58687088 5
 59364910 5
-59418438 2
-59520574 2
+# RETIRADA 2026-10-01: 59418438 2   # frame 1778: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
+# RETIRADA 2026-10-01: 59520574 2   # frame 1784: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 59865277 4
 59865277 1
 60108244 2
@@ -291,29 +291,29 @@
 67633328 7
 67777011 1
 69106031 5
-69301596 2
+# RETIRADA 2026-10-01: 69301596 2   # frame 2094: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 69645983 6
 70229610 7
 70436352 7
 70436352 6
 70733442 2
 70927972 2
-71073042 2
+# RETIRADA 2026-10-01: 71073042 2   # frame 2145: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 71211245 2
 71946584 2
 72440224 1
 72548424 1
-72734667 2
+# RETIRADA 2026-10-01: 72734667 2   # frame 2206: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 73533180 7
 73571154 7
-74262005 2
+# RETIRADA 2026-10-01: 74262005 2   # frame 2257: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 74609469 4
 74802210 5
 75157065 6
 75451596 7
 78072812 7
-78262442 2
-78421619 2
+# RETIRADA 2026-10-01: 78262442 2   # frame 2379: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
+# RETIRADA 2026-10-01: 78421619 2   # frame 2382: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 78761682 6
 78761682 5
 79393184 6
@@ -324,13 +324,13 @@
 81126162 2
 81513768 3
 81627899 7
-81794823 2
+# RETIRADA 2026-10-01: 81794823 2   # frame 2458: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 81895038 6
 82683773 4
 82778225 6
 82778225 1
 82930212 5
-83120591 2
+# RETIRADA 2026-10-01: 83120591 2   # frame 2492: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 83470681 7
 83714283 4
 83818702 4
@@ -340,11 +340,11 @@
 84949896 4
 85387088 5
 85492277 5
-85543933 2
+# RETIRADA 2026-10-01: 85543933 2   # frame 2574: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 85781021 6
 86325163 1
-86961354 2
-88636902 2
+# RETIRADA 2026-10-01: 86961354 2   # frame 2623: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
+# RETIRADA 2026-10-01: 88636902 2   # frame 2675: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 89175775 2
 91677190 3
 92620186 2
@@ -358,7 +358,7 @@
 98164796 2
 98367747 5
 98854972 2
-99499951 2
+# RETIRADA 2026-10-01: 99499951 2   # frame 2949: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 99789528 1
 100132722 5
 100823939 7
@@ -371,7 +371,7 @@
 104305392 4
 104753543 3
 105093650 3
-105395660 2
+# RETIRADA 2026-10-01: 105395660 2   # frame 3103: o molde_slice casou o slice_type com o nal_ref_idc corrompido (armadilha 63); o cabecalho remontado pelos irmaos esta em data/patches_irmaos.txt
 105632323 6
 105981093 3
 106033740 1

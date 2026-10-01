@@ -16,6 +16,7 @@
 | QP e tarja de cima do 17 e do 19 (mesmo dia, 129 linhas) | 5.778 linhas | **5.907**; `mapa` muda só no 17 (9 → 1.151) e no 19 (1 → 1.080); `serie` 165 igual; `verify` 0 / 11 / **4.558** |
 | cabeçalhos e tarja de cima do GOP 29 (2026-09-30, 22 linhas) | 5.907 linhas | **5.929**; `mapa`: dez quadros do GOP 29 andam (30, 35, 37, 47, 48, 49, 54, 55, 57; o 47 só na saída), o 437 e o 438 (quebrados) deixam de sair; `serie` igual; `verify` 0 / 11 / **4.580** |
 | cabeçalhos e tarja de cima do GOP 58 (mesmo dia, +27 −1 linhas) | 5.929 linhas | **5.955**; saiu a `2993169 2` (determinística errada do 63); `mapa`: oito quadros do GOP 58 andam (62, 63, 72, 74, 76, 79, 80, 84), nada muda fora dele; `serie` igual; `verify` 0 / 11 / **4.606** |
+| o que os irmãos de GOP provam, filme inteiro (2026-10-01, +675 −25 linhas) | 5.955 linhas | **6.605**; `mapa`: 305 quadros andam (186 passam a tarja, 102 ganham imagem), nenhum recua; `serie` 165 igual; `verify` 0 / 11 / **5.256** |
 
 **Consertado por reparo: 2 quadros, o 10 e o 12** — que já contavam como bons,
 mas por interpolação: o NAL cortado num `00 00 02` fazia os dois serem lidos
@@ -98,7 +99,7 @@ Isso inclui **todos** os "trechos de 3 quadros" da tabela de 2026-09-17 abaixo
 | `serie 0 3444` com a cadeia de referência (`TARJA=1`) | **167** — idêntico antes e depois do lote. O conjunto é as três ilhas + o 1683 (listrado, falso positivo); o 12 fica de fora por depender do frame 11 |
 | imagens dos 167 bons | **byte a byte iguais** antes e depois do lote |
 | `mapa`: sem imagem / 8.160 MB / quebrados com imagem | antes **338 / 2.052 / 1.055** → depois **159 / 2.133 / 1.153** (com as 12 linhas erradas eram 165: elas tiravam a imagem de 6 quadros) |
-| `verify` com `BASE_N=1338` | **0 válidos, 11 falsos** explicados, 4.381 pulados (desde 2026-09-29, com os 406 dos gêmeos, os 7 + 51 escapes, os 325 do nível B da cabeça, os 6 de cabeçalho do 14 e do 15, os 48 da tarja do 15, os 129 do 17 e do 19, os 22 do GOP 29 e os 27 do GOP 58, menos a determinística do 63; hoje 4.606; antes 12 falsos e 3.587 desde 2026-09-28, com os 33 de cauda de IDR, os 475 de cauda de P/B, os 873 do frame 11 e os 943 da tarja de cima) — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
+| `verify` com `BASE_N=1338` | **0 válidos, 11 falsos** explicados, 4.381 pulados (desde 2026-09-29, com os 406 dos gêmeos, os 7 + 51 escapes, os 325 do nível B da cabeça, os 6 de cabeçalho do 14 e do 15, os 48 da tarja do 15, os 129 do 17 e do 19, os 22 do GOP 29, os 27 do GOP 58 e os 675 dos irmãos de GOP, menos 26 determinísticas da armadilha 63; hoje 5.256; antes 12 falsos e 3.587 desde 2026-09-28, com os 33 de cauda de IDR, os 475 de cauda de P/B, os 873 do frame 11 e os 943 da tarja de cima) — com o critério de ocultação nenhum reparo fecha um quadro sozinho (ver `AGENTS.md`) |
 
 **Frame 2361 (aprovado pelo usuário):** o reparo antigo (`77528961 0` +
 `77528965 2`) dava cabeçalho inválido e o B decodificava "tudo skip" em 8 bytes —

@@ -2142,16 +2142,18 @@ static int modo_verify(int argc, char **argv) {
          * consertado (patches_cabeca_fis), e a do GOP 29 (patches_cabeca_gop29,
          * IDR quebrado: o QP do 30, os irmaos do 54, o nivel C dos B que paravam
          * dentro da tarja), e a do GOP 58 (patches_cabeca_gop58, idem, com os
-         * escapes antes da cena). Das doze listas juntas saem 4.606 pulados. */
-        const char *listas[12] = {
+         * escapes antes da cena), e o que os irmaos de GOP provam no filme
+         * inteiro (patches_irmaos, tools/varre_irmaos.py). Das treze listas
+         * juntas saem 5.256 pulados. */
+        const char *listas[13] = {
             getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
             "data/patches_cabecalho.txt", "data/patches_cauda.txt",
             "data/patches_cauda_pb.txt", "data/patches_f11.txt",
             "data/patches_cabeca.txt", "data/patches_gemeos.txt",
             "data/patches_cabeca_b.txt", "data/patches_cabeca_f15.txt",
             "data/patches_cabeca_fis.txt", "data/patches_cabeca_gop29.txt",
-            "data/patches_cabeca_gop58.txt" };
-        for (int f = 0; f < 12; f++) {
+            "data/patches_cabeca_gop58.txt", "data/patches_irmaos.txt" };
+        for (int f = 0; f < 13; f++) {
             FILE *fd = fopen(listas[f], "r");
             if (!fd) continue;
             char linha[512]; long o; int b, n0 = n_det;

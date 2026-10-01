@@ -1249,3 +1249,12 @@ controle confirma: no IDR 3426, bom, 35 candidatos passam; no IDR 29, zero.
     invariante liga dois campos e eles discordam, o conserto de 1 bit pode
     estar em qualquer um; decide um terceiro dado (aqui, a cadência de
     `frame_num` dos vizinhos), nunca a ordem em que os campos são lidos.
+
+    **Adendo de 2026-10-01: não era um caso, eram 26.** A varredura dos irmãos
+    (`tools/varre_irmaos.py`) remontou os cabeçalhos inválidos do filme pelos
+    campos esperados e achou o mesmo par em série: a troca do `nal_ref_idc`
+    (novo) e a do `slice_type` que desfaz a determinística antiga (byte + 1,
+    bit 2). Em 25 quadros o cabeçalho remontado faz o quadro andar no `mapa`
+    (a maioria passa a ter imagem); as 25 linhas saíram, marcadas RETIRADA no
+    `deterministicos.txt`. Mais 1 (436) ficou: sozinho, o conserto não muda o
+    quadro.

@@ -2260,3 +2260,32 @@ deles), o teste reduzido no 1773 — 1º bit nos 160 bytes da frente, 2º até
 57–58. Fica excluído o cenário de 2 bits próximos; o de 2 bits distantes
 (busca de ~5,5 h) tem pouca chance pela geometria do dano. Detalhes em
 `docs/PLANO_ESCAPES_1773.md`, "Andamento".
+
+## Os irmãos de GOP no filme inteiro: 675 bits em 305 quadros (2026-10-01)
+
+`tools/varre_irmaos.py` generaliza o que fechou os GOPs 29 e 58:
+
+- **Cabeçalho:** um montador de cabeçalho de P e B (sem pesos, sem
+  modificação de lista) reproduz bit a bit 3.076 dos cabeçalhos do filme; 58
+  ficam fora do modelo (fades com pesos, listas modificadas), 2 diferem (1153 e
+  3207, a olhar), 177 são inválidos. Inválidos e incoerentes (`frame_num` fora
+  da cadência, POC repetido, `nal_ref_idc` 3 num P, QP fora do grupo) são
+  remontados com o `frame_num` da cadência, um POC livre e os parâmetros dos
+  irmãos (nos P, todo QP de −20 a 15 e 1–3 referências); fica a montagem com
+  menos trocas (até 7).
+- **Gêmeos:** irmãos do mesmo grupo (tipo, tamanho de cabeçalho, QP, n0/n1)
+  que passam da fileira 8 têm o começo do slice idêntico até a cena; quadro que
+  para antes do MB 1.300 com 1–3 bits fora dessa janela é candidato.
+- Cada troca cruzada com o `patches.txt` (igual a uma linha existente:
+  DESFARIA_PATCH) e com as linhas retiradas.
+
+520 candidatos em 509 quadros; aplicados juntos e julgados pelo `mapa` do
+filme, iterando até nenhum recuar: 348 andam, 147 não mudam (28 deles quadros
+inteiros — a cadência suposta não vale ali; fora), 14 recuam (fora). Dos 348,
+41 têm empate no cabeçalho (nível C, fora). **Aplicados A (gêmeos) e B
+(cabeçalho sem empate) com aprovação do usuário**; sozinhos, o 436 e o 437 não
+andavam (andavam com o C) e saíram. Resultado: 675 linhas, 305 quadros, todos
+para a frente (186 passam a tarja, 102 ganham imagem), nenhum outro muda;
+`serie` 165 igual; nenhuma sequência proibida; 25 determinísticas retiradas
+(armadilha 63, em série). Quase tudo em GOP de IDR quebrado: prova bits, não
+traz imagem boa nova.
