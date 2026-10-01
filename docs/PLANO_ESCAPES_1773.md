@@ -1,6 +1,6 @@
 # Plano 4 — IDR 1773: encadear pelas violações de escape
 
-**Estado: etapas 0b e 1 feitas em 2026-09-30; a busca da etapa 1b com a âncora de posição foi preparada e interrompida a pedido do usuário** (ver "Andamento" no fim). Proposto em 2026-09-25. Continua o trabalho no 1773
+**Estado: etapas 0b e 1 feitas em 2026-09-30; a busca da etapa 1b com a âncora de posição foi validada no 3368 e o teste reduzido no 1773 (2 bits próximos) deu zero em 2026-10-01** (ver "Andamento" no fim). Proposto em 2026-09-25. Continua o trabalho no 1773
 depois dos planos [`PLANO_ANCORA_CAUDA.md`](PLANO_ANCORA_CAUDA.md) (a tarja e a
 auditoria das caudas) e [`PLANO_JUIZ_ENCODER.md`](PLANO_JUIZ_ENCODER.md)
 (refutado). Se este plano concluir que o dano é denso demais, o caminho é o
@@ -267,3 +267,20 @@ Projeção para o 1773: ~16 M pares (~8,7× o controle) → ~4 h no `avanco`,
 ~240 mil na faixa → ~1,6 h no JM, e da ordem de 10 falsos sobrando para a
 imagem. Se o dano entre a frente e o byte 34.217 tiver mais que o par da
 frente (cenários B/C), nenhum passa — e isso também responde o portão.
+
+**Teste reduzido no 1773 (2026-10-01): nenhum par.** 1º bit em
+`[32.560, 32.720)`, 2º depois dele até 32.800 (os dois a até 80–240 bytes um do
+outro, como a observação de setembro sugeria), 1,64 M pares em 24 min; 36.628
+na faixa da âncora; no JM, **0 passam**: 36.570 perdem o QP nas fileiras 57–59
+(18.430 na 57, 17.121 na 58, 1.019 na 59), 45 chegam à fileira 60 centenas de
+bytes adiantados (cena lida barato demais), o resto para antes. Com o controle
+do 3368 (o par plantado passa), isso exclui "2 bits próximos na frente".
+
+Estimativa antes do teste: 5–10% de o dano da frente ser só 2 bits — o fim do
+1773 tem dano denso (2 em ~42 bits na última fileira; 3 violações de escape
+nas fileiras 60–67), os blocos de dano medidos no arquivo têm 2–4% em 1–3 KB,
+e o trecho quebrado (do byte 32.640 do 1773 ao ~10 do 1774, cujo começo também
+tem ~4%) tem o tamanho de um bloco. Depois do teste a chance que sobra é a de 2
+bits **distantes** (o 2º entre 32.800 e 34.217), com a busca inteira de ~5,5 h.
+Recomendação: parar os bits no 1773 e ir para o plano 3 (substituir a
+referência), com o 1773 como primeiro alvo.

@@ -2251,3 +2251,12 @@ fileira 60 como cena. As listas de setembro não eram as melhores (gravadas
 antes da correção do `TETO`), então a busca de 2 bits foi preparada de novo
 com `CORTE_ALVO` e interrompida a pedido do usuário. Detalhes, números e os
 comandos para retomar: `docs/PLANO_ESCAPES_1773.md`, "Andamento".
+
+### IDR 1773 — 2 bits próximos na frente: zero (2026-10-01)
+
+Com a âncora validada no 3368 (de 1,84 M pares sobram 2, e o plantado é um
+deles), o teste reduzido no 1773 — 1º bit nos 160 bytes da frente, 2º até
+32.800 — dá **0** em 1,64 M: quase todos perdem a sincronia já nas fileiras
+57–58. Fica excluído o cenário de 2 bits próximos; o de 2 bits distantes
+(busca de ~5,5 h) tem pouca chance pela geometria do dano. Detalhes em
+`docs/PLANO_ESCAPES_1773.md`, "Andamento".
