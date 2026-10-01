@@ -2144,7 +2144,7 @@ static int modo_verify(int argc, char **argv) {
          * dentro da tarja), e a do GOP 58 (patches_cabeca_gop58, idem, com os
          * escapes antes da cena), e o que os irmaos de GOP provam no filme
          * inteiro (patches_irmaos, tools/varre_irmaos.py). Das treze listas
-         * juntas saem 5.256 pulados. */
+         * juntas saem 5.258 pulados. */
         const char *listas[13] = {
             getenv("DET") ? getenv("DET") : "data/deterministicos.txt",
             "data/patches_cabecalho.txt", "data/patches_cauda.txt",

@@ -2289,3 +2289,12 @@ para a frente (186 passam a tarja, 102 ganham imagem), nenhum outro muda;
 `serie` 165 igual; nenhuma sequência proibida; 25 determinísticas retiradas
 (armadilha 63, em série). Quase tudo em GOP de IDR quebrado: prova bits, não
 traz imagem boa nova.
+
+### GOP 128: a tarja do P 137 pelo gêmeo 141 (2026-10-01)
+
+O P 137 parava no MB 97, dentro da tarja. O irmão 141 (mesmo QP −5, n0 3) tem
+`ed ff 87 00 00 03 00 00 03 00 1f e4`; o 137, `ed ff 87 00 20 03 00 00 03 02
+1f e4` — iguais até nos bytes da cena, fora 2 bits, os mesmos que o censo da
+cabeça aponta. Com eles: MB 97 → 970, nada mais muda no `mapa`, `serie`
+igual. A varredura dos irmãos não o pegou: o grupo tem só um irmão são (ela
+exige dois). Aplicado com aprovação do usuário (linhas 6.606–6.607).

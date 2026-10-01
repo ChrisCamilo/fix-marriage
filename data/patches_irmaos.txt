@@ -679,3 +679,8 @@
 110658267 5 # quadro 3297, cabecalho, byte_mexido (linha 6603)
 110658272 5 # quadro 3297, cabecalho (linha 6604)
 110658273 4 # quadro 3297, cabecalho (linha 6605)
+# 2026-10-01, aprovado pelo usuario: o P 137 (GOP 128), que a varredura nao pegava (o grupo dele so tem um irmao sao, o 141).
+# Tarja `ed ff 87 00 20 03 00 00 03 02 1f e4` contra `ed ff 87 00 00 03 00 00 03 00 1f e4` no 141 (mesmo QP e n0); o censo da
+# cabeca aponta os mesmos 2 bits. mapa: 137 de 97 a 970, nada mais muda; serie igual; nenhuma sequencia proibida.
+5508107 5 # quadro 137, gemeo 141 + censo (linha 6606)
+5508112 1 # quadro 137, gemeo 141 + censo (linha 6607)
