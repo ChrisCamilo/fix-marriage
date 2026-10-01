@@ -249,4 +249,21 @@ combinação, não as melhores — o par certo pode ter ficado de fora.
     JANELA2=32560:34217 CORTE_ALVO=34217 PORTA=7180 TETO=0 ./reparador.exe "$MP4" index.txt patches.txt avanco 1773 2 32560 32720 f1773_ancora.txt
     # depois: os de MB em [7180,7205] no JM (sincronia_1773.py) e a fileira 60 tarja pura
 
-O controle foi interrompido com ~14 min de 1,84 M pares, sem resultado.
+**Controle sintético rodado em 2026-10-01** (3368, 2 bits plantados em
+29.434 b3 e 29.634 b6; 1,84 M pares em 28 min, ~1.100/s):
+
+| juiz | sobram | o par plantado |
+|---|---|---|
+| 1º: `CORTE_ALVO` em fim − 100, MB em [7.180, 7.205] (ffmpeg) | 26.950 (1,5%) | MB 7.188, o mesmo do 3368 íntegro |
+| 2º: `tools/anchor/sincronia_tarja.py` (JM, corte em fim − 64): QP do quadro nas fileiras 57–59, fileira 60 entre 77 e 95 bytes do fim, e tarja pura | **2** (11 min) | passa |
+
+O outro que passa (`29.470 b1` + `29.751 b2`) põe a fileira 60 seis bytes
+adiante (31.052 contra 31.046) — sobra para olhar a imagem. Calibração do 2º
+juiz: os 6 IDRs íntegros passam, o 3368 sem conserto falha; a conferência da
+tarja para 16 bytes antes do corte, porque o JM lê adiante (no 3319 o MB que
+começa 10 bytes antes do corte já lê além do dado).
+
+Projeção para o 1773: ~16 M pares (~8,7× o controle) → ~4 h no `avanco`,
+~240 mil na faixa → ~1,6 h no JM, e da ordem de 10 falsos sobrando para a
+imagem. Se o dano entre a frente e o byte 34.217 tiver mais que o par da
+frente (cenários B/C), nenhum passa — e isso também responde o portão.
